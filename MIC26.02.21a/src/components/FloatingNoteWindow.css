@@ -1,0 +1,258 @@
+.floating-note-window {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+  border: 1px solid #e8e8e8;
+  transition: box-shadow 0.3s ease;
+  user-select: none;
+}
+
+.floating-note-window:hover {
+  box-shadow: 0 6px 30px rgba(0, 0, 0, 0.2);
+}
+
+.floating-note-window.dragging {
+  opacity: 0.9;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
+}
+
+.floating-note-window.resizing {
+  opacity: 0.95;
+}
+
+.note-window-card {
+  height: 100%;
+  border: none !important;
+}
+
+.note-window-card .ant-card-head {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  color: white;
+  border-bottom: 1px solid #1890ff;
+  padding: 0 12px;
+  min-height: 40px;
+  cursor: move;
+  user-select: none;
+}
+
+.note-window-card .ant-card-head-title {
+  color: white;
+  padding: 8px 0;
+}
+
+.note-window-card .ant-card-extra {
+  padding: 8px 0;
+}
+
+.window-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+/* 最小化按钮样式 */
+.note-window-card .ant-card-extra .ant-btn-text {
+  color: rgba(255, 255, 255, 0.8);
+  transition: all 0.2s ease;
+}
+
+.note-window-card .ant-card-extra .ant-btn-text:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.drag-handle {
+  color: rgba(255, 255, 255, 0.8);
+  cursor: move;
+  margin-right: 8px;
+}
+
+.window-title {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.note-content-area {
+  height: calc(100% - 50px);
+  margin-bottom: 8px;
+}
+
+.note-content-area .ant-input {
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.note-content-area .ant-input:focus {
+  border-color: #1890ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.note-content-area .ant-input[disabled] {
+  background-color: #fafafa;
+  color: rgba(0, 0, 0, 0.85);
+  cursor: default;
+}
+
+.window-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: 8px;
+  padding-right: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+
+
+.minimized-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  cursor: pointer;
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  color: white;
+  padding: 0 12px;
+  transition: all 0.2s ease;
+}
+
+.minimized-content:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+}
+
+.minimized-text {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.resize-handle {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 16px;
+  height: 16px;
+  cursor: se-resize;
+  color: #8c8c8c;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  z-index: 10;
+}
+
+.resize-handle:hover {
+  color: #1890ff;
+}
+
+/* 调整大小边缘区域 */
+.resize-edge {
+  position: absolute;
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.resize-edge:hover {
+  opacity: 1;
+  background-color: rgba(24, 144, 255, 0.1);
+}
+
+.resize-corner {
+  position: absolute;
+  z-index: 10001;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.resize-corner:hover {
+  opacity: 1;
+  background-color: rgba(24, 144, 255, 0.2);
+}
+
+/* 调整大小时的窗口样式 */
+.floating-note-window.resizing {
+  opacity: 0.95;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
+}
+
+.active-button {
+  color: #1890ff !important;
+  background-color: rgba(24, 144, 255, 0.1) !important;
+}
+
+/* 按钮样式优化 */
+.note-window-card .ant-btn {
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.note-window-card .ant-btn:hover {
+  transform: translateY(-1px);
+}
+
+.note-window-card .ant-btn:active {
+  transform: translateY(0);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .floating-note-window {
+    width: 95vw !important;
+    left: 2.5vw !important;
+    right: 2.5vw !important;
+  }
+  
+  .window-footer {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  
+  .window-footer .ant-space {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.floating-note-window {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* 最大化状态样式 */
+.floating-note-window.maximized {
+  border-radius: 0;
+  box-shadow: none;
+  border: 1px solid #d9d9d9;
+}
+
+/* 拖拽时的视觉反馈 */
+.floating-note-window.dragging::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(24, 144, 255, 0.05);
+  pointer-events: none;
+}

@@ -1,0 +1,676 @@
+import React, { useState } from 'react';
+import { Layout, Menu, Breadcrumb, ConfigProvider, Avatar, Modal, Radio } from 'antd';
+import { Link, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+import zhCN from 'antd/locale/zh_CN';
+import AppWithTabs from './components/AppWithTabs';
+import { TabProvider } from './contexts/TabContext';
+import { NoteProvider } from './contexts/NoteContext';
+import GlobalNoteWindow from './components/GlobalNoteWindow';
+import Home from './pages/Home';
+import StockInAccept from './pages/StockInAccept';
+import TransferAcceptance from './pages/TransferAcceptance';
+import StockInDetail from './pages/StockInDetail';
+
+import InventoryDetail from './pages/InventoryDetail';
+import InventoryAdjust from './pages/InventoryAdjust';
+import InventoryTransfer from './pages/InventoryTransfer';
+import InventoryShelf from './pages/InventoryShelf';
+import InventoryLocation from './pages/InventoryLocation';
+import InventoryExpiry from './pages/InventoryExpiry';
+import StockOutConsumption from './pages/StockOutConsumption';
+import StockOutDetail from './pages/StockOutDetail';
+import StockOutStats from './pages/StockOutStats';
+import StockOutConsumptionUndo from './pages/StockOutConsumptionUndo';
+import InventoryCheckGenerate from './pages/InventoryCheckGenerate';
+import InventoryCheckDiff from './pages/InventoryCheckDiff';
+import ReportsStockInDetail from './pages/ReportsStockInDetail';
+import ReportsStockInSummary from './pages/ReportsStockInSummary';
+import ReportsConsumptionDetail from './pages/ReportsConsumptionDetail';
+import ReportsConsumptionSummary from './pages/ReportsConsumptionSummary';
+import ReportsLossSummary from './pages/ReportsLossSummary';
+import SupplierMaintenance from './pages/SupplierMaintenance';
+import SupplierInspectionReport from './pages/SupplierInspectionReport';
+import SupplierBusinessLicense from './pages/SupplierBusinessLicense';
+import SupplierBusinessCertificate from './pages/SupplierBusinessCertificate';
+import SupplierQualificationWarning from './pages/SupplierQualificationWarning';
+import ProductCatalog from './pages/ProductCatalog';
+import ProductPriceAdjustment from './pages/ProductPriceAdjustment';
+import WarehouseMaintenance from './pages/WarehouseMaintenance';
+import UDIMaintenance from './pages/UDIMaintenance';
+import UserAccountCreation from './pages/UserAccountCreation';
+import UserPermissionSettings from './pages/UserPermissionSettings';
+import UserAccountManagement from './pages/UserAccountManagement';
+import DepartmentManagement from './pages/DepartmentManagement';
+import PurchaseOrderRequest from './pages/PurchaseOrderRequest';
+import PurchaseOrderApproval from './pages/PurchaseOrderApproval';
+import PurchaseOrderQuery from './pages/PurchaseOrderQuery';
+import PurchaseOrderRecords from './pages/PurchaseOrderRecords';
+import PurchaseOrderAcceptance from './pages/PurchaseOrderAcceptance';
+import PurchaseReceipt from './pages/PurchaseReceipt';
+import OperationLog from './pages/OperationLog';
+import Login from './pages/Login';
+
+import ConsumablesQualityIssueRecord from './pages/ConsumablesQualityIssueRecord';
+import MedicalDeviceAdverseEvent from './pages/MedicalDeviceAdverseEvent';
+import FixedAssetsDictionary from './pages/FixedAssetsDictionary';
+import FixedAssetsAdd from './pages/FixedAssetsAdd';
+import FixedAssetsDetailQuery from './pages/FixedAssetsDetailQuery';
+import FixedAssetsScrap from './pages/FixedAssetsScrap';
+import FixedAssetsScrapDetail from './pages/FixedAssetsScrapDetail';
+import FixedAssetsChangeAudit from './pages/FixedAssetsChangeAudit';
+import FixedAssetsTransfer from './pages/FixedAssetsTransfer';
+import FixedAssetsWarning from './pages/FixedAssetsWarning';
+import FixedAssetsMaintenanceRecord from './pages/FixedAssetsMaintenanceRecord';
+import SampleQuantityManagement from './pages/SampleQuantityManagement';
+import SampleProjectManagement from './pages/SampleProjectManagement';
+
+import {
+  DashboardOutlined,
+  InboxOutlined,
+  DatabaseOutlined,
+  UnorderedListOutlined,
+  FileTextOutlined,
+  BarChartOutlined,
+  SettingOutlined,
+  UserOutlined,
+  LogoutOutlined,
+  ShoppingOutlined,
+  ClockCircleOutlined,
+  DesktopOutlined,
+  WarningOutlined,
+  TeamOutlined,
+  ControlOutlined,
+  ImportOutlined,
+  HomeOutlined,
+  ExportOutlined
+} from '@ant-design/icons';
+
+const { Header, Content, Sider } = Layout;
+
+const App = () => {
+  const [collapsed, setCollapsed] = useState(false);
+  // 从localStorage读取当前科室，如果不存在则使用默认值'测试科室'
+  const [currentDepartment, setCurrentDepartment] = useState(() => {
+    const savedDepartment = localStorage.getItem('currentDepartment');
+    return savedDepartment || '测试科室';
+  });
+  const [isDepartmentModalVisible, setIsDepartmentModalVisible] = useState(false);
+  const location = useLocation();
+  
+  // 检查用户是否已登录
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+  
+  // 主题配置
+  const themeConfig = {
+    token: {
+      colorPrimary: '#667eea',
+      colorPrimaryHover: '#5a6fd8',
+      colorPrimaryActive: '#4e62c9',
+      borderRadius: 8,
+      borderRadiusLG: 12,
+      borderRadiusSM: 4,
+      colorBgContainer: '#ffffff',
+      colorBgLayout: '#f8f9fa',
+      colorBgElevated: '#ffffff',
+      colorTextSecondary: '#8c8c8c',
+      colorTextTertiary: '#bfbfbf',
+      colorBorder: '#e8e8e8',
+      colorBorderSecondary: '#f0f0f0',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+      boxShadowSecondary: '0 4px 16px rgba(0, 0, 0, 0.12)',
+      fontSize: 14,
+      fontSizeLG: 16,
+      fontSizeSM: 12,
+      lineHeight: 1.6,
+    },
+  };
+  
+  // 退出登录处理
+  const handleLogout = () => {
+    localStorage.removeItem('isLoggedIn');
+    window.location.href = '/login';
+  };
+
+  const departments = ['内科', '外科', '儿科', '妇产科', '急诊科', '运营组', '测试科室'];
+
+  const showDepartmentModal = () => {
+    setIsDepartmentModalVisible(true);
+  };
+
+  const handleDepartmentChange = (e) => {
+    const newDepartment = e.target.value;
+    setCurrentDepartment(newDepartment);
+    // 将当前科室保存到localStorage
+    localStorage.setItem('currentDepartment', newDepartment);
+    // 触发自定义事件，通知其他组件科室已更改
+    window.dispatchEvent(new CustomEvent('departmentChanged', { detail: newDepartment }));
+    setIsDepartmentModalVisible(false);
+  };
+
+  const handleCancelDepartmentModal = () => {
+    setIsDepartmentModalVisible(false);
+  };
+
+  const getBreadcrumbItems = () => {
+    const pathSnippets = location.pathname.split('/').filter(i => i);
+    const items = [{ title: <Link to="/">首页</Link> }];
+    
+    if (pathSnippets.length > 0) {
+      pathSnippets.forEach((snippet, index) => {
+        const url = `/${pathSnippets.slice(0, index + 1).join('/')}`;
+        const title = getMenuTitle(snippet);
+        items.push({ title: <Link to={url}>{title}</Link> });
+      });
+    }
+    
+    return items;
+  };
+
+  const getMenuTitle = (key) => {
+    const titles = {
+      'stock-in-accept': '采购入库',
+      'stock-in-detail': '入库单查询',
+      'inventory-detail': '物资库存',
+      'inventory-transfer': '物资调拨',
+      'inventory-shelf': '物资库位维护',
+      'inventory-location': '物资库位调整',
+      'inventory-expiry': '效期管理',
+      'stock-out-consumption': '消耗出库',
+      'stock-out-detail': '消耗明细查询',
+      'stock-out-stats': '消耗统计',
+      'inventory-check-generate': '盘点表生成',
+      'inventory-check-diff': '盘点损溢录入',
+      'reports-stock-in-detail': '仓库入库明细',
+      'reports-stock-in-summary': '仓库入库汇总',
+      'reports-consumption-detail': '仓库消耗明细',
+      'reports-consumption-summary': '仓库消耗汇总',
+      'reports-loss-summary': '损耗汇总',
+      'supplier-maintenance': '供应商维护',
+      'supplier-inspection-report': '检验报告',
+      'supplier-business-license': '经营许可证',
+      'supplier-business-certificate': '营业执照管理',
+      'product-catalog': '物资字典维护',
+      'product-price-adjustment': '物资调价',
+      'warehouse-maintenance': '仓库货位维护',
+      'user-account-creation': '用户角色模板',
+      'user-permission-settings': '用户权限设定',
+      'user-account-management': '用户账户管理',
+      'department-management': '部门管理',
+      'purchase-order-request': '采购计划申请',
+      'purchase-order-approval': '采购审核',
+      'purchase-order-query': '采购订单查询',
+      'purchase-order-records': '采购申领记录',
+      'purchase-order-acceptance': '采购入库',
+      'operation-log': '操作日志',
+      'fixed-assets-dictionary': '资产字典维护',
+      'fixed-assets-add': '资产新增',
+      'fixed-assets-detail-query': '资产明细查询',
+      'fixed-assets-scrap': '资产报废',
+      'fixed-assets-scrap-detail': '资产清理明细',
+      'fixed-assets-change-audit': '资产变更审核',
+      'fixed-assets-warning': '固定资产预警',
+      'fixed-assets-maintenance-record': '资产维修记录',
+      'sample-quantity-management': '样本量管理',
+      'consumables-quality-issue': '耗材质量问题记录',
+      'medical-device-adverse-event': '异常事件记录',
+    };
+    return titles[key] || key;
+  };
+
+  // 如果未登录，只显示登录页面
+  if (!isLoggedIn) {
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
+  }
+
+  // 如果已登录，显示完整布局
+  return (
+    <ConfigProvider theme={themeConfig} locale={zhCN}>
+      <TabProvider>
+        <NoteProvider>
+          <Layout style={{ minHeight: '100vh', transition: 'all 0.3s ease', backgroundColor: '#f8f9fa' }}>
+        <Header
+          className="header"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 48px',
+            background: '#ffffff',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+            zIndex: 100,
+            height: 72,
+            position: 'sticky',
+            top: 0,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div
+              className="logo"
+              style={{
+                fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+                fontWeight: 'bold',
+                color: '#667eea',
+                marginRight: 'clamp(1rem, 3vw, 3rem)',
+                display: 'flex',
+                alignItems: 'center',
+                letterSpacing: 'clamp(0.5rem, 2vw, 2rem)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: '100%',
+              }}
+            >
+              <img 
+                src="/assets/YLogo.png" 
+                alt="医智宝" 
+                style={{ 
+                  marginRight: 'clamp(0.5rem, 1vw, 1rem)', 
+                  width: 'clamp(2rem, 5vw, 4.5rem)', 
+                  height: 'clamp(2rem, 5vw, 4.5rem)',
+                  flexShrink: 0 
+                }} 
+              />
+              医智宝管理系统
+            </div>
+          </div>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 'clamp(0.5rem, 1vw, 1rem)',
+            justifyContent: 'flex-end',
+            flex: 1,
+            minWidth: 0
+          }}>
+            <Avatar
+              style={{ 
+                marginRight: 'clamp(0.25rem, 0.5vw, 0.75rem)', 
+                backgroundColor: '#667eea',
+                flexShrink: 0
+              }}
+              icon={<UserOutlined />}
+            />
+            <span style={{ 
+              color: '#262626', 
+              marginRight: 'clamp(0.5rem, 1vw, 1rem)',
+              fontSize: 'clamp(0.875rem, 1vw, 1rem)',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
+            }}>管理员</span>
+            <button
+              onClick={showDepartmentModal}
+              style={{
+                background: 'none',
+                border: '1px solid #667eea',
+                color: '#667eea',
+                cursor: 'pointer',
+                padding: 'clamp(0.25rem, 0.5vw, 0.5rem) clamp(0.5rem, 1vw, 0.75rem)',
+                borderRadius: 4,
+                transition: 'all 0.3s',
+                display: 'flex',
+                alignItems: 'center',
+                marginRight: 'clamp(0.5rem, 1vw, 1rem)',
+                fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = 'rgba(102, 126, 234, 0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = 'transparent';
+              }}
+            >
+              {currentDepartment}
+            </button>
+            <button
+              onClick={handleLogout}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#8c8c8c',
+                cursor: 'pointer',
+                padding: 'clamp(0.25rem, 0.5vw, 0.5rem) clamp(0.5rem, 1vw, 0.75rem)',
+                borderRadius: 4,
+                transition: 'all 0.3s',
+                display: 'flex',
+                alignItems: 'center',
+                fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.color = '#f5222d';
+                e.target.style.backgroundColor = 'rgba(245, 34, 45, 0.06)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.color = '#8c8c8c';
+                e.target.style.backgroundColor = 'transparent';
+              }}
+            >
+              <LogoutOutlined style={{ marginRight: 'clamp(0.125rem, 0.25vw, 0.25rem)' }} />
+              退出登录
+            </button>
+          </div>
+        </Header>
+        <Modal
+          title="切换科室"
+          open={isDepartmentModalVisible}
+          onCancel={handleCancelDepartmentModal}
+          footer={null}
+          centered
+        >
+          <Radio.Group
+            onChange={handleDepartmentChange}
+            value={currentDepartment}
+            style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}
+          >
+            {departments.map((dept) => (
+              <Radio.Button
+                key={dept}
+                value={dept}
+                style={{
+                  width: '100%',
+                  textAlign: 'center',
+                  height: 40,
+                  lineHeight: '38px',
+                  borderRadius: 6,
+                  border: '1px solid #d9d9d9',
+                  background: currentDepartment === dept ? '#667eea' : '#fff',
+                  color: currentDepartment === dept ? '#fff' : '#262626',
+                  transition: 'all 0.3s',
+                }}
+              >
+                {dept}
+              </Radio.Button>
+            ))}
+          </Radio.Group>
+        </Modal>
+        <Layout style={{ display: 'flex', flex: 1, marginTop: 0 }}>
+          <Sider
+            collapsible
+            collapsed={collapsed}
+            onCollapse={setCollapsed}
+            breakpoint="lg"
+            collapsedWidth="80"
+            zeroWidthTriggerStyle={{ top: 20, width: 36, height: 36, borderRadius: 8, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}
+            style={{
+              boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)',
+              transition: 'all 0.3s ease',
+              background: '#ffffff',
+              borderRight: '1px solid #e8e8e8',
+            }}
+          >
+            <Menu
+              theme="light"
+              selectedKeys={[location.pathname || '/']}
+              mode="inline"
+              style={{ 
+                borderRight: 0, 
+                background: '#ffffff',
+                padding: '8px 0',
+                borderRadius: '8px',
+              }}
+              items={[
+                { 
+                  key: '/', 
+                  icon: <DashboardOutlined />, 
+                  label: <Link to="/">首页</Link>,
+                  style: { marginBottom: 4 }
+                },
+                {
+                  key: 'supplier-group',
+                  icon: <TeamOutlined />,
+                  label: '供应商维护',
+                  children: [
+                    { key: '/supplier-maintenance', label: <Link to="/supplier-maintenance">供应商管理</Link> },
+                    {
+                      key: 'supplier-qualification',
+                      label: '供应商资质',
+                      children: [
+                        { key: '/supplier-inspection-report', label: <Link to="/supplier-inspection-report">检验报告</Link> },
+                        { key: '/supplier-business-license', label: <Link to="/supplier-business-license">经营许可证</Link> },
+                        { key: '/supplier-business-certificate', label: <Link to="/supplier-business-certificate">营业执照管理</Link> },
+                      ]
+                    },
+                    { key: '/supplier-qualification-warning', label: <Link to="/supplier-qualification-warning">资质预警</Link> }
+                  ]
+                },
+                {
+                  key: 'master-data-group',
+                  icon: <SettingOutlined />,
+                  label: '字典维护',
+                  children: [
+                    { key: '/product-catalog', label: <Link to="/product-catalog">物资字典</Link> },
+                    { key: '/product-price-adjustment', label: <Link to="/product-price-adjustment">物资调价</Link> },
+                  ]
+                },
+                {
+                  key: 'purchase-group',
+                  icon: <ShoppingOutlined />,
+                  label: '采购管理',
+                  children: [
+                    { key: '/purchase-order-request', label: <Link to="/purchase-order-request">采购计划申请</Link> },
+                    { key: '/purchase-order-approval', label: <Link to="/purchase-order-approval">采购审核</Link> },
+                    { key: '/purchase-order-records', label: <Link to="/purchase-order-records">采购申领记录</Link> },
+                    { key: '/purchase-order-query', label: <Link to="/purchase-order-query">采购订单查询</Link> },
+                  ]
+                },
+                {
+                  key: 'stock-in-group',
+                  icon: <ImportOutlined />,
+                  label: '入库管理',
+                  children: [
+                    { key: '/purchase-receipt', label: <Link to="/purchase-receipt">采购收货</Link> },
+                    { key: '/purchase-order-acceptance', label: <Link to="/purchase-order-acceptance">采购入库</Link> },
+                    { key: '/transfer-acceptance', label: <Link to="/transfer-acceptance">调拨验收入库</Link> },
+                    { key: '/stock-in-detail', label: <Link to="/stock-in-detail">入库单查询</Link> },
+                  ]
+                },
+                {
+                  key: 'inventory-group',
+                  icon: <DatabaseOutlined />,
+                  label: '库存管理',
+                  children: [
+                    { key: '/inventory-detail', label: <Link to="/inventory-detail">物资库存</Link> },
+                    { key: '/inventory-transfer', label: <Link to="/inventory-transfer">物资调拨</Link> },
+                    { key: '/inventory-shelf', label: <Link to="/inventory-shelf">物资库位维护</Link> },
+                    { key: '/inventory-location', label: <Link to="/inventory-location">物资库位调整</Link> },
+                    { key: '/inventory-expiry', label: <Link to="/inventory-expiry">近效期查询</Link> },
+                  ]
+                },
+                {
+                  key: 'stock-out-group',
+                  icon: <ExportOutlined />,
+                  label: '出库管理',
+                  children: [
+                    { key: '/stock-out-consumption', label: <Link to="/stock-out-consumption">消耗出库</Link> },
+                    { key: '/stock-out-detail', label: <Link to="/stock-out-detail">消耗明细查询</Link> },
+                    { key: '/stock-out-stats', label: <Link to="/stock-out-stats">消耗统计</Link> },
+                    { key: '/stock-out-consumption-undo', label: <Link to="/stock-out-consumption-undo">消耗撤销</Link> },
+                  ]
+                },
+                {
+                  key: 'inventory-check-group',
+                  icon: <FileTextOutlined />,
+                  label: '库存盘点',
+                  children: [
+                    { key: '/inventory-check-generate', label: <Link to="/inventory-check-generate">盘点表生成</Link> },
+                    { key: '/inventory-check-detail', label: <Link to="/inventory-check-detail">盘点明细查询</Link> },
+                    { key: '/inventory-check-diff', label: <Link to="/inventory-check-diff">盘点损溢录入</Link> },
+                  ]
+                },
+                {
+                  key: 'reports-group',
+                  icon: <BarChartOutlined />,
+                  label: '仓库报表',
+                  children: [
+                    { key: '/reports-stock-in-detail', label: <Link to="/reports-stock-in-detail">仓库入库明细</Link> },
+                    { key: '/reports-stock-in-summary', label: <Link to="/reports-stock-in-summary">仓库入库汇总</Link> },
+                    { key: '/reports-consumption-detail', label: <Link to="/reports-consumption-detail">仓库消耗明细</Link> },
+                    { key: '/reports-consumption-summary', label: <Link to="/reports-consumption-summary">仓库消耗汇总</Link> },
+                    { key: '/reports-loss-summary', label: <Link to="/reports-loss-summary">损耗汇总</Link> },
+                  ]
+                },
+                {
+                  key: 'warehouse-group',
+                  icon: <HomeOutlined />,
+                  label: '仓库管理',
+                  children: [
+                    { key: '/warehouse-maintenance', label: <Link to="/warehouse-maintenance">货位维护</Link> },
+                  ]
+                },
+                {
+                  key: 'operation-group',
+                  icon: <ControlOutlined />,
+                  label: '运营组管理',
+                  children: [
+                    { key: '/user-account-management', label: <Link to="/user-account-management">用户账户管理</Link> },
+                    { key: '/user-permission-settings', label: <Link to="/user-permission-settings">用户权限设定</Link> },
+                    { key: '/user-role-template', label: <Link to="/user-role-template">用户角色模板</Link> },
+                    { key: '/department-management', label: <Link to="/department-management">部门管理</Link> },
+                  ]
+                },
+                {
+                  key: 'fixed-assets-group',
+                  icon: <DesktopOutlined />,
+                  label: '固定资产管理',
+                  children: [
+                    { key: '/fixed-assets-dictionary', label: <Link to="/fixed-assets-dictionary">资产字典维护</Link> },
+                    { key: '/fixed-assets-add', label: <Link to="/fixed-assets-add">资产新增</Link> },
+                    { key: '/fixed-assets-detail-query', label: <Link to="/fixed-assets-detail-query">资产明细查询</Link> },
+                    { key: '/fixed-assets-transfer', label: <Link to="/fixed-assets-transfer">固定资产调拨</Link> },
+                    { key: '/fixed-assets-scrap', label: <Link to="/fixed-assets-scrap">资产报废</Link> },
+                    { key: '/fixed-assets-scrap-detail', label: <Link to="/fixed-assets-scrap-detail">资产清理明细</Link> },
+                    { key: '/fixed-assets-change-audit', label: <Link to="/fixed-assets-change-audit">资产变更审核</Link> },
+                    { key: '/fixed-assets-warning', label: <Link to="/fixed-assets-warning">固定资产预警</Link> },
+                    { key: '/fixed-assets-maintenance-record', label: <Link to="/fixed-assets-maintenance-record">资产维修记录</Link> },
+                  ]
+                },
+                {
+                  key: 'sample-group',
+                  icon: <DatabaseOutlined />,
+                  label: '样本量管理',
+                  children: [
+                    { key: '/sample-project-management', label: <Link to="/sample-project-management">新增项目管理</Link> },
+                    { key: '/sample-quantity-management', label: <Link to="/sample-quantity-management">样本量管理</Link> },
+                  ]
+                },
+                {
+                  key: 'abnormal-events-group',
+                  icon: <WarningOutlined />,
+                  label: '异常事件记录',
+                  children: [
+                    { key: '/consumables-quality-issue', label: <Link to="/consumables-quality-issue">耗材质量问题记录</Link> },
+                    { key: '/medical-device-adverse-event', label: <Link to="/medical-device-adverse-event">异常事件记录</Link> },
+                  ]
+                },
+                {
+                  key: '/operation-log',
+                  icon: <ClockCircleOutlined />,
+                  label: <Link to="/operation-log">操作日志</Link>,
+                  style: { marginTop: 8 }
+                },
+              ]}
+              onOpenChange={() => {}}
+              onClick={() => {}}
+            />
+          </Sider>
+          <Layout style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', flex: 1, backgroundColor: '#f8f9fa' }}>
+            <AppWithTabs>
+              <Content
+                style={{
+                  background: '#ffffff',
+                  padding: 24,
+                  margin: 0,
+                  flex: 1,
+                  minHeight: 280,
+                  borderRadius: 12,
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+                  overflow: 'auto',
+                  border: '1px solid #e8e8e8',
+                }}
+              >
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/login" element={<Navigate to="/" replace />} />
+                  <Route path="/stock-in-accept" element={<StockInAccept />} />
+                  <Route path="/transfer-acceptance" element={<TransferAcceptance />} />
+                  <Route path="/stock-in-detail" element={<StockInDetail />} />
+                  <Route path="/inventory" element={<Navigate to="/inventory-detail" replace />} />
+                  <Route path="/inventory-detail" element={<InventoryDetail />} />
+                  <Route path="/inventory-adjust" element={<InventoryAdjust />} />
+                  <Route path="/inventory-transfer" element={<InventoryTransfer />} />
+                  <Route path="/inventory-shelf" element={<InventoryShelf />} />
+                  <Route path="/inventory-location" element={<InventoryLocation />} />
+                  <Route path="/inventory-expiry" element={<InventoryExpiry />} />
+                  <Route path="/stock-out-consumption" element={<StockOutConsumption />} />
+                  <Route path="/stock-out-detail" element={<StockOutDetail />} />
+                  <Route path="/stock-out-stats" element={<StockOutStats />} />
+                  <Route path="/stock-out-consumption-undo" element={<StockOutConsumptionUndo />} />
+                  <Route path="/inventory-check-generate" element={<InventoryCheckGenerate />} />
+                  <Route path="/inventory-check-detail" element={<InventoryDetail />} />
+                  <Route path="/inventory-check-diff" element={<InventoryCheckDiff />} />
+                  <Route path="/reports-stock-in-detail" element={<ReportsStockInDetail />} />
+                  <Route path="/reports-stock-in-summary" element={<ReportsStockInSummary />} />
+                  <Route path="/reports-consumption-detail" element={<ReportsConsumptionDetail />} />
+                  <Route path="/reports-consumption-summary" element={<ReportsConsumptionSummary />} />
+                  <Route path="/reports-loss-summary" element={<ReportsLossSummary />} />
+                  <Route path="/supplier-maintenance" element={<SupplierMaintenance />} />
+                  <Route path="/supplier-inspection-report" element={<SupplierInspectionReport />} />
+                  <Route path="/supplier-business-license" element={<SupplierBusinessLicense />} />
+                  <Route path="/supplier-business-certificate" element={<SupplierBusinessCertificate />} />
+                  <Route path="/supplier-qualification-warning" element={<SupplierQualificationWarning />} />
+                  <Route path="/product-catalog" element={<ProductCatalog />} />
+                  <Route path="/product-price-adjustment" element={<ProductPriceAdjustment />} />
+                  <Route path="/warehouse-maintenance" element={<WarehouseMaintenance />} />
+                  <Route path="/udi-maintenance" element={<UDIMaintenance />} />
+                  <Route path="/user-account-creation" element={<UserAccountCreation />} />
+                  <Route path="/user-role-template" element={<UserAccountCreation />} />
+                  <Route path="/user-permission-settings" element={<UserPermissionSettings />} />
+                  <Route path="/user-account-management" element={<UserAccountManagement />} />
+                  <Route path="/department-management" element={<DepartmentManagement />} />
+                  <Route path="/purchase-order-request" element={<PurchaseOrderRequest />} />
+                  <Route path="/purchase-order-approval" element={<PurchaseOrderApproval />} />
+                  <Route path="/purchase-order-query" element={<PurchaseOrderQuery />} />
+                  <Route path="/purchase-order-records" element={<PurchaseOrderRecords />} />
+                  <Route path="/purchase-order-acceptance" element={<PurchaseOrderAcceptance />} />
+                  <Route path="/purchase-receipt" element={<PurchaseReceipt />} />
+                  <Route path="/fixed-assets-dictionary" element={<FixedAssetsDictionary />} />
+                  <Route path="/fixed-assets-add" element={<FixedAssetsAdd />} />
+                  <Route path="/fixed-assets-detail-query" element={<FixedAssetsDetailQuery />} />
+                  <Route path="/fixed-assets-scrap" element={<FixedAssetsScrap />} />
+                  <Route path="/fixed-assets-scrap-detail" element={<FixedAssetsScrapDetail />} />
+                  <Route path="/fixed-assets-change-audit" element={<FixedAssetsChangeAudit />} />
+                  <Route path="/fixed-assets-transfer" element={<FixedAssetsTransfer />} />
+                  <Route path="/fixed-assets-warning" element={<FixedAssetsWarning />} />
+                  <Route path="/fixed-assets-maintenance-record" element={<FixedAssetsMaintenanceRecord />} />
+                  <Route path="/sample-project-management" element={<SampleProjectManagement />} />
+                  <Route path="/sample-quantity-management" element={<SampleQuantityManagement />} />
+
+                  <Route path="/consumables-quality-issue" element={<ConsumablesQualityIssueRecord />} />
+                  <Route path="/medical-device-adverse-event" element={<MedicalDeviceAdverseEvent />} />
+                  <Route path="/operation-log" element={<OperationLog />} />
+
+                </Routes>
+              </Content>
+            </AppWithTabs>
+            
+            {/* 全局悬浮备注窗口 */}
+            <GlobalNoteWindow />
+            
+          </Layout>
+        </Layout>
+      </Layout>
+        </NoteProvider>
+      </TabProvider>
+    </ConfigProvider>
+  );
+};
+
+export default App;
