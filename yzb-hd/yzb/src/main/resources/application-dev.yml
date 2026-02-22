@@ -1,0 +1,63 @@
+server:
+  port: 8088
+  servlet:
+    session:
+      timeout: 7200s
+    jsp:
+      init-parameters: {development,true}
+spring:
+  main:
+    allow-circular-references: true
+  application:
+    name: yzb
+
+  # 使用freemark
+  freemarker:
+    template-loader-path: classpath:/pages/
+    suffix: .html
+    cache: false
+    enabled: true
+    charset: UTF-8
+    request-context-attribute: request
+
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/yzb?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=GMT%2B8&zeroDateTimeBehavior=convertToNull
+    username: root
+    password:
+    #com.mysql.cj.jdbc.Driver com.mysql.jdbc.Driver
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+    #load-on-startup: 100
+mybatis:
+  mapper-locations: classpath*:mapper/*.xml
+  type-aliases-package: com.yunsheng.yzb
+
+# 打印sql
+logging:
+  level:
+    com.yunsheng.yzb.mapper: debug
+
+###################### ueditor ########################
+ue:
+  physical-path: E:/upload/ #存储文件的绝对路径 必须使用标准路径"/"作为分隔符
+  config-file: static/ueditor/jsp/config.json #resources目录下配置文件的位置
+  server-url: /ueditor.do #服务器统一请求接口路径
+  url-prefix: /file/ #"/"结尾
+
+pagehelper:
+  helperDialect: mysql
+  reasonable: true
+  supportMethodsArguments: true
+  params=count: countSql
+
+
+
+
+
+
+
+
