@@ -240,4 +240,21 @@
       status = #{status,jdbcType=INTEGER}
     where id = #{id,jdbcType=INTEGER}
   </update>
+  <select id="selectWarehouse" resultType="com.yunsheng.yzb.model.Warehouse">
+    select
+    id,
+    ware_name wareName,
+    position,
+      charge_person chargePerson,
+      capacity,
+      cdate,
+      status
+     FROM warehouse WHERE 1=1
+    <if test="wareName!=null and wareName!=''">
+    AND ware_name LIKE concat('%', #{wareName},'%')
+    </if>
+    <if test="position!=null and position!=''">
+    AND position LIKE concat('%', #{position},'%')
+    </if>
+  </select>
 </mapper>

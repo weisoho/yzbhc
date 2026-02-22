@@ -20,6 +20,9 @@ public interface WarehouseMapper {
 
     Warehouse selectByPrimaryKey(Integer id);
 
+    //查询仓库列表
+    List<Warehouse> selectWarehouse(@Param("wareName")String wareName,@Param("position")String position);
+
     int updateByExampleSelective(@Param("record") Warehouse record, @Param("example") WarehouseExample example);
 
     int updateByExample(@Param("record") Warehouse record, @Param("example") WarehouseExample example);
