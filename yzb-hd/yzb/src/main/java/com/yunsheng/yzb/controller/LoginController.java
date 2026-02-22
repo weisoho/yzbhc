@@ -33,7 +33,12 @@ public class LoginController {
     private UserTokenMapper userTokenMapper;
 
 
-
+    /**
+     * 登录
+     * @param userName
+     * @param password
+     * @return
+     */
     @GetMapping("/login")
     public AjaxResult login(String userName ,String password){
         YsUserExample ysUserExample = new YsUserExample();
