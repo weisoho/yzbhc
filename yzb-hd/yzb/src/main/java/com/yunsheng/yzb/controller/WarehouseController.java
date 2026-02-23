@@ -15,6 +15,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * 仓库管理模块
+ */
 @RestController
 @RequestMapping("/yzb")
 public class WarehouseController {

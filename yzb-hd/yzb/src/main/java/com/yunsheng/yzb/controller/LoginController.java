@@ -30,6 +30,7 @@ import java.util.UUID;
 public class LoginController {
     @Autowired
     private YsUserMapper ysUserMapper;
+    @Autowired
     private UserTokenMapper userTokenMapper;
 
 
