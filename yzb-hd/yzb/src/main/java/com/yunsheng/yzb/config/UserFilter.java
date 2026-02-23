@@ -38,7 +38,7 @@ public class UserFilter implements Filter {
         //登陆获取token
         String token = req.getHeader("token");
         UserTokenExample tokenExample = new UserTokenExample();
-        tokenExample.createCriteria().andUserTokenEqualTo(token).andExpiratedtimeLessThanOrEqualTo(new Date());
+        tokenExample.createCriteria().andUserTokenEqualTo(token);
         List<UserToken> userTokens = userTokenMapper.selectByExample(tokenExample);
         if(userTokens.size()<1){
             return;

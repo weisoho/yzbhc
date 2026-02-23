@@ -7,10 +7,7 @@ import com.yunsheng.yzb.model.Warehouse;
 import com.yunsheng.yzb.utils.AjaxResult;
 import com.yunsheng.yzb.utils.ClassCastUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
 import java.util.List;
@@ -56,5 +53,10 @@ public class WarehouseController {
         List<Warehouse> warehouseList = warehouseMapper.selectWarehouse(wareName, position);
         PageInfo pageInfo = new PageInfo(warehouseList);
         return AjaxResult.res(1,"删除成功", ClassCastUtil.pageInfoToPageOutputDto(pageInfo));
+    }
+
+    @GetMapping("/test")
+    public String test(){
+        return "测试";
     }
 }
