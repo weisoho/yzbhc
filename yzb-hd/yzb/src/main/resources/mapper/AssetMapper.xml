@@ -462,4 +462,48 @@
       udate = #{udate,jdbcType=TIMESTAMP}
     where id = #{id,jdbcType=INTEGER}
   </update>
+  <select id="selectAsset" resultType="com.yunsheng.yzb.model.Asset">
+    select id,
+    asset_code assetCode,
+    asset_name assetName,
+      asset_typeid assetTypeid,
+      asset_typename assetTypename,
+      spe_model speModel,
+      manufacturer,
+      purchase_date purchaseDate,
+      orig_value origValue,
+      service_life serviceLife,
+      dep_id depId,
+      dep_name depName,
+      sto_location stoLocation,
+      resp_person respPerson,
+      asset_state assetState,
+      depr_method deprMethod,
+      serial_num serialNum,
+      asset_desc assetDesc,
+      attachment,
+      cdate,
+      udate
+      FROM asset WHERE 1=1
+    <if test="assetCode!=null and assetCode!=''">
+      AND asset_code LIKE concat('%', #{assetCode},'%')
+    </if>
+    <if test="assetName!=null and assetName!=''">
+      AND asset_name LIKE concat('%', #{assetName},'%')
+    </if>
+    <if test="assetState!=null ">
+      AND asset_state =#{assetState}
+    </if>
+    <if test="depId!=null ">
+      AND dep_id =#{depId}
+    </if>
+    <if test="assetTypeid!=null ">
+      AND asset_typeid =#{assetTypeid}
+    </if>
+    <if test="purchaseStart!=null and purchaseEnd!=null">
+      AND purchase_date &gt;=#{purchaseStart} and purchase_date &lt;= #{purchaseEnd}
+    </if>
+
+
+  </select>
 </mapper>
