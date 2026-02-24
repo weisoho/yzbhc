@@ -62,8 +62,8 @@ public class AssetTypeController {
     @PostMapping("/selectAssetType")
     public AjaxResult selectAssetType(String assetCode , String assetName,Integer pageNum,Integer pageSize,Integer assetState){
         PageHelper.startPage(pageNum, pageSize);
-        List<AssetType> warehouseList = assetTypeMapper.selectAssetType(assetCode, assetName,assetState);
-        PageInfo pageInfo = new PageInfo(warehouseList);
+        List<AssetType> list = assetTypeMapper.selectAssetType(assetCode, assetName,assetState);
+        PageInfo pageInfo = new PageInfo(list);
         return AjaxResult.res(1,"删除成功", ClassCastUtil.pageInfoToPageOutputDto(pageInfo));
     }
 }
