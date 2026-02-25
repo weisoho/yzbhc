@@ -4,7 +4,6 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.yunsheng.yzb.mapper.AssetMapper;
 import com.yunsheng.yzb.model.Asset;
-import com.yunsheng.yzb.model.AssetType;
 import com.yunsheng.yzb.utils.AjaxResult;
 import com.yunsheng.yzb.utils.ClassCastUtil;
 import org.springframework.beans.factory.annotation.Autowired;

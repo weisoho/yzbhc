@@ -2,6 +2,28 @@
 -- 权限管理系统数据库设计
 -- 基于RBAC模型，支持用户-角色-权限三层架构
 -- =============================================
+-- ----------------------------
+-- Table structure for repair
+-- ----------------------------
+DROP TABLE IF EXISTS `repair`;
+CREATE TABLE `repair`  (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
+  `asset_id` int(11) NOT NULL COMMENT '资产id',
+  `repair_code` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '维修单号',
+  `repair_date` datetime NOT NULL COMMENT '维修日期',
+  `finish_date` datetime NULL DEFAULT NULL COMMENT '完成日期',
+  `repair_type` int(1) NOT NULL DEFAULT 1 COMMENT '维修类型1定期维修2故障维修',
+  `repair_reason` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '维修原因',
+  `repair_content` varchar(2000) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '维修内容',
+  `repair_bus` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '维修商家',
+  `repair_person` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '维修人员',
+  `repair_fee` varchar(255) CHARACTER SET utf8 COLLATE utf8_general_ci NOT NULL COMMENT '维修费用',
+  `repair_status` int(1) NOT NULL DEFAULT 1 COMMENT '1待处理2处理中3已完成',
+  `remark` varchar(2000) CHARACTER SET utf8 COLLATE utf8_general_ci NULL DEFAULT NULL COMMENT '备注',
+  `cdate` datetime NOT NULL COMMENT '创建日期',
+  `udate` datetime NOT NULL COMMENT '更新时间',
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8 COLLATE = utf8_general_ci ROW_FORMAT = Compact;
 
 -- 1. 角色表
 CREATE TABLE `sys_role` (
