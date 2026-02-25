@@ -34,22 +34,22 @@ public class AjaxResult
 		return new AjaxResult(1,"success", data);
 	}
 
-	public int getcode()
+	public int getCode()
 	{
 		return code;
 	}
 
-	public void setcode(int msg)
+	public void setCode(int code)
 	{
 		this.code = code;
 	}
 
-	public String getmsg()
+	public String getMsg()
 	{
 		return msg;
 	}
 
-	public void setmsg(String msg)
+	public void setMsg(String msg)
 	{
 		this.msg = msg;
 	}

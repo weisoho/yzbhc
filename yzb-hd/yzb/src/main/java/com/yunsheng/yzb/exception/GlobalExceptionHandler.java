@@ -1,0 +1,51 @@
+package com.yunsheng.yzb.exception;
+
+import com.yunsheng.yzb.utils.AjaxResult;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import javax.servlet.http.HttpServletResponse;
+import java.util.Arrays;
+
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(UnauthorizedException.class)
+    public AjaxResult handleUnauthorizedException(UnauthorizedException e, HttpServletResponse response) {
+        logger.error("未授权访问 - {}", e.getMessage());
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        return AjaxResult.res(e.getCode(), e.getMessage(), null);
+    }
+
+    @ExceptionHandler(PermissionDeniedException.class)
+    public AjaxResult handlePermissionDeniedException(PermissionDeniedException e, HttpServletResponse response) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("权限不足 - 用户ID: ").append(e.getUserId());
+        sb.append(", 请求URL: ").append(e.getRequestUrl());
+        
+        if (e.getRequiredPermissions() != null && e.getRequiredPermissions().length > 0) {
+            sb.append(", 所需权限: ").append(Arrays.toString(e.getRequiredPermissions()));
+        }
+        
+        if (e.getRequiredRoles() != null && e.getRequiredRoles().length > 0) {
+            sb.append(", 所需角色: ").append(Arrays.toString(e.getRequiredRoles()));
+        }
+        
+        sb.append(", 错误信息: ").append(e.getMessage());
+        
+        logger.error(sb.toString());
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        return AjaxResult.res(e.getCode(), e.getMessage(), null);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public AjaxResult handleException(Exception e, HttpServletResponse response) {
+        logger.error("系统异常: ", e);
+        response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        return AjaxResult.res(500, "系统异常，请联系管理员", null);
+    }
+}

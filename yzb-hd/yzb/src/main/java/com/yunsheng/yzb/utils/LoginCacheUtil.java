@@ -18,5 +18,9 @@ public class LoginCacheUtil {
         loginCache.remove();
     }
 
+    public static Integer getCurrentUserId(){
+        return getCurrentAccount().getId();
+    }
+
 }
 
