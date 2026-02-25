@@ -69,6 +69,8 @@ public class RoleController {
 
     /**
      * 更新角色
+     * @param id 用户id
+     * @param role　角色
      */
     @PutMapping("/{id}")
     @RequiresPermission("system:role:edit")
@@ -84,6 +86,7 @@ public class RoleController {
 
     /**
      * 删除角色
+     * @param id 用户id
      */
     @DeleteMapping("/{id}")
     @RequiresPermission("system:role:delete")
@@ -97,6 +100,8 @@ public class RoleController {
 
     /**
      * 为角色分配权限
+     * @param roleId 角色ID
+     * @param permissionIds 权限id集合
      */
     @PostMapping("/{roleId}/permissions")
     @RequiresPermission("system:role:assign")
@@ -111,6 +116,8 @@ public class RoleController {
 
     /**
      * 为用户分配角色
+     * @param userId 用户id
+     * @param 角色id集合
      */
     @PostMapping("/user/{userId}/roles")
     @RequiresPermission("system:user:assign")
