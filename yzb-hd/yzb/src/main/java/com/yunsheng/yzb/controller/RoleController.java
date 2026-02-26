@@ -117,7 +117,7 @@ public class RoleController {
     /**
      * 为用户分配角色
      * @param userId 用户id
-     * @param 角色id集合
+     * @param roleIds 角色id集合
      */
     @PostMapping("/user/{userId}/roles")
     @RequiresPermission("system:user:assign")

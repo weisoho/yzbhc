@@ -33,6 +33,10 @@ public class AjaxResult
 	{
 		return new AjaxResult(1,"success", data);
 	}
+	public static AjaxResult success(Object data)
+	{
+		return new AjaxResult(1,"success", data);
+	}
 
 	public int getCode()
 	{
