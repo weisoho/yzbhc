@@ -1,8 +1,8 @@
 # 忽略所有node_modules文件夹
-/node_modules/
+/node_modules/**
 
 # 忽略构建后的dist文件夹
-/dist/
+/dist/**
 
 # 忽略打包配置文件
 /webpack.config.js
