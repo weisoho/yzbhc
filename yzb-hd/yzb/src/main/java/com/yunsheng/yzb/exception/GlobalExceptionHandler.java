@@ -42,6 +42,13 @@ public class GlobalExceptionHandler {
         return AjaxResult.res(e.getCode(), e.getMessage(), null);
     }
 
+    @ExceptionHandler(RuntimeException.class)
+    public AjaxResult handleRuntimeException(RuntimeException e, HttpServletResponse response) {
+        logger.error("运行时异常: ", e);
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        return AjaxResult.res(400, e.getMessage(), null);
+    }
+
     @ExceptionHandler(Exception.class)
     public AjaxResult handleException(Exception e, HttpServletResponse response) {
         logger.error("系统异常: ", e);

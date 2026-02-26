@@ -49,6 +49,11 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int createRole(SysRole role) {
+        // 检查角色编码是否已存在
+        SysRole existingRole = roleMapper.selectByRoleCode(role.getRoleCode());
+        if (existingRole != null) {
+            throw new RuntimeException("角色编码已存在");
+        }
         return roleMapper.insert(role);
     }
 
