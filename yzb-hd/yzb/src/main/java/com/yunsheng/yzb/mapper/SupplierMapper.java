@@ -51,9 +51,13 @@ public interface SupplierMapper {
     int updateByPrimaryKey(Supplier record);
 
     /**
-     * 查询所有供应商
+     * 查询供应商列表（支持模糊查询）
      * @param name 供应商名称（模糊查询）
+     * @param contactPerson 联系人（模糊查询）
+     * @param contactPhone 联系电话（模糊查询）
      * @return 供应商列表
      */
-    List<Supplier> selectAll(@Param("name") String name);
+    List<Supplier> selectByCondition(@Param("name") String name, 
+                                   @Param("contactPerson") String contactPerson, 
+                                   @Param("contactPhone") String contactPhone);
 }

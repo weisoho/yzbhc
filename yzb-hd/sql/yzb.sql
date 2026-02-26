@@ -307,6 +307,9 @@ CREATE TABLE `supplier` (
                             `registration_number` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '注册证号',
                             `enterprise_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '企业类型',
                             `status` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT '1' COMMENT '状态',
+                            `credit_code` varchar(50) DEFAULT NULL COMMENT '企业信用代码' ,
+                            `tax_number` varchar(50) DEFAULT NULL COMMENT '企业税号' ,
+                            `supplier_code` varchar(50) DEFAULT NULL COMMENT '院内供应商编码',
                             `create_time` datetime DEFAULT NULL COMMENT '创建时间',
                             `update_time` datetime DEFAULT NULL COMMENT '更新时间',
                             PRIMARY KEY (`id`) USING BTREE

@@ -24,12 +24,17 @@ public class SupplierController {
 
     /**
      * 获取供应商列表
-     * @param name 供应商名称（可选，支持模糊查询）
+     * 支持按供应商名称、联系人、联系电话模糊查询
+     * @param name 供应商名称（可选，模糊查询）
+     * @param contactPerson 联系人（可选，模糊查询）
+     * @param contactPhone 联系电话（可选，模糊查询）
      * @return 供应商列表
      */
     @GetMapping("/list")
-    public AjaxResult list(@RequestParam(required = false) String name) {
-        List<Supplier> list = supplierService.getAllSuppliers(name);
+    public AjaxResult list(@RequestParam(required = false) String name,
+                        @RequestParam(required = false) String contactPerson,
+                        @RequestParam(required = false) String contactPhone) {
+        List<Supplier> list = supplierService.getSuppliersByCondition(name, contactPerson, contactPhone);
         return AjaxResult.success(list);
     }
 
@@ -39,13 +44,22 @@ public class SupplierController {
      * @return 供应商详情对象
      */
     @GetMapping("/{id}")
-    public AjaxResult getInfo(@PathVariable("id") Integer id) {
+    public AjaxResult getInfo(@PathVariable Integer id) {
         return AjaxResult.success(supplierService.getSupplierById(id));
     }
 
     /**
      * 新增供应商
-     * @param supplier 供应商对象
+     * @param supplier 供应商对象，包含以下字段：
+     *               - name: 供应商名称（必填）
+     *               - contactPerson: 联系人（可选）
+     *               - contactPhone: 联系电话（可选）
+     *               - address: 地址（可选）
+     *               - registrationNumber: 注册证号（可选）
+     *               - creditCode: 企业信用代码（可选）
+     *               - taxNumber: 企业税号（可选）
+     *               - supplierCode: 院内供应商编码（可选，系统自动生成）
+     *               - enterpriseType: 企业类型（可选，默认为"经营企业"）
      * @return 成功返回1
      */
     @PostMapping("/add")
@@ -55,7 +69,7 @@ public class SupplierController {
 
     /**
      * 编辑供应商
-     * @param supplier 供应商对象（需包含ID）
+     * @param supplier 供应商对象，需包含ID
      * @return 成功返回1
      */
     @PutMapping("/edit")
@@ -93,7 +107,7 @@ public class SupplierController {
      * @return 资质详情对象
      */
     @GetMapping("/qualification/{id}")
-    public AjaxResult getQualificationInfo(@PathVariable("id") Integer id) {
+    public AjaxResult getQualificationInfo(@PathVariable Integer id) {
         return AjaxResult.success(supplierService.getQualificationById(id));
     }
 

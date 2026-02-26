@@ -8,6 +8,9 @@
     <result column="contact_phone" jdbcType="VARCHAR" property="contactPhone" />
     <result column="address" jdbcType="VARCHAR" property="address" />
     <result column="registration_number" jdbcType="VARCHAR" property="registrationNumber" />
+    <result column="credit_code" jdbcType="VARCHAR" property="creditCode" />
+    <result column="tax_number" jdbcType="VARCHAR" property="taxNumber" />
+    <result column="supplier_code" jdbcType="VARCHAR" property="supplierCode" />
     <result column="enterprise_type" jdbcType="VARCHAR" property="enterpriseType" />
     <result column="status" jdbcType="VARCHAR" property="status" />
     <result column="create_time" jdbcType="TIMESTAMP" property="createTime" />
@@ -15,7 +18,7 @@
   </resultMap>
   
   <sql id="Base_Column_List">
-    id, name, contact_person, contact_phone, address, registration_number, enterprise_type, status, create_time, update_time
+    id, name, contact_person, contact_phone, address, registration_number, credit_code, tax_number, supplier_code, enterprise_type, status, create_time, update_time
   </sql>
   
   <select id="selectByPrimaryKey" parameterType="java.lang.Integer" resultMap="BaseResultMap">
@@ -24,14 +27,21 @@
     where id = #{id,jdbcType=INTEGER}
   </select>
   
-  <select id="selectAll" resultMap="BaseResultMap">
+  <select id="selectByCondition" resultMap="BaseResultMap">
     select <include refid="Base_Column_List" />
     from supplier
     <where>
       <if test="name != null and name != ''">
         and name like concat('%', #{name}, '%')
       </if>
+      <if test="contactPerson != null and contactPerson != ''">
+        and contact_person like concat('%', #{contactPerson}, '%')
+      </if>
+      <if test="contactPhone != null and contactPhone != ''">
+        and contact_phone like concat('%', #{contactPhone}, '%')
+      </if>
     </where>
+    order by create_time desc
   </select>
   
   <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer">
@@ -40,8 +50,8 @@
   </delete>
   
   <insert id="insert" parameterType="com.yunsheng.yzb.model.Supplier">
-    insert into supplier (name, contact_person, contact_phone, address, registration_number, enterprise_type, status, create_time, update_time)
-    values (#{name}, #{contactPerson}, #{contactPhone}, #{address}, #{registrationNumber}, #{enterpriseType}, #{status}, now(), now())
+    insert into supplier (name, contact_person, contact_phone, address, registration_number, credit_code, tax_number, supplier_code, enterprise_type, status, create_time, update_time)
+    values (#{name}, #{contactPerson}, #{contactPhone}, #{address}, #{registrationNumber}, #{creditCode}, #{taxNumber}, #{supplierCode}, #{enterpriseType}, #{status}, now(), now())
   </insert>
   
   <insert id="insertSelective" parameterType="com.yunsheng.yzb.model.Supplier">
@@ -52,6 +62,9 @@
       <if test="contactPhone != null">contact_phone,</if>
       <if test="address != null">address,</if>
       <if test="registrationNumber != null">registration_number,</if>
+      <if test="creditCode != null">credit_code,</if>
+      <if test="taxNumber != null">tax_number,</if>
+      <if test="supplierCode != null">supplier_code,</if>
       <if test="enterpriseType != null">enterprise_type,</if>
       <if test="status != null">status,</if>
       create_time, update_time
@@ -62,6 +75,9 @@
       <if test="contactPhone != null">#{contactPhone},</if>
       <if test="address != null">#{address},</if>
       <if test="registrationNumber != null">#{registrationNumber},</if>
+      <if test="creditCode != null">#{creditCode},</if>
+      <if test="taxNumber != null">#{taxNumber},</if>
+      <if test="supplierCode != null">#{supplierCode},</if>
       <if test="enterpriseType != null">#{enterpriseType},</if>
       <if test="status != null">#{status},</if>
       now(), now()
@@ -76,6 +92,9 @@
       <if test="contactPhone != null">contact_phone = #{contactPhone},</if>
       <if test="address != null">address = #{address},</if>
       <if test="registrationNumber != null">registration_number = #{registrationNumber},</if>
+      <if test="creditCode != null">credit_code = #{creditCode},</if>
+      <if test="taxNumber != null">tax_number = #{taxNumber},</if>
+      <if test="supplierCode != null">supplier_code = #{supplierCode},</if>
       <if test="enterpriseType != null">enterprise_type = #{enterpriseType},</if>
       <if test="status != null">status = #{status},</if>
       update_time = now()

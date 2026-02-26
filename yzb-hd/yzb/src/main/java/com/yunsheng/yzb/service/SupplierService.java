@@ -20,6 +20,15 @@ public interface SupplierService {
     List<Supplier> getAllSuppliers(String name);
 
     /**
+     * 根据条件查询供应商列表
+     * @param name 供应商名称（可选，模糊查询）
+     * @param contactPerson 联系人（可选，模糊查询）
+     * @param contactPhone 联系电话（可选，模糊查询）
+     * @return 供应商列表
+     */
+    List<Supplier> getSuppliersByCondition(String name, String contactPerson, String contactPhone);
+
+    /**
      * 根据ID获取供应商详情
      * @param id 供应商ID
      * @return 供应商详情

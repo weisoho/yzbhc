@@ -7,6 +7,8 @@ import com.yunsheng.yzb.model.SupplierQualification;
 import com.yunsheng.yzb.service.SupplierService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
 import java.util.List;
 
 /**
@@ -15,10 +17,10 @@ import java.util.List;
 @Service
 public class SupplierServiceImpl implements SupplierService {
 
-    @Autowired
+    @Resource
     private SupplierMapper supplierMapper;
 
-    @Autowired
+    @Resource
     private SupplierQualificationMapper qualificationMapper;
 
     /**
@@ -27,7 +29,16 @@ public class SupplierServiceImpl implements SupplierService {
      */
     @Override
     public List<Supplier> getAllSuppliers(String name) {
-        return supplierMapper.selectAll(name);
+        return supplierMapper.selectByCondition(name, null, null);
+    }
+
+    /**
+     * 根据条件查询供应商列表
+     * 支持根据供应商名称、联系人、联系电话模糊查询
+     */
+    @Override
+    public List<Supplier> getSuppliersByCondition(String name, String contactPerson, String contactPhone) {
+        return supplierMapper.selectByCondition(name, contactPerson, contactPhone);
     }
 
     /**
