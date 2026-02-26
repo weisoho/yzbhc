@@ -1,1 +1,55 @@
 .idea/**
+
+HELP.md
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+# 忽略所有node_modules文件夹
+/node_modules/**
+
+# 忽略构建后的dist文件夹
+/dist/**
+
+# 忽略打包配置文件
+/webpack.config.js
+
+# 忽略.env文件
+.env
+
+# 忽略其他不必要文件
+.DS_Store
+Thumbs.db
+
+# 忽略特定目录
+/.idea/
+/.vscode/
