@@ -53,3 +53,4 @@ Thumbs.db
 # 忽略特定目录
 /.idea/
 /.vscode/
+*.iml
