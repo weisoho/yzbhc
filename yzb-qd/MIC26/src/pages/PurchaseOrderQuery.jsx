@@ -153,31 +153,37 @@ const PurchaseOrderQuery = () => {
 
   const itemColumns = [
     { title: '物资编码', dataIndex: 'productCode', key: 'productCode', width: 120 },
-    { title: '商品名称', dataIndex: 'productName', key: 'productName', width: 150 },
-    { title: '规格型号', dataIndex: 'specification', key: 'specification', width: 150 },
+    { title: '物资名称', dataIndex: 'productName', key: 'productName', width: 150 },
+    { title: '物资类型', dataIndex: 'productType', key: 'productType', width: 100, render: (value) => value || '-' },
+    { title: '规格', dataIndex: 'specification', key: 'specification', width: 120 },
+    { title: '型号', dataIndex: 'model', key: 'model', width: 100, render: (value) => value || '-' },
+    { title: '最小包装', dataIndex: 'minPackage', key: 'minPackage', width: 100, render: (value) => value || '-' },
+    { title: '起订量', dataIndex: 'minOrder', key: 'minOrder', width: 100, render: (value) => value || '-' },
     { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
-    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80 },
-    { title: '单价', dataIndex: 'price', key: 'price', width: 100, render: (value) => `¥${value.toFixed(2)}` },
-    { title: '金额', dataIndex: 'amount', key: 'amount', width: 100, render: (value) => `¥${value.toFixed(2)}` },
+    { title: '采购价格', dataIndex: 'price', key: 'price', width: 100, render: (value) => `¥${value.toFixed(2)}` },
+    { title: '采购数量', dataIndex: 'quantity', key: 'quantity', width: 100 },
+    { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', width: 150, render: (value) => value || '-' },
+    { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 120, render: (value) => value || '-' },
+    { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 150, render: (value) => value || '-' },
+    { title: '创建日期', dataIndex: 'createDate', key: 'createDate', width: 120, render: (value) => value || '-' },
+    { title: '审核日期', dataIndex: 'approveDate', key: 'approveDate', width: 120, render: (value) => value || '-' },
   ];
 
   const columns = [
-    { title: '订单编号', dataIndex: 'orderNo', key: 'orderNo', fixed: 'left', width: 180 },
+    { title: '采购单号', dataIndex: 'orderNo', key: 'orderNo', fixed: 'left', width: 180 },
     { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (status) => {
       const colors = { '待审核': 'orange', '已审核': 'blue', '已驳回': 'red', '已完成': 'green' };
       return <Tag color={colors[status]}>{status}</Tag>;
     }},
-    { title: '申请部门', dataIndex: 'department', key: 'department', width: 100 },
+    { title: '采购分院', dataIndex: 'department', key: 'department', width: 100 },
     { title: '申请人', dataIndex: 'applicant', key: 'applicant', width: 80 },
-    { title: '商品名称', dataIndex: 'product', key: 'product', width: 120 },
-    { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 80, render: (qty, record) => `${qty} ${record.unit}` },
-    { title: '单价(元)', dataIndex: 'price', key: 'price', width: 100, render: (price) => `¥${price?.toFixed(2)}` },
-    { title: '总价(元)', dataIndex: 'totalAmount', key: 'totalAmount', width: 120, render: (amount) => `¥${amount?.toFixed(2)}` },
-    { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 100 },
-    { title: '收货仓库', dataIndex: 'warehouse', key: 'warehouse', width: 100 },
-    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 160 },
-    { title: '审核时间', dataIndex: 'approveTime', key: 'approveTime', width: 160, render: (time) => time || '-' },
-    { title: '完成时间', dataIndex: 'completeTime', key: 'completeTime', width: 160, render: (time) => time || '-' },
+    { title: '物资名称', dataIndex: 'product', key: 'product', width: 120 },
+    { title: '采购数量', dataIndex: 'quantity', key: 'quantity', width: 80, render: (qty, record) => `${qty} ${record.unit}` },
+    { title: '采购价格', dataIndex: 'price', key: 'price', width: 100, render: (price) => `¥${price?.toFixed(2)}` },
+    { title: '合计金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 120, render: (amount) => `¥${amount?.toFixed(2)}` },
+    { title: '创建日期', dataIndex: 'createTime', key: 'createTime', width: 160 },
+    { title: '审核日期', dataIndex: 'approveTime', key: 'approveTime', width: 160, render: (time) => time || '-' },
+    { title: '审核人', dataIndex: 'approveTime', key: 'approver', width: 80, render: (time) => time ? '管理员' : '-' },
     { 
       title: '操作', 
       key: 'action', 
@@ -195,37 +201,62 @@ const PurchaseOrderQuery = () => {
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>采购订单查询</h1>
       
-      <Card style={{ marginBottom: 16 }}>
-        <Space wrap>
-          <Input placeholder="订单编号" style={{ width: 200 }} />
-          <Input placeholder="商品名称" style={{ width: 200 }} />
-          <Select placeholder="申请部门" style={{ width: 150 }} allowClear>
-            {departments.map((dept, index) => (
-              <Option key={index} value={dept}>{dept}</Option>
-            ))}
-          </Select>
-          <Select placeholder="供应商" style={{ width: 150 }} allowClear>
-            {suppliers.map((sup, index) => (
-              <Option key={index} value={sup}>{sup}</Option>
-            ))}
-          </Select>
-          <Select placeholder="状态" style={{ width: 120 }} allowClear>
-            <Option value="pending">待审核</Option>
-            <Option value="approved">已审核</Option>
-            <Option value="completed">已完成</Option>
-            <Option value="rejected">已驳回</Option>
-          </Select>
-          <DatePicker placeholder="开始日期" style={{ width: 150 }} />
-          <DatePicker placeholder="结束日期" style={{ width: 150 }} />
-          <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-          <Button icon={<ExportOutlined />}>导出</Button>
-        </Space>
+      <Card style={{ marginBottom: 16, padding: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ whiteSpace: 'nowrap' }}>采购单号：</span>
+              <Input 
+                placeholder="请输入采购单号" 
+                allowClear
+                style={{ width: 180 }}
+                size="middle"
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ whiteSpace: 'nowrap' }}>物资名称：</span>
+              <Input 
+                placeholder="请输入物资名称" 
+                allowClear
+                style={{ width: 180 }}
+                size="middle"
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ whiteSpace: 'nowrap' }}>状态：</span>
+              <Select 
+                placeholder="请选择状态" 
+                allowClear
+                style={{ width: 120 }}
+                size="middle"
+              >
+                <Option value="已审核">已审核</Option>
+                <Option value="已驳回">已驳回</Option>
+              </Select>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <Button 
+              type="primary" 
+              icon={<SearchOutlined />}
+              style={{ minWidth: 90 }}
+            >
+              查询
+            </Button>
+            <Button 
+              icon={<ExportOutlined />}
+              style={{ minWidth: 90 }}
+            >
+              导出
+            </Button>
+          </div>
+        </div>
       </Card>
 
       <Card>
         <Table 
           columns={columns} 
-          dataSource={orders} 
+          dataSource={orders.filter(order => order.status === '已审核' || order.status === '已驳回')} 
           pagination={{ 
             pageSize: 10,
             showSizeChanger: true,
@@ -243,7 +274,7 @@ const PurchaseOrderQuery = () => {
       </Card>
 
       <Modal
-        title="采购申领单详情"
+        title="采购订单详情"
         open={detailVisible}
         onCancel={() => setDetailVisible(false)}
         width={1000}
@@ -266,12 +297,11 @@ const PurchaseOrderQuery = () => {
                   {currentRecord.status}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="采购部门">{currentRecord.department}</Descriptions.Item>
+              <Descriptions.Item label="采购分院">{currentRecord.department}</Descriptions.Item>
               <Descriptions.Item label="申请人">{currentRecord.applicant}</Descriptions.Item>
-              <Descriptions.Item label="申请时间">{currentRecord.createTime}</Descriptions.Item>
+              <Descriptions.Item label="创建日期">{currentRecord.createTime}</Descriptions.Item>
               <Descriptions.Item label="供应商">{currentRecord.supplier}</Descriptions.Item>
-              <Descriptions.Item label="仓库">{currentRecord.warehouse}</Descriptions.Item>
-              <Descriptions.Item label="商品种类">{currentRecord.productCount} 种</Descriptions.Item>
+              <Descriptions.Item label="物资数量">{currentRecord.productCount} 种</Descriptions.Item>
               <Descriptions.Item label="总金额">¥{currentRecord.totalAmount.toFixed(2)}</Descriptions.Item>
               <Descriptions.Item label="申请原因">{currentRecord.reason}</Descriptions.Item>
               <Descriptions.Item label="审核人">{currentRecord.approveTime ? '管理员' : '-'}</Descriptions.Item>
@@ -280,13 +310,14 @@ const PurchaseOrderQuery = () => {
             </Descriptions>
 
             <div style={{ marginTop: 24 }}>
-              <h4>商品明细</h4>
+              <h4>采购明细</h4>
               <Table
                 columns={itemColumns}
                 dataSource={currentRecord.items}
                 pagination={false}
                 size="small"
                 rowKey="key"
+                scroll={{ x: 1600 }}
               />
             </div>
           </div>

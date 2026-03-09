@@ -34,28 +34,28 @@ const InventoryCheckGenerate = () => {
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>盘点表生成</h1>
       
-      <Card>
-        <Form layout="inline" onFinish={() => {}} style={{ marginBottom: 16 }}>
-          <Form.Item name="warehouse" label="盘点仓库" rules={[{ required: true, message: '请选择盘点仓库' }]}>
-            <Select placeholder="请选择盘点仓库" style={{ width: 150 }}>
+      <Card style={{ padding: '16px' }}>
+        <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>盘点仓库：</span>
+            <Select placeholder="请选择盘点仓库" style={{ width: '200px' }}>
               <Option value="warehouse1">仓库1</Option>
               <Option value="warehouse2">仓库2</Option>
               <Option value="warehouse3">仓库3</Option>
             </Select>
-          </Form.Item>
-          
-          <Form.Item name="checkDate" label="盘点日期" rules={[{ required: true, message: '请选择盘点日期' }]}>
-            <DatePicker style={{ width: 150 }} />
-          </Form.Item>
-          
-          <Form.Item name="checker" label="盘点人" rules={[{ required: true, message: '请输入盘点人' }]}>
-            <Input placeholder="请输入盘点人" style={{ width: 150 }} />
-          </Form.Item>
-          
-          <Form.Item>
-            <Button type="primary" htmlType="submit">生成盘点表</Button>
-          </Form.Item>
-        </Form>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>盘点日期：</span>
+            <DatePicker style={{ width: '200px' }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>盘点人：</span>
+            <Input placeholder="请输入盘点人" style={{ width: '200px' }} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <Button type="primary">生成盘点表</Button>
+        </div>
         
         <div style={{ overflowX: 'auto' }}>
           <Table 

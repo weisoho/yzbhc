@@ -48,34 +48,35 @@ const InventoryTransfer = () => {
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>物资调拨</h1>
       
-      <Card style={{ marginBottom: 16 }}>
-        <Row gutter={[16, 0]} align="middle">
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Input placeholder="调拨单号" style={{ width: '100%' }} />
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Select placeholder="调出仓库" style={{ width: '100%' }}>
+      <Card style={{ marginBottom: 16, padding: '16px' }}>
+        <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>调拨单号：</span>
+            <Input placeholder="请输入调拨单号" style={{ width: '200px' }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>调出仓库：</span>
+            <Select placeholder="请选择调出仓库" style={{ width: '200px' }}>
               <Select.Option value="all">全部仓库</Select.Option>
               <Select.Option value="warehouse1">仓库1</Select.Option>
               <Select.Option value="warehouse2">仓库2</Select.Option>
               <Select.Option value="warehouse3">仓库3</Select.Option>
             </Select>
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Select placeholder="调入仓库" style={{ width: '100%' }}>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>调入仓库：</span>
+            <Select placeholder="请选择调入仓库" style={{ width: '200px' }}>
               <Select.Option value="all">全部仓库</Select.Option>
               <Select.Option value="warehouse1">仓库1</Select.Option>
               <Select.Option value="warehouse2">仓库2</Select.Option>
               <Select.Option value="warehouse3">仓库3</Select.Option>
             </Select>
-          </Col>
-          <Col xs={24} sm={12} md={12} lg={6}>
-            <Space>
-              <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-              <Button type="primary">新建调拨</Button>
-            </Space>
-          </Col>
-        </Row>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <Button type="primary" icon={<SearchOutlined />}>查询</Button>
+          <Button type="primary">新建调拨</Button>
+        </div>
       </Card>
       
       <div style={{ overflowX: 'auto' }}>

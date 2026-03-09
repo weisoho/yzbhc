@@ -49,6 +49,8 @@ const PurchaseReceipt = () => {
   const [receivedQuantities, setReceivedQuantities] = useState({});
   // 记录哪些商品的到货数量被修改过
   const [modifiedItems, setModifiedItems] = useState({});
+  // 存储批号、生产日期、失效日期的修改
+  const [batchInfo, setBatchInfo] = useState({});
   // 备注
   const [remarks, setRemarks] = useState('');
 
@@ -71,9 +73,9 @@ const PurchaseReceipt = () => {
         itemCount: 3,
         totalAmount: 15000,
         items: [
-          { key: '1-1', productCode: 'P001', productName: '医用口罩', specification: '三层防护', model: 'M-001', unit: '盒', price: 50, quantity: 100, amount: 5000, status: '待验收' },
-          { key: '1-2', productCode: 'P002', productName: '医用手套', specification: '乳胶', model: 'L-001', unit: '盒', price: 30, quantity: 200, amount: 6000, status: '待验收' },
-          { key: '1-3', productCode: 'P003', productName: '消毒液', specification: '500ml', model: 'D-001', unit: '瓶', price: 40, quantity: 100, amount: 4000, status: '待验收' },
+          { key: '1-1', productCode: 'P001', productName: '医用口罩', specification: '三层防护', model: 'M-001', batchNumber: '20260101', productionDate: '2026-01-01', expiryDate: '2027-01-01', unit: '盒', price: 50, quantity: 100, amount: 5000, status: '待验收' },
+          { key: '1-2', productCode: 'P002', productName: '医用手套', specification: '乳胶', model: 'L-001', batchNumber: '20260102', productionDate: '2026-01-02', expiryDate: '2027-01-02', unit: '盒', price: 30, quantity: 200, amount: 6000, status: '待验收' },
+          { key: '1-3', productCode: 'P003', productName: '消毒液', specification: '500ml', model: 'D-001', batchNumber: '20260103', productionDate: '2026-01-03', expiryDate: '2027-01-03', unit: '瓶', price: 40, quantity: 100, amount: 4000, status: '待验收' },
         ]
       },
       {
@@ -92,8 +94,8 @@ const PurchaseReceipt = () => {
         itemCount: 2,
         totalAmount: 8000,
         items: [
-          { key: '2-1', productCode: 'P004', productName: '体温计', specification: '电子', model: 'T-001', unit: '支', price: 100, quantity: 50, amount: 5000, status: '待验收' },
-          { key: '2-2', productCode: 'P005', productName: '血压计', specification: '上臂式', model: 'B-001', unit: '台', price: 150, quantity: 20, amount: 3000, status: '待验收' },
+          { key: '2-1', productCode: 'P004', productName: '体温计', specification: '电子', model: 'T-001', batchNumber: '20260104', productionDate: '2026-01-04', expiryDate: '2027-01-04', unit: '支', price: 100, quantity: 50, amount: 5000, status: '待验收' },
+          { key: '2-2', productCode: 'P005', productName: '血压计', specification: '上臂式', model: 'B-001', batchNumber: '20260105', productionDate: '2026-01-05', expiryDate: '2027-01-05', unit: '台', price: 150, quantity: 20, amount: 3000, status: '待验收' },
         ]
       },
       {
@@ -112,7 +114,7 @@ const PurchaseReceipt = () => {
         itemCount: 1,
         totalAmount: 6000,
         items: [
-          { key: '3-1', productCode: 'P006', productName: '酒精', specification: '75%', model: 'A-001', unit: '瓶', price: 60, quantity: 100, amount: 6000, status: '待验收' },
+          { key: '3-1', productCode: 'P006', productName: '酒精', specification: '75%', model: 'A-001', batchNumber: '20260106', productionDate: '2026-01-06', expiryDate: '2027-01-06', unit: '瓶', price: 60, quantity: 100, amount: 6000, status: '待验收' },
         ]
       },
       {
@@ -131,8 +133,8 @@ const PurchaseReceipt = () => {
         itemCount: 2,
         totalAmount: 12000,
         items: [
-          { key: '4-1', productCode: 'P007', productName: '纱布', specification: '无菌', model: 'G-001', unit: '包', price: 20, quantity: 300, amount: 6000, status: '待验收' },
-          { key: '4-2', productCode: 'P008', productName: '棉签', specification: '无菌', model: 'Q-001', unit: '包', price: 15, quantity: 400, amount: 6000, status: '待验收' },
+          { key: '4-1', productCode: 'P007', productName: '纱布', specification: '无菌', model: 'G-001', batchNumber: '20260107', productionDate: '2026-01-07', expiryDate: '2027-01-07', unit: '包', price: 20, quantity: 300, amount: 6000, status: '待验收' },
+          { key: '4-2', productCode: 'P008', productName: '棉签', specification: '无菌', model: 'Q-001', batchNumber: '20260108', productionDate: '2026-01-08', expiryDate: '2027-01-08', unit: '包', price: 15, quantity: 400, amount: 6000, status: '待验收' },
         ]
       },
       {
@@ -151,7 +153,7 @@ const PurchaseReceipt = () => {
         itemCount: 1,
         totalAmount: 25000,
         items: [
-          { key: '5-1', productCode: 'P009', productName: '监护仪', specification: '多参数', model: 'J-001', unit: '台', price: 25000, quantity: 1, amount: 25000, status: '待验收' },
+          { key: '5-1', productCode: 'P009', productName: '监护仪', specification: '多参数', model: 'J-001', batchNumber: '20260109', productionDate: '2026-01-09', expiryDate: '2027-01-09', unit: '台', price: 25000, quantity: 1, amount: 25000, status: '待验收' },
         ]
       },
     ];
@@ -176,29 +178,37 @@ const PurchaseReceipt = () => {
   const handleSearch = (values) => {
     let result = [...data];
     
-    // 输入耗材名称或编码搜索
-    if (values.searchText) {
-      const searchText = values.searchText.toLowerCase();
+    // 采购单号搜索
+    if (values.purchaseOrderNo) {
+      const purchaseOrderNo = values.purchaseOrderNo.toLowerCase();
       result = result.filter(item => 
-        item.orderNumber.toLowerCase().includes(searchText) ||
-        item.supplierName.toLowerCase().includes(searchText) ||
+        item.orderNumber.toLowerCase().includes(purchaseOrderNo)
+      );
+    }
+    
+    // 供应商搜索
+    if (values.supplierName) {
+      result = result.filter(item => item.supplierName.includes(values.supplierName));
+    }
+    
+    // 物资编码搜索
+    if (values.productCode) {
+      const productCode = values.productCode.toLowerCase();
+      result = result.filter(item => 
         item.items.some(subItem => 
-          subItem.productName.toLowerCase().includes(searchText) ||
-          subItem.productCode.toLowerCase().includes(searchText)
+          subItem.productCode.toLowerCase().includes(productCode)
         )
       );
     }
     
-    if (values.supplierName) {
-      result = result.filter(item => item.supplierName.includes(values.supplierName));
-    }
-    if (values.orderDateRange && values.orderDateRange.length === 2) {
-      const startDate = values.orderDateRange[0].format('YYYY-MM-DD');
-      const endDate = values.orderDateRange[1].format('YYYY-MM-DD');
-      result = result.filter(item => item.orderDate >= startDate && item.orderDate <= endDate);
-    }
-    if (values.status) {
-      result = result.filter(item => item.status === values.status);
+    // 物资名称搜索
+    if (values.productName) {
+      const productName = values.productName.toLowerCase();
+      result = result.filter(item => 
+        item.items.some(subItem => 
+          subItem.productName.toLowerCase().includes(productName)
+        )
+      );
     }
     
     setFilteredData(result);
@@ -271,11 +281,13 @@ const PurchaseReceipt = () => {
             order.items.forEach(item => {
               if (selectedItemKeys.includes(item.key)) {
                 const receivedQty = receivedQuantities[item.key] || item.quantity;
+                const itemBatchInfo = batchInfo[item.key] || {};
                 
                 if (receivedQty >= item.quantity) {
                   // 全部验收
                   updatedItems.push({
                     ...item,
+                    ...itemBatchInfo,
                     status: '已验收'
                   });
                 } else {
@@ -283,6 +295,7 @@ const PurchaseReceipt = () => {
                   // 添加已验收的部分
                   updatedItems.push({
                     ...item,
+                    ...itemBatchInfo,
                     quantity: receivedQty,
                     amount: item.price * receivedQty,
                     status: '已验收',
@@ -413,49 +426,31 @@ const PurchaseReceipt = () => {
       width: 150,
       render: (text) => <Tag color="blue">{text}</Tag>
     },
+
     {
-      title: '供应商名称',
-      dataIndex: 'supplierName',
-      key: 'supplierName',
-      width: 180
-    },
-    {
-      title: '采购部门',
+      title: '采购分院',
       dataIndex: 'department',
       key: 'department',
       width: 120
     },
     {
-      title: '商品数量',
+      title: '物资数量',
       dataIndex: 'itemCount',
       key: 'itemCount',
       width: 100
     },
     {
-      title: '总金额',
+      title: '合计金额',
       dataIndex: 'totalAmount',
       key: 'totalAmount',
       width: 120,
       render: (value) => <strong>¥{value?.toFixed(2)}</strong>
     },
     {
-      title: '订单日期',
+      title: '创建日期',
       dataIndex: 'orderDate',
       key: 'orderDate',
       width: 120
-    },
-    {
-      title: '预计到货',
-      dataIndex: 'expectedDeliveryDate',
-      key: 'expectedDeliveryDate',
-      width: 120
-    },
-    {
-      title: '实际到货',
-      dataIndex: 'actualDeliveryDate',
-      key: 'actualDeliveryDate',
-      width: 120,
-      render: (value) => value || '-'
     },
     {
       title: '状态',
@@ -479,12 +474,19 @@ const PurchaseReceipt = () => {
               // 初始化到货数量为采购数量
               const initialReceivedQuantities = {};
               const initialModifiedItems = {};
+              const initialBatchInfo = {};
               record.items.forEach(item => {
                 initialReceivedQuantities[item.key] = item.quantity;
                 initialModifiedItems[item.key] = false;
+                initialBatchInfo[item.key] = {
+                  batchNumber: item.batchNumber || '',
+                  productionDate: item.productionDate || '',
+                  expiryDate: item.expiryDate || ''
+                };
               });
               setReceivedQuantities(initialReceivedQuantities);
               setModifiedItems(initialModifiedItems);
+              setBatchInfo(initialBatchInfo);
               setRemarks(''); // 重置备注
               setIsModalVisible(true);
             }}
@@ -587,77 +589,45 @@ const PurchaseReceipt = () => {
         {/* 搜索表单 */}
         <Form
           form={form}
-          layout="vertical"
           onFinish={handleSearch}
           style={{ marginBottom: '24px' }}
         >
-          <Row gutter={16}>
-            <Col span={6}>
-              <Form.Item label="输入耗材名称或编码" name="searchText">
-                <Input placeholder="请输入采购单号、供应商或商品信息" allowClear />
-              </Form.Item>
-            </Col>
-            <Col span={5}>
-              <Form.Item label="供应商" name="supplierName">
-                <Select placeholder="请选择供应商" allowClear>
-                  <Option value="医疗用品供应商A">医疗用品供应商A</Option>
-                  <Option value="医疗器械供应商B">医疗器械供应商B</Option>
-                  <Option value="消毒用品供应商C">消毒用品供应商C</Option>
-                  <Option value="医疗耗材供应商D">医疗耗材供应商D</Option>
-                  <Option value="医疗设备供应商E">医疗设备供应商E</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={5}>
-              <Form.Item label="订单日期" name="orderDateRange">
-                <RangePicker style={{ width: '100%' }} locale={zhCN} />
-              </Form.Item>
-            </Col>
-            <Col span={4}>
-              <Form.Item label="状态" name="status">
-                <Select placeholder="请选择状态" allowClear>
-                  <Option value="待验收">待验收</Option>
-                  <Option value="已验收">已验收</Option>
-                  <Option value="已拒收">已拒收</Option>
-                  <Option value="部分验收">部分验收</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={4}>
-              <Form.Item label="单据筛选" name="viewMode">
-                <Select 
-                  placeholder="单据筛选" 
-                  allowClear
-                  onChange={(value) => {
-                    if (value) {
-                      setViewMode(value);
-                      setHasSelectedView(true);
-                    } else {
-                      setHasSelectedView(false);
-                    }
-                  }}
-                >
-                  <Option value="summary">采购单汇总</Option>
-                  <Option value="detail">采购明细</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row>
-            <Col span={24} style={{ textAlign: 'right' }}>
-              <Space>
-                <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
+          <div style={{ padding: '16px', backgroundColor: '#fafafa', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ whiteSpace: 'nowrap' }}>采购单号：</span>
+                  <Form.Item name="purchaseOrderNo" noStyle>
+                    <Input placeholder="请输入采购单号" allowClear style={{ width: 180 }} size="middle" />
+                  </Form.Item>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ whiteSpace: 'nowrap' }}>物资编码：</span>
+                  <Form.Item name="productCode" noStyle>
+                    <Input placeholder="请输入物资编码" allowClear style={{ width: 180 }} size="middle" />
+                  </Form.Item>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ whiteSpace: 'nowrap' }}>物资名称：</span>
+                  <Form.Item name="productName" noStyle>
+                    <Input placeholder="请输入物资名称" allowClear style={{ width: 180 }} size="middle" />
+                  </Form.Item>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <Button type="primary" htmlType="submit" icon={<SearchOutlined />} style={{ minWidth: 90 }}>
                   查询
                 </Button>
-                <Button onClick={handleReset} icon={<ReloadOutlined />}>
+                <Button onClick={handleReset} icon={<ReloadOutlined />} style={{ minWidth: 90 }}>
                   重置
                 </Button>
-                <Button onClick={handleExport} icon={<DownloadOutlined />}>
+                <Button onClick={handleExport} icon={<DownloadOutlined />} style={{ minWidth: 90 }}>
                   导出
                 </Button>
-              </Space>
-            </Col>
-          </Row>
+              </div>
+            </div>
+          </div>
         </Form>
 
         {/* 数据表格 */}
@@ -725,7 +695,7 @@ const PurchaseReceipt = () => {
             onClick={() => handleAcceptSelectedItems()}
             disabled={selectedItemKeys.length === 0}
           >
-            确认验收
+            确认收货
           </Button>,
         ]}
       >
@@ -747,25 +717,16 @@ const PurchaseReceipt = () => {
             
             <Row gutter={16} style={{ marginBottom: 16 }}>
               <Col span={8}>
-                <div><strong>订单日期：</strong>{selectedOrder.orderDate}</div>
-              </Col>
-              <Col span={8}>
-                <div><strong>预计到货：</strong>{selectedOrder.expectedDeliveryDate}</div>
-              </Col>
-              <Col span={8}>
-                <div><strong>实际到货：</strong>{selectedOrder.actualDeliveryDate || '-'}</div>
+                <div><strong>创建日期：</strong>{selectedOrder.orderDate}</div>
               </Col>
             </Row>
             
             <Row gutter={16} style={{ marginBottom: 16 }}>
               <Col span={8}>
-                <div><strong>采购部门：</strong>{selectedOrder.department}</div>
+                <div><strong>采购分院：</strong>{selectedOrder.department}</div>
               </Col>
               <Col span={8}>
-                <div><strong>采购员：</strong>{selectedOrder.buyer}</div>
-              </Col>
-              <Col span={8}>
-                <div><strong>联系人：</strong>{selectedOrder.contactPerson} ({selectedOrder.contactPhone})</div>
+                <div><strong>申请人：</strong>{selectedOrder.buyer}</div>
               </Col>
             </Row>
             
@@ -774,7 +735,7 @@ const PurchaseReceipt = () => {
                 <div><strong>总金额：</strong>¥{selectedOrder.totalAmount.toFixed(2)}</div>
               </Col>
               <Col span={8}>
-                <div><strong>商品数量：</strong>{selectedOrder.itemCount} 项</div>
+                <div><strong>物资数量：</strong>{selectedOrder.itemCount} 项</div>
               </Col>
             </Row>
             
@@ -786,7 +747,7 @@ const PurchaseReceipt = () => {
                 borderBottom: '1px solid #f0f0f0',
                 paddingBottom: 8
               }}>
-                商品明细
+                采购明细
               </div>
               <Table
                 columns={[
@@ -823,12 +784,66 @@ const PurchaseReceipt = () => {
                     )
                   },
                   { title: '物资编码', dataIndex: 'productCode', key: 'productCode', width: 120 },
-                  { title: '商品名称', dataIndex: 'productName', key: 'productName', width: 150 },
+                  { title: '物资名称', dataIndex: 'productName', key: 'productName', width: 150 },
                   { title: '规格', dataIndex: 'specification', key: 'specification', width: 100 },
                   { title: '型号', dataIndex: 'model', key: 'model', width: 100 },
+                  { 
+                    title: '批号', 
+                    key: 'batchNumber', 
+                    width: 120, 
+                    render: (_, record) => (
+                      <Input 
+                        value={batchInfo[record.key]?.batchNumber || ''} 
+                        onChange={(e) => {
+                          const newBatchInfo = { ...batchInfo };
+                          if (!newBatchInfo[record.key]) {
+                            newBatchInfo[record.key] = { ...record };
+                          }
+                          newBatchInfo[record.key].batchNumber = e.target.value;
+                          setBatchInfo(newBatchInfo);
+                        }}
+                      />
+                    )
+                  },
+                  { 
+                    title: '生产日期', 
+                    key: 'productionDate', 
+                    width: 120, 
+                    render: (_, record) => (
+                      <Input 
+                        value={batchInfo[record.key]?.productionDate || ''} 
+                        onChange={(e) => {
+                          const newBatchInfo = { ...batchInfo };
+                          if (!newBatchInfo[record.key]) {
+                            newBatchInfo[record.key] = { ...record };
+                          }
+                          newBatchInfo[record.key].productionDate = e.target.value;
+                          setBatchInfo(newBatchInfo);
+                        }}
+                      />
+                    )
+                  },
+                  { 
+                    title: '失效日期', 
+                    key: 'expiryDate', 
+                    width: 120, 
+                    render: (_, record) => (
+                      <Input 
+                        value={batchInfo[record.key]?.expiryDate || ''} 
+                        onChange={(e) => {
+                          const newBatchInfo = { ...batchInfo };
+                          if (!newBatchInfo[record.key]) {
+                            newBatchInfo[record.key] = { ...record };
+                          }
+                          newBatchInfo[record.key].expiryDate = e.target.value;
+                          setBatchInfo(newBatchInfo);
+                        }}
+                      />
+                    )
+                  },
                   { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
-                  { title: '单价', dataIndex: 'price', key: 'price', width: 100, render: (value) => `¥${value?.toFixed(2)}` },
-                  { title: '采购数量', dataIndex: 'quantity', key: 'quantity', width: 80 },
+                  { title: '采购价格', dataIndex: 'price', key: 'price', width: 100, render: (value) => `¥${value?.toFixed(2)}` },
+                  { title: '采购数量', dataIndex: 'quantity', key: 'quantity', width: 100 },
                   { 
                     title: '到货数量', 
                     key: 'receivedQuantity', 
@@ -852,7 +867,7 @@ const PurchaseReceipt = () => {
                     )
                   },
                   { 
-                    title: '金额', 
+                    title: '合计金额', 
                     key: 'amount', 
                     width: 120, 
                     render: (_, record) => {

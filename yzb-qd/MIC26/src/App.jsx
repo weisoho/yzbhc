@@ -27,8 +27,7 @@ import StockInDetail from './pages/StockInDetail';
 import InventoryDetail from './pages/InventoryDetail';
 import InventoryAdjust from './pages/InventoryAdjust';
 import InventoryTransfer from './pages/InventoryTransfer';
-import InventoryShelf from './pages/InventoryShelf';
-import InventoryLocation from './pages/InventoryLocation';
+
 import InventoryExpiry from './pages/InventoryExpiry';
 import StockOutConsumption from './pages/StockOutConsumption';
 import StockOutDetail from './pages/StockOutDetail';
@@ -98,7 +97,9 @@ import {
   ControlOutlined,
   ImportOutlined,
   HomeOutlined,
-  ExportOutlined
+  ExportOutlined,
+  MenuUnfoldOutlined,
+  MenuFoldOutlined
 } from '@ant-design/icons';
 
 const { Header, Content, Sider } = Layout;
@@ -301,8 +302,7 @@ const AppContent = () => {
       'stock-in-detail': '入库单查询',
       'inventory-detail': '物资库存',
       'inventory-transfer': '物资调拨',
-      'inventory-shelf': '物资库位维护（已弃置）',
-      'inventory-location': '物资库位调整',
+
       'inventory-expiry': '效期管理',
       'stock-out-consumption': '消耗出库',
       'stock-out-detail': '消耗明细查询',
@@ -315,7 +315,7 @@ const AppContent = () => {
       'reports-consumption-summary': '仓库消耗汇总',
       'reports-loss-summary': '损耗汇总',
       'supplier-maintenance': '供应商维护',
-      'supplier-inspection-report': '检验报告',
+      'supplier-inspection-report': '注册证',
       'supplier-business-license': '经营许可证',
       'supplier-business-certificate': '营业执照',
       'product-catalog': '物资字典维护',
@@ -447,9 +447,9 @@ const AppContent = () => {
     <ConfigProvider theme={themeConfig} locale={zhCN}>
       <TabProvider>
         <NoteProvider>
-          <Layout style={{ minHeight: '100vh', transition: 'all 0.3s ease', backgroundColor: '#f8f9fa' }}>
-            {/* 头部区域 */}
-            <Header
+          <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+            {/* 头部区域 - 固定顶部 */}
+            <div
               className="header"
               style={{
                 display: 'flex',
@@ -460,8 +460,10 @@ const AppContent = () => {
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
                 zIndex: 100,
                 height: 64,
-                position: 'sticky',
+                position: 'fixed',
                 top: 0,
+                left: 0,
+                right: 0,
               }}
             >
               {/* 系统标题 */}
@@ -613,8 +615,8 @@ const AppContent = () => {
                   <LogoutOutlined style={{ marginRight: 'clamp(0.125rem, 0.25vw, 0.25rem)' }} />
                   退出登录
                 </button>
-              </div>
-            </Header>
+            </div>
+          </div>
             
             {/* 科室切换模态框 */}
             <Modal
@@ -652,25 +654,30 @@ const AppContent = () => {
             </Modal>
             
             {/* 主体布局 */}
-            <Layout style={{ display: 'flex', flex: 1, marginTop: 0 }}>
-              {/* 侧边栏 */}
-              <Sider
-                collapsible
-                collapsed={collapsed}
-                onCollapse={setCollapsed}
-                breakpoint="lg"
-                collapsedWidth="80"
-                zeroWidthTriggerStyle={{ top: 20, width: 36, height: 36, borderRadius: 8, boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}
+            <div style={{ display: 'flex', flex: 1, marginTop: 64 }}>
+              {/* 侧边栏 - 固定左侧 */}
+              <div
                 style={{
+                  width: collapsed ? 80 : 240,
                   boxShadow: '2px 0 8px rgba(0, 0, 0, 0.08)',
                   transition: 'all 0.3s ease',
                   background: '#ffffff',
                   borderRight: '1px solid #e8e8e8',
+                  position: 'fixed',
+                  left: 0,
+                  top: 64,
+                  bottom: 0,
+                  zIndex: 99,
+                  overflowY: 'auto',
+                  display: 'flex',
+                  flexDirection: 'column',
                 }}
               >
-                {/* 菜单配置 */}
-                {/* 原始菜单配置 */}
-                {(() => {
+                {/* 菜单内容 */}
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                  {/* 菜单配置 */}
+                  {/* 原始菜单配置 */}
+                  {(() => {
                   const originalMenuItems = [
                     { 
                       key: '/', 
@@ -688,7 +695,7 @@ const AppContent = () => {
                           key: 'supplier-qualification',
                           label: '供应商资质',
                           children: [
-                            { key: '/supplier-inspection-report', label: <Link to="/supplier-inspection-report">检验报告</Link> },
+                            { key: '/supplier-inspection-report', label: <Link to="/supplier-inspection-report">注册证</Link> },
                             { key: '/supplier-business-license', label: <Link to="/supplier-business-license">经营许可证</Link> },
                             { key: '/supplier-business-certificate', label: <Link to="/supplier-business-certificate">营业执照</Link> },
                           ]
@@ -735,8 +742,7 @@ const AppContent = () => {
                       children: [
                         { key: '/inventory-detail', label: <Link to="/inventory-detail">物资库存</Link> },
                         { key: '/inventory-transfer', label: <Link to="/inventory-transfer">物资调拨</Link> },
-                        { key: '/inventory-shelf', label: <Link to="/inventory-shelf">物资库位维护（已弃置）</Link> },
-                        { key: '/inventory-location', label: <Link to="/inventory-location">物资库位调整（已弃置）</Link> },
+
                         { key: '/inventory-expiry', label: <Link to="/inventory-expiry">近效期查询</Link> },
                       ]
                     },
@@ -771,25 +777,6 @@ const AppContent = () => {
                         { key: '/reports-consumption-detail', label: <Link to="/reports-consumption-detail">仓库消耗明细</Link> },
                         { key: '/reports-consumption-summary', label: <Link to="/reports-consumption-summary">仓库消耗汇总</Link> },
                         { key: '/reports-loss-summary', label: <Link to="/reports-loss-summary">损耗汇总</Link> },
-                      ]
-                    },
-                    {
-                      key: 'all-campus-management-group',
-                      icon: <TeamOutlined />,
-                      label: '院区管理',
-                      children: [
-                        { key: '/department-management', label: <Link to="/department-management">部门管理</Link> },
-                        { key: '/campus-management', label: <Link to="/campus-management">分院管理</Link> },
-                      ]
-                    },
-                    {
-                      key: 'operation-group',
-                      icon: <ControlOutlined />,
-                      label: '运营组管理',
-                      children: [
-                        { key: '/user-account-management', label: <Link to="/user-account-management">用户账户管理</Link> },
-                        { key: '/user-permission-settings', label: <Link to="/user-permission-settings">用户权限设定</Link> },
-                        { key: '/user-role-template', label: <Link to="/user-role-template">用户角色模板</Link> },
                       ]
                     },
                     {
@@ -834,6 +821,25 @@ const AppContent = () => {
                       label: <Link to="/operation-log">操作日志</Link>,
                       style: { marginTop: 8 }
                     },
+                    {
+                      key: 'all-campus-management-group',
+                      icon: <TeamOutlined />,
+                      label: '院区管理',
+                      children: [
+                        { key: '/department-management', label: <Link to="/department-management">部门管理</Link> },
+                        { key: '/campus-management', label: <Link to="/campus-management">分院管理</Link> },
+                      ]
+                    },
+                    {
+                      key: 'operation-group',
+                      icon: <ControlOutlined />,
+                      label: '运营组管理',
+                      children: [
+                        { key: '/user-account-management', label: <Link to="/user-account-management">用户账户管理</Link> },
+                        { key: '/user-permission-settings', label: <Link to="/user-permission-settings">用户权限设定</Link> },
+                        { key: '/user-role-template', label: <Link to="/user-role-template">用户角色模板</Link> },
+                      ]
+                    },
                   ];
 
                   // 如果页面可见性未初始化，显示加载状态
@@ -870,90 +876,135 @@ const AppContent = () => {
                     />
                   );
                 })()}
-              </Sider>
-              
-              {/* 内容区域 */}
-              <Layout style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', flex: 1, backgroundColor: '#f8f9fa' }}>
-                <AppWithTabs>
-                  <Content
+                </div>
+                
+                {/* 折叠按钮 */}
+                <div style={{ padding: '16px', background: '#ffffff', borderTop: '1px solid #e8e8e8' }}>
+                  <button
+                    onClick={() => setCollapsed(!collapsed)}
                     style={{
-                      background: '#ffffff',
-                      padding: 24,
-                      margin: 0,
-                      flex: 1,
-                      minHeight: 280,
-                      borderRadius: 12,
-                      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
-                      overflow: 'auto',
-                      border: '1px solid #e8e8e8',
+                      background: '#667eea',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '100%',
+                      color: 'white',
+                      transition: 'all 0.3s ease',
                     }}
+                    onMouseEnter={(e) => e.target.style.background = '#5a6fd8'}
+                    onMouseLeave={(e) => e.target.style.background = '#667eea'}
                   >
-                    {/* 路由配置 */}
-                    <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/login" element={<Navigate to="/" replace />} />
-                      <Route path="/stock-in-accept" element={<StockInAccept />} />
-                      <Route path="/transfer-acceptance" element={<TransferAcceptance />} />
-                      <Route path="/stock-in-detail" element={<StockInDetail />} />
-                      <Route path="/inventory" element={<Navigate to="/inventory-detail" replace />} />
-                      <Route path="/inventory-detail" element={<InventoryDetail />} />
-                      <Route path="/inventory-adjust" element={<InventoryAdjust />} />
-                      <Route path="/inventory-transfer" element={<InventoryTransfer />} />
-                      <Route path="/inventory-shelf" element={<InventoryShelf />} />
-                      <Route path="/inventory-location" element={<InventoryLocation />} />
-                      <Route path="/inventory-expiry" element={<InventoryExpiry />} />
-                      <Route path="/stock-out-consumption" element={<StockOutConsumption />} />
-                      <Route path="/stock-out-detail" element={<StockOutDetail />} />
-                      <Route path="/stock-out-stats" element={<StockOutStats />} />
-                      <Route path="/stock-out-consumption-undo" element={<StockOutConsumptionUndo />} />
-                      <Route path="/inventory-check-generate" element={<InventoryCheckGenerate />} />
-                      <Route path="/inventory-check-detail" element={<InventoryDetail />} />
-                      <Route path="/inventory-check-diff" element={<InventoryCheckDiff />} />
-                      <Route path="/reports-stock-in-detail" element={<ReportsStockInDetail />} />
-                      <Route path="/reports-stock-in-summary" element={<ReportsStockInSummary />} />
-                      <Route path="/reports-consumption-detail" element={<ReportsConsumptionDetail />} />
-                      <Route path="/reports-consumption-summary" element={<ReportsConsumptionSummary />} />
-                      <Route path="/reports-loss-summary" element={<ReportsLossSummary />} />
-                      <Route path="/supplier-maintenance" element={<SupplierMaintenance />} />
-                      <Route path="/supplier-inspection-report" element={<SupplierInspectionReport />} />
-                      <Route path="/supplier-business-license" element={<SupplierBusinessLicense />} />
-                      <Route path="/supplier-business-certificate" element={<SupplierBusinessCertificate />} />
-                      <Route path="/supplier-qualification-warning" element={<SupplierQualificationWarning />} />
-                      <Route path="/product-catalog" element={<ProductCatalog />} />
-                      <Route path="/product-price-adjustment" element={<ProductPriceAdjustment />} />
-                      <Route path="/udi-maintenance" element={<UDIMaintenance />} />
-                      <Route path="/user-account-creation" element={<UserAccountCreation />} />
-                      <Route path="/user-role-template" element={<UserAccountCreation />} />
-                      <Route path="/user-permission-settings" element={<UserPermissionSettings />} />
-                      <Route path="/user-account-management" element={<UserAccountManagement />} />
-                      <Route path="/department-management" element={<DepartmentManagement />} />
-                      <Route path="/campus-management" element={<CampusManagement />} />
-                      <Route path="/purchase-order-request" element={<PurchaseOrderRequest />} />
-                      <Route path="/purchase-order-approval" element={<PurchaseOrderApproval />} />
-                      <Route path="/purchase-order-query" element={<PurchaseOrderQuery />} />
-                      <Route path="/purchase-order-acceptance" element={<PurchaseOrderAcceptance />} />
-                      <Route path="/manual-stock-in" element={<ManualStockIn />} />
-                      <Route path="/purchase-receipt" element={<PurchaseReceipt />} />
-                      <Route path="/abnormal-order-management" element={<AbnormalOrderManagement />} />
-                      <Route path="/fixed-assets-dictionary" element={<FixedAssetsDictionary />} />
-                      <Route path="/fixed-assets-add" element={<FixedAssetsAdd />} />
-                      <Route path="/fixed-assets-detail-query" element={<FixedAssetsDetailQuery />} />
-                      <Route path="/fixed-assets-scrap" element={<FixedAssetsScrap />} />
-                      <Route path="/fixed-assets-scrap-detail" element={<FixedAssetsScrapDetail />} />
-                      <Route path="/fixed-assets-change-audit" element={<FixedAssetsChangeAudit />} />
-                      <Route path="/fixed-assets-transfer" element={<FixedAssetsTransfer />} />
-                      <Route path="/fixed-assets-warning" element={<FixedAssetsWarning />} />
-                      <Route path="/fixed-assets-maintenance-record" element={<FixedAssetsMaintenanceRecord />} />
-                      <Route path="/sample-project-management" element={<SampleProjectManagement />} />
-                      <Route path="/sample-quantity-management" element={<SampleQuantityManagement />} />
-                      <Route path="/consumables-quality-issue" element={<ConsumablesQualityIssueRecord />} />
-                      <Route path="/medical-device-adverse-event" element={<MedicalDeviceAdverseEvent />} />
-                      <Route path="/instrument-maintenance-record" element={<InstrumentMaintenanceRecord />} />
-                      <Route path="/maintenance-record" element={<MaintenanceRecord />} />
-                      <Route path="/operation-log" element={<OperationLog />} />
-                    </Routes>
-                  </Content>
-                </AppWithTabs>
+                    {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                  </button>
+                </div>
+              </div>
+              
+              {/* 标签页导航栏 - 固定 */}
+              <div 
+                style={{ 
+                  marginLeft: collapsed ? 80 : 240, 
+                  padding: '0 24px', 
+                  backgroundColor: '#ffffff',
+                  borderBottom: '1px solid #e8e8e8',
+                  position: 'fixed',
+                  top: 64,
+                  left: 0,
+                  right: 0,
+                  zIndex: 90,
+                }}
+              >
+                <AppWithTabs />
+              </div>
+              
+              {/* 内容区域 - 可滚动 */}
+              <div 
+                style={{ 
+                  flex: 1, 
+                  marginLeft: collapsed ? 80 : 240, 
+                  padding: '24px', 
+                  paddingTop: '60px',
+                  backgroundColor: '#f8f9fa',
+                  minHeight: 'calc(100vh - 64px)',
+                  overflowY: 'auto',
+                }}
+              >
+                <div
+                  style={{
+                    background: '#ffffff',
+                    padding: 24,
+                    borderRadius: 12,
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
+                    border: '1px solid #e8e8e8',
+                  }}
+                >
+                  {/* 路由配置 */}
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/login" element={<Navigate to="/" replace />} />
+                    <Route path="/stock-in-accept" element={<StockInAccept />} />
+                    <Route path="/transfer-acceptance" element={<TransferAcceptance />} />
+                    <Route path="/stock-in-detail" element={<StockInDetail />} />
+                    <Route path="/inventory" element={<Navigate to="/inventory-detail" replace />} />
+                    <Route path="/inventory-detail" element={<InventoryDetail />} />
+                    <Route path="/inventory-adjust" element={<InventoryAdjust />} />
+                    <Route path="/inventory-transfer" element={<InventoryTransfer />} />
+
+                    <Route path="/inventory-expiry" element={<InventoryExpiry />} />
+                    <Route path="/stock-out-consumption" element={<StockOutConsumption />} />
+                    <Route path="/stock-out-detail" element={<StockOutDetail />} />
+                    <Route path="/stock-out-stats" element={<StockOutStats />} />
+                    <Route path="/stock-out-consumption-undo" element={<StockOutConsumptionUndo />} />
+                    <Route path="/inventory-check-generate" element={<InventoryCheckGenerate />} />
+                    <Route path="/inventory-check-detail" element={<InventoryDetail />} />
+                    <Route path="/inventory-check-diff" element={<InventoryCheckDiff />} />
+                    <Route path="/reports-stock-in-detail" element={<ReportsStockInDetail />} />
+                    <Route path="/reports-stock-in-summary" element={<ReportsStockInSummary />} />
+                    <Route path="/reports-consumption-detail" element={<ReportsConsumptionDetail />} />
+                    <Route path="/reports-consumption-summary" element={<ReportsConsumptionSummary />} />
+                    <Route path="/reports-loss-summary" element={<ReportsLossSummary />} />
+                    <Route path="/supplier-maintenance" element={<SupplierMaintenance />} />
+                    <Route path="/supplier-inspection-report" element={<SupplierInspectionReport />} />
+                    <Route path="/supplier-business-license" element={<SupplierBusinessLicense />} />
+                    <Route path="/supplier-business-certificate" element={<SupplierBusinessCertificate />} />
+                    <Route path="/supplier-qualification-warning" element={<SupplierQualificationWarning />} />
+                    <Route path="/product-catalog" element={<ProductCatalog />} />
+                    <Route path="/product-price-adjustment" element={<ProductPriceAdjustment />} />
+                    <Route path="/udi-maintenance" element={<UDIMaintenance />} />
+                    <Route path="/user-account-creation" element={<UserAccountCreation />} />
+                    <Route path="/user-role-template" element={<UserAccountCreation />} />
+                    <Route path="/user-permission-settings" element={<UserPermissionSettings />} />
+                    <Route path="/user-account-management" element={<UserAccountManagement />} />
+                    <Route path="/department-management" element={<DepartmentManagement />} />
+                    <Route path="/campus-management" element={<CampusManagement />} />
+                    <Route path="/purchase-order-request" element={<PurchaseOrderRequest />} />
+                    <Route path="/purchase-order-approval" element={<PurchaseOrderApproval />} />
+                    <Route path="/purchase-order-query" element={<PurchaseOrderQuery />} />
+                    <Route path="/purchase-order-acceptance" element={<PurchaseOrderAcceptance />} />
+                    <Route path="/manual-stock-in" element={<ManualStockIn />} />
+                    <Route path="/purchase-receipt" element={<PurchaseReceipt />} />
+                    <Route path="/abnormal-order-management" element={<AbnormalOrderManagement />} />
+                    <Route path="/fixed-assets-dictionary" element={<FixedAssetsDictionary />} />
+                    <Route path="/fixed-assets-add" element={<FixedAssetsAdd />} />
+                    <Route path="/fixed-assets-detail-query" element={<FixedAssetsDetailQuery />} />
+                    <Route path="/fixed-assets-scrap" element={<FixedAssetsScrap />} />
+                    <Route path="/fixed-assets-scrap-detail" element={<FixedAssetsScrapDetail />} />
+                    <Route path="/fixed-assets-change-audit" element={<FixedAssetsChangeAudit />} />
+                    <Route path="/fixed-assets-transfer" element={<FixedAssetsTransfer />} />
+                    <Route path="/fixed-assets-warning" element={<FixedAssetsWarning />} />
+                    <Route path="/fixed-assets-maintenance-record" element={<FixedAssetsMaintenanceRecord />} />
+                    <Route path="/sample-project-management" element={<SampleProjectManagement />} />
+                    <Route path="/sample-quantity-management" element={<SampleQuantityManagement />} />
+                    <Route path="/consumables-quality-issue" element={<ConsumablesQualityIssueRecord />} />
+                    <Route path="/medical-device-adverse-event" element={<MedicalDeviceAdverseEvent />} />
+                    <Route path="/instrument-maintenance-record" element={<InstrumentMaintenanceRecord />} />
+                    <Route path="/maintenance-record" element={<MaintenanceRecord />} />
+                    <Route path="/operation-log" element={<OperationLog />} />
+                  </Routes>
+                </div>
                 
                 {/* 全局悬浮备注窗口 */}
                 <GlobalNoteWindow />
@@ -966,9 +1017,9 @@ const AppContent = () => {
                   currentCampus={currentCampus}
                 />
                 
-              </Layout>
-            </Layout>
-          </Layout>
+              </div>
+            </div>
+          </div>
         </NoteProvider>
       </TabProvider>
     </ConfigProvider>

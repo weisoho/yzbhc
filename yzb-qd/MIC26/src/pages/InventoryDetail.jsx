@@ -7,33 +7,73 @@ const { RangePicker } = DatePicker;
 const InventoryDetail = () => {
   const [inventoryDetails, setInventoryDetails] = useState([]);
   const [searchParams, setSearchParams] = useState({
+    materialCode: '',
     materialName: '',
-    category: 'all',
-    warehouse: 'all',
     supplier: '',
-    stockStatus: 'all'
+    manufacturer: ''
   });
   const [adjustModalVisible, setAdjustModalVisible] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [currentRecord, setCurrentRecord] = useState(null);
   const [adjustForm] = Form.useForm();
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
 
   // 定义表格列
   const columns = [
+    {
+      title: (
+        <input 
+          type="checkbox" 
+          checked={selectedRowKeys.length === inventoryDetails.length && inventoryDetails.length > 0}
+          onChange={(e) => {
+            if (e.target.checked) {
+              setSelectedRowKeys(inventoryDetails.map(item => item.key));
+            } else {
+              setSelectedRowKeys([]);
+            }
+          }}
+        />
+      ),
+      dataIndex: 'checkbox',
+      key: 'checkbox',
+      width: 60,
+      render: (_, record) => (
+        <input 
+          type="checkbox" 
+          checked={selectedRowKeys.includes(record.key)}
+          onChange={(e) => {
+            if (e.target.checked) {
+              setSelectedRowKeys([...selectedRowKeys, record.key]);
+            } else {
+              setSelectedRowKeys(selectedRowKeys.filter(key => key !== record.key));
+            }
+          }}
+        />
+      )
+    },
     { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode', width: 120 },
     { title: '物资名称', dataIndex: 'materialName', key: 'materialName', width: 150 },
-    { title: '规格型号', dataIndex: 'specification', key: 'specification', width: 120 },
-    { title: '物资分类', dataIndex: 'category', key: 'category', width: 100 },
-    { title: '当前库存', dataIndex: 'currentStock', key: 'currentStock', width: 100, 
+    { title: '物资类型', dataIndex: 'category', key: 'category', width: 100 },
+    { title: '规格', dataIndex: 'specification', key: 'specification', width: 120 },
+    { title: '型号', dataIndex: 'model', key: 'model', width: 100 },
+    { title: '批号', dataIndex: 'batchNumber', key: 'batchNumber', width: 120 },
+    { title: '生产日期', dataIndex: 'productionDate', key: 'productionDate', width: 120 },
+    { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', width: 120 },
+    { title: '最小包装', dataIndex: 'minPackage', key: 'minPackage', width: 120 },
+    { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
+    { title: '采购价格', dataIndex: 'purchasePrice', key: 'purchasePrice', width: 100, render: (price) => `¥${price?.toFixed(2) || '0.00'}` },
+    { title: '库存数量', dataIndex: 'currentStock', key: 'currentStock', width: 100, 
       render: (currentStock, record) => {
         let color = 'default';
-        if (currentStock <= record.minStock) color = 'red';
-        else if (currentStock <= record.maxStock) color = 'orange';
+        if (currentStock <= (record.minStock || 0)) color = 'red';
+        else if (currentStock <= (record.maxStock || 0)) color = 'orange';
         else color = 'green';
         return <span style={{ color: color }}>{currentStock}</span>;
       }
     },
-    { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
+    { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', width: 150 },
     { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 120 },
+    { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 150 },
     { title: '库存状态', dataIndex: 'stockStatus', key: 'stockStatus', width: 100,
       render: (status) => {
         const statusMap = {
@@ -46,15 +86,15 @@ const InventoryDetail = () => {
         return <Tag color={config.color}>{config.text}</Tag>;
       }
     },
-    { title: '入库时间', dataIndex: 'lastInbound', key: 'lastInbound', width: 100 },
+    { title: '入库时间', dataIndex: 'lastInbound', key: 'lastInbound', width: 120 },
     {
       title: '操作', 
       key: 'action',
       width: 120,
       render: (_, record) => (
         <Space size="middle">
-          <a key={`adjust-${record.key}`} onClick={() => handleAdjustStock(record)}><EditOutlined />调整</a>
-          <a key={`export-${record.key}`}><ExportOutlined />导出</a>
+          <a key={`detail-${record.key}`} onClick={() => handleViewDetail(record)}>明细</a>
+          <a key={`adjust-${record.key}`} onClick={() => handleAdjustStock(record)}>调整</a>
         </Space>
       )
     },
@@ -66,67 +106,151 @@ const InventoryDetail = () => {
       key: '1',
       materialCode: 'YZS-001',
       materialName: '一次性注射器',
-      specification: '10ml',
       category: '医疗器械',
-      warehouse: '仓库1',
-      shelf: 'A1-01',
-      currentStock: 500,
-      minStock: 200,
-      maxStock: 1000,
+      specification: '10ml',
+      model: '标准型',
+      minPackage: '100支/箱',
       unit: '支',
+      purchasePrice: 2.50,
+      currentStock: 750,
+      registrationNumber: '国械注准20203150001',
       supplier: '山东威高集团',
+      manufacturer: '山东威高集团医用高分子制品股份有限公司',
       stockStatus: 'normal',
       lastInbound: '2024-01-15',
       warning: null,
-      expiryWarningDays: 30
+      expiryWarningDays: 30,
+      // 不同入库时间的批次信息
+      batches: [
+        {
+          batchKey: '1-1',
+          materialCode: 'YZS-001-01',
+          batchNumber: '20240101',
+          productionDate: '2024-01-01',
+          expiryDate: '2025-01-01',
+          inboundDate: '2024-01-15',
+          quantity: 300,
+          status: 'normal'
+        },
+        {
+          batchKey: '1-2',
+          materialCode: 'YZS-001-02',
+          batchNumber: '20240102',
+          productionDate: '2024-01-02',
+          expiryDate: '2025-01-02',
+          inboundDate: '2024-01-20',
+          quantity: 200,
+          status: 'normal'
+        },
+        {
+          batchKey: '1-3',
+          materialCode: 'YZS-001-03',
+          batchNumber: '20240103',
+          productionDate: '2024-01-03',
+          expiryDate: '2025-01-03',
+          inboundDate: '2024-01-25',
+          quantity: 150,
+          status: 'normal'
+        },
+        {
+          batchKey: '1-4',
+          materialCode: 'YZS-001-04',
+          batchNumber: '20240104',
+          productionDate: '2024-01-04',
+          expiryDate: '2025-01-04',
+          inboundDate: '2024-01-30',
+          quantity: 100,
+          status: 'normal'
+        }
+      ]
     },
     {
       key: '2',
       materialCode: 'YZS-002',
       materialName: '输液器',
-      specification: '500ml',
       category: '医疗器械',
-      warehouse: '仓库1',
-      shelf: 'A1-02',
-      currentStock: 300,
-      minStock: 100,
-      maxStock: 800,
+      specification: '500ml',
+      model: '普通型',
+      minPackage: '50支/箱',
       unit: '支',
+      purchasePrice: 3.00,
+      currentStock: 300,
+      registrationNumber: '国械注准20203150002',
       supplier: '山东威高集团',
+      manufacturer: '山东威高集团医用高分子制品股份有限公司',
       stockStatus: 'normal',
       lastInbound: '2024-01-20',
-      warning: null
+      warning: null,
+      batches: [
+        {
+          batchKey: '2-1',
+          materialCode: 'YZS-002-01',
+          batchNumber: '20240102',
+          productionDate: '2024-01-02',
+          expiryDate: '2025-01-02',
+          inboundDate: '2024-01-20',
+          quantity: 200,
+          status: 'normal'
+        },
+        {
+          batchKey: '2-2',
+          materialCode: 'YZS-002-02',
+          batchNumber: '20240103',
+          productionDate: '2024-01-03',
+          expiryDate: '2025-01-03',
+          inboundDate: '2024-01-25',
+          quantity: 100,
+          status: 'normal'
+        }
+      ]
     },
     {
       key: '3',
       materialCode: 'YZS-003',
       materialName: '医用棉签',
-      specification: '100支/包',
       category: '医疗用品',
-      warehouse: '仓库1',
-      shelf: 'A2-01',
-      currentStock: 50,
-      minStock: 100,
-      maxStock: 500,
+      specification: '100支/包',
+      model: '无菌型',
+      minPackage: '50包/箱',
       unit: '包',
+      purchasePrice: 1.50,
+      currentStock: 50,
+      registrationNumber: '国械注准20201410003',
       supplier: '稳健医疗用品',
+      manufacturer: '稳健医疗用品股份有限公司',
       stockStatus: 'low',
       lastInbound: '2024-01-25',
-      warning: 'low_stock'
+      warning: 'low_stock',
+      batches: [
+        {
+          batchKey: '3-1',
+          materialCode: 'YZS-003-01',
+          batchNumber: '20240103',
+          productionDate: '2024-01-03',
+          expiryDate: '2025-01-03',
+          inboundDate: '2024-01-25',
+          quantity: 50,
+          status: 'low'
+        }
+      ]
     },
     {
       key: '4',
       materialCode: 'YZS-004',
       materialName: '酒精棉球',
-      specification: '50g/瓶',
       category: '医疗用品',
-      warehouse: '仓库2',
-      shelf: 'B1-01',
-      currentStock: 200,
-      minStock: 80,
-      maxStock: 300,
+      specification: '50g/瓶',
+      model: '75%',
+      batchNumber: '20240104',
+      productionDate: '2024-01-04',
+      expiryDate: '2024-07-04',
+      minPackage: '20瓶/箱',
       unit: '瓶',
+      purchasePrice: 2.00,
+      currentStock: 200,
+      registrationNumber: '鲁卫消证字2020第0004号',
       supplier: '稳健医疗用品',
+      manufacturer: '稳健医疗用品股份有限公司',
       stockStatus: 'normal',
       lastInbound: '2024-02-01',
       warning: null
@@ -135,15 +259,19 @@ const InventoryDetail = () => {
       key: '5',
       materialCode: 'YZS-005',
       materialName: '碘伏消毒液',
-      specification: '500ml',
       category: '消毒用品',
-      warehouse: '仓库2',
-      shelf: 'B1-02',
-      currentStock: 100,
-      minStock: 50,
-      maxStock: 200,
+      specification: '500ml',
+      model: '10%',
+      batchNumber: '20240105',
+      productionDate: '2024-01-05',
+      expiryDate: '2024-07-05',
+      minPackage: '12瓶/箱',
       unit: '瓶',
+      purchasePrice: 5.00,
+      currentStock: 100,
+      registrationNumber: '鲁卫消证字2020第0005号',
       supplier: '利尔康消毒科技',
+      manufacturer: '山东利尔康消毒科技股份有限公司',
       stockStatus: 'normal',
       lastInbound: '2024-02-05',
       warning: null
@@ -152,15 +280,19 @@ const InventoryDetail = () => {
       key: '6',
       materialCode: 'YLQ-001',
       materialName: '血压计',
-      specification: '台式水银',
       category: '医疗设备',
-      warehouse: '仓库3',
-      shelf: 'C1-01',
-      currentStock: 50,
-      minStock: 20,
-      maxStock: 100,
+      specification: '台式水银',
+      model: '汞柱式',
+      batchNumber: '20240106',
+      productionDate: '2024-01-06',
+      expiryDate: '2027-01-06',
+      minPackage: '1台/箱',
       unit: '台',
+      purchasePrice: 200.00,
+      currentStock: 50,
+      registrationNumber: '国械注准20202070006',
       supplier: '鱼跃医疗设备',
+      manufacturer: '江苏鱼跃医疗设备股份有限公司',
       stockStatus: 'normal',
       lastInbound: '2024-01-10',
       warning: null
@@ -169,15 +301,19 @@ const InventoryDetail = () => {
       key: '7',
       materialCode: 'YLQ-002',
       materialName: '体温计',
-      specification: '电子式',
       category: '医疗设备',
-      warehouse: '仓库3',
-      shelf: 'C1-02',
-      currentStock: 80,
-      minStock: 30,
-      maxStock: 120,
+      specification: '电子式',
+      model: '数字显示',
+      batchNumber: '20240107',
+      productionDate: '2024-01-07',
+      expiryDate: '2027-01-07',
+      minPackage: '10支/盒',
       unit: '支',
+      purchasePrice: 30.00,
+      currentStock: 80,
+      registrationNumber: '国械注准20202070007',
       supplier: '可孚医疗科技',
+      manufacturer: '可孚医疗科技股份有限公司',
       stockStatus: 'normal',
       lastInbound: '2024-01-15',
       warning: null
@@ -186,15 +322,19 @@ const InventoryDetail = () => {
       key: '8',
       materialCode: 'YHP-001',
       materialName: '一次性手套',
-      specification: '乳胶，M码',
       category: '防护用品',
-      warehouse: '仓库4',
-      shelf: 'D1-01',
-      currentStock: 1500,
-      minStock: 200,
-      maxStock: 1000,
+      specification: '乳胶，M码',
+      model: '无菌型',
+      batchNumber: '20240108',
+      productionDate: '2024-01-08',
+      expiryDate: '2025-01-08',
+      minPackage: '100双/盒',
       unit: '双',
+      purchasePrice: 0.50,
+      currentStock: 1500,
+      registrationNumber: '国械注准20203140008',
       supplier: '蓝帆医疗股份',
+      manufacturer: '蓝帆医疗股份有限公司',
       stockStatus: 'high',
       lastInbound: '2024-02-10',
       warning: 'overstock'
@@ -203,15 +343,19 @@ const InventoryDetail = () => {
       key: '9',
       materialCode: 'YHP-002',
       materialName: '医用口罩',
-      specification: 'N95',
       category: '防护用品',
-      warehouse: '仓库4',
-      shelf: 'D1-02',
-      currentStock: 300,
-      minStock: 150,
-      maxStock: 800,
+      specification: 'N95',
+      model: '头戴式',
+      batchNumber: '20240109',
+      productionDate: '2024-01-09',
+      expiryDate: '2025-01-09',
+      minPackage: '20个/盒',
       unit: '个',
+      purchasePrice: 3.00,
+      currentStock: 300,
+      registrationNumber: '国械注准20203140009',
       supplier: '稳健医疗用品',
+      manufacturer: '稳健医疗用品股份有限公司',
       stockStatus: 'normal',
       lastInbound: '2024-02-12',
       warning: null
@@ -220,15 +364,19 @@ const InventoryDetail = () => {
       key: '10',
       materialCode: 'YBF-001',
       materialName: '纱布绷带',
-      specification: '7.5cm×600cm',
       category: '医用材料',
-      warehouse: '仓库1',
-      shelf: 'A2-02',
-      currentStock: 300,
-      minStock: 100,
-      maxStock: 600,
+      specification: '7.5cm×600cm',
+      model: '无菌型',
+      batchNumber: '20240110',
+      productionDate: '2024-01-10',
+      expiryDate: '2025-01-10',
+      minPackage: '10卷/盒',
       unit: '卷',
+      purchasePrice: 5.00,
+      currentStock: 300,
+      registrationNumber: '国械注准20201410010',
       supplier: '振德医疗用品',
+      manufacturer: '振德医疗用品股份有限公司',
       stockStatus: 'normal',
       lastInbound: '2024-02-15',
       warning: null
@@ -237,15 +385,19 @@ const InventoryDetail = () => {
       key: '11',
       materialCode: 'YDQ-001',
       materialName: '胰岛素注射器',
-      specification: '1ml',
       category: '医疗器械',
-      warehouse: '仓库1',
-      shelf: 'A1-03',
-      currentStock: 20,
-      minStock: 50,
-      maxStock: 200,
+      specification: '1ml',
+      model: 'BD型',
+      batchNumber: '20240111',
+      productionDate: '2024-01-11',
+      expiryDate: '2025-01-11',
+      minPackage: '100支/盒',
       unit: '支',
+      purchasePrice: 2.00,
+      currentStock: 20,
+      registrationNumber: '国械注准20203150011',
       supplier: '山东威高集团',
+      manufacturer: '山东威高集团医用高分子制品股份有限公司',
       stockStatus: 'low',
       lastInbound: '2023-12-20',
       warning: 'low_stock'
@@ -254,15 +406,19 @@ const InventoryDetail = () => {
       key: '12',
       materialCode: 'YXP-001',
       materialName: '创可贴',
-      specification: '透气型',
       category: '医疗用品',
-      warehouse: '仓库2',
-      shelf: 'B2-01',
-      currentStock: 800,
-      minStock: 100,
-      maxStock: 500,
+      specification: '透气型',
+      model: '标准型',
+      batchNumber: '20240112',
+      productionDate: '2024-01-12',
+      expiryDate: '2025-01-12',
+      minPackage: '100片/盒',
       unit: '盒',
+      purchasePrice: 10.00,
+      currentStock: 800,
+      registrationNumber: '国械注准20201410012',
       supplier: '云南白药集团',
+      manufacturer: '云南白药集团股份有限公司',
       stockStatus: 'high',
       lastInbound: '2024-01-30',
       warning: 'overstock'
@@ -273,22 +429,18 @@ const InventoryDetail = () => {
   const handleSearch = () => {
     let filteredData = inventoryDetailsData;
 
-    // 按商品名称筛选
-    if (searchParams.materialName) {
+    // 按物资编码筛选
+    if (searchParams.materialCode) {
       filteredData = filteredData.filter(item => 
-        item.materialName.toLowerCase().includes(searchParams.materialName.toLowerCase()) ||
-        item.materialCode.toLowerCase().includes(searchParams.materialName.toLowerCase())
+        item.materialCode.toLowerCase().includes(searchParams.materialCode.toLowerCase())
       );
     }
 
-    // 按商品分类筛选
-    if (searchParams.category !== 'all') {
-      filteredData = filteredData.filter(item => item.category === searchParams.category);
-    }
-
-    // 按仓库筛选
-    if (searchParams.warehouse !== 'all') {
-      filteredData = filteredData.filter(item => item.warehouse === searchParams.warehouse);
+    // 按物资名称筛选
+    if (searchParams.materialName) {
+      filteredData = filteredData.filter(item => 
+        item.materialName.toLowerCase().includes(searchParams.materialName.toLowerCase())
+      );
     }
 
     // 按供应商筛选
@@ -298,9 +450,11 @@ const InventoryDetail = () => {
       );
     }
 
-    // 按库存状态筛选
-    if (searchParams.stockStatus !== 'all') {
-      filteredData = filteredData.filter(item => item.stockStatus === searchParams.stockStatus);
+    // 按生产厂家筛选
+    if (searchParams.manufacturer) {
+      filteredData = filteredData.filter(item => 
+        item.manufacturer.toLowerCase().includes(searchParams.manufacturer.toLowerCase())
+      );
     }
 
     setInventoryDetails(filteredData);
@@ -309,11 +463,10 @@ const InventoryDetail = () => {
   // 重置查询条件
   const handleReset = () => {
     setSearchParams({
+      materialCode: '',
       materialName: '',
-      checkNumber: '',
-      warehouse: 'all',
-      batchNumber: '',
-      dateRange: null
+      supplier: '',
+      manufacturer: ''
     });
     setInventoryDetails(inventoryDetailsData);
   };
@@ -342,6 +495,12 @@ const InventoryDetail = () => {
       reason: ''
     });
     setAdjustModalVisible(true);
+  };
+
+  // 打开明细模态框
+  const handleViewDetail = (record) => {
+    setCurrentRecord(record);
+    setDetailModalVisible(true);
   };
 
   // 提交设置调整
@@ -413,82 +572,53 @@ const InventoryDetail = () => {
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>物资库存</h1>
       
-      <Card>
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col span={6}>
+      <Card style={{ padding: '16px' }}>
+        <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>物资编码：</span>
             <Input
-              placeholder="物资名称/编码"
+              placeholder="请输入物资编码"
+              value={searchParams.materialCode}
+              onChange={(e) => setSearchParams({...searchParams, materialCode: e.target.value})}
+              style={{ width: '180px' }}
+            />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>物资名称：</span>
+            <Input
+              placeholder="请输入物资名称"
               value={searchParams.materialName}
               onChange={(e) => setSearchParams({...searchParams, materialName: e.target.value})}
+              style={{ width: '180px' }}
             />
-          </Col>
-          <Col span={6}>
-            <Select
-              placeholder="物资分类"
-              value={searchParams.category}
-              style={{ width: '100%' }}
-              onChange={(value) => setSearchParams({...searchParams, category: value})}
-            >
-              <Select.Option value="all">全部分类</Select.Option>
-              <Select.Option value="医疗器械">医疗器械</Select.Option>
-              <Select.Option value="医疗用品">医疗用品</Select.Option>
-              <Select.Option value="医疗设备">医疗设备</Select.Option>
-              <Select.Option value="防护用品">防护用品</Select.Option>
-              <Select.Option value="消毒用品">消毒用品</Select.Option>
-              <Select.Option value="医用材料">医用材料</Select.Option>
-            </Select>
-          </Col>
-          <Col span={6}>
-            <Select
-              placeholder="所属仓库"
-              value={searchParams.warehouse}
-              style={{ width: '100%' }}
-              onChange={(value) => setSearchParams({...searchParams, warehouse: value})}
-            >
-              <Select.Option value="all">全部仓库</Select.Option>
-              <Select.Option value="仓库1">仓库1</Select.Option>
-              <Select.Option value="仓库2">仓库2</Select.Option>
-              <Select.Option value="仓库3">仓库3</Select.Option>
-              <Select.Option value="仓库4">仓库4</Select.Option>
-            </Select>
-          </Col>
-          <Col span={6}>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>供应商：</span>
             <Input
-              placeholder="供应商"
+              placeholder="请输入供应商"
               value={searchParams.supplier}
               onChange={(e) => setSearchParams({...searchParams, supplier: e.target.value})}
+              style={{ width: '180px' }}
             />
-          </Col>
-        </Row>
-        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col span={6}>
-            <Select
-              placeholder="库存状态"
-              value={searchParams.stockStatus}
-              style={{ width: '100%' }}
-              onChange={(value) => setSearchParams({...searchParams, stockStatus: value})}
-            >
-              <Select.Option value="all">全部状态</Select.Option>
-              <Select.Option value="normal">正常</Select.Option>
-              <Select.Option value="low">缺货</Select.Option>
-              <Select.Option value="high">积压</Select.Option>
-              <Select.Option value="out">停用</Select.Option>
-            </Select>
-          </Col>
-          <Col span={18} style={{ textAlign: 'right' }}>
-            <Space>
-              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-                查询
-              </Button>
-              <Button icon={<ExportOutlined />} onClick={handleExport}>
-                导出库存报表
-              </Button>
-              <Button icon={<WarningOutlined />}>
-                导出预警清单
-              </Button>
-            </Space>
-          </Col>
-        </Row>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>生产厂家：</span>
+            <Input
+              placeholder="请输入生产厂家"
+              value={searchParams.manufacturer}
+              onChange={(e) => setSearchParams({...searchParams, manufacturer: e.target.value})}
+              style={{ width: '180px' }}
+            />
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+            查询
+          </Button>
+          <Button icon={<ExportOutlined />} onClick={handleExport}>
+            导出库存报表
+          </Button>
+        </div>
       </Card>
 
       <Card style={{ marginTop: 16 }}>
@@ -644,6 +774,50 @@ const InventoryDetail = () => {
               />
             </Form.Item>
           </Form>
+        )}
+      </Modal>
+
+      {/* 明细模态框 */}
+      <Modal
+        title="物资明细"
+        open={detailModalVisible}
+        onCancel={() => setDetailModalVisible(false)}
+        width={1400}
+        footer={[
+          <Button key="close" onClick={() => setDetailModalVisible(false)}>
+            关闭
+          </Button>,
+        ]}
+      >
+        {currentRecord && (
+          <div>
+            <div style={{ marginBottom: 20 }}>
+              <Table
+                columns={[
+                  { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode', width: 150, align: 'center', ellipsis: false },
+                  { title: '物资名称', dataIndex: 'materialName', key: 'materialName', width: 150, render: () => currentRecord.materialName, align: 'center', ellipsis: false },
+                  { title: '物资类型', dataIndex: 'category', key: 'category', width: 100, render: () => currentRecord.category, align: 'center', ellipsis: false },
+                  { title: '规格', dataIndex: 'specification', key: 'specification', width: 120, render: () => currentRecord.specification, align: 'center', ellipsis: false },
+                  { title: '型号', dataIndex: 'model', key: 'model', width: 100, render: () => currentRecord.model, align: 'center', ellipsis: false },
+                  { title: '批号', dataIndex: 'batchNumber', key: 'batchNumber', width: 120, align: 'center', ellipsis: false },
+                  { title: '生产日期', dataIndex: 'productionDate', key: 'productionDate', width: 120, align: 'center', ellipsis: false },
+                  { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', width: 120, align: 'center', ellipsis: false },
+                  { title: '最小包装', dataIndex: 'minPackage', key: 'minPackage', width: 120, render: () => currentRecord.minPackage, align: 'center', ellipsis: false },
+                  { title: '单位', dataIndex: 'unit', key: 'unit', width: 80, render: () => currentRecord.unit, align: 'center', ellipsis: false },
+                  { title: '采购价格', dataIndex: 'purchasePrice', key: 'purchasePrice', width: 100, render: () => `¥${currentRecord.purchasePrice?.toFixed(2) || '0.00'}`, align: 'center', ellipsis: false },
+                  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 100, align: 'center', ellipsis: false },
+                  { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', width: 150, render: () => currentRecord.registrationNumber, align: 'center', ellipsis: false },
+                  { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 120, render: () => currentRecord.supplier, align: 'center', ellipsis: false },
+                  { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 150, render: () => currentRecord.manufacturer, align: 'center', ellipsis: false },
+                  { title: '入库时间', dataIndex: 'inboundDate', key: 'inboundDate', width: 120, align: 'center', ellipsis: false },
+                ]}
+                dataSource={currentRecord.batches || []}
+                pagination={false}
+                rowKey="batchKey"
+                scroll={{ x: 1600 }}
+              />
+            </div>
+          </div>
         )}
       </Modal>
     </div>

@@ -600,62 +600,60 @@ const AbnormalOrderManagement = () => {
       <h1 style={{ marginBottom: 24 }}>异常订单管理</h1>
       
       {/* 搜索区域 */}
-      <Card style={{ marginBottom: 24 }}>
+      <Card style={{ marginBottom: 24, padding: '16px' }}>
         <Form
           form={searchForm}
-          layout="vertical"
           onFinish={handleSearch}
         >
-          <Row gutter={16}>
-            <Col span={6}>
-              <Form.Item name="orderNo" label="订单号">
-                <Input placeholder="请输入订单号" />
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>订单号</label>
+              <Form.Item name="orderNo" noStyle>
+                <Input placeholder="请输入订单号" style={{ width: 200 }} />
               </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="supplierName" label="供应商名称">
-                <Input placeholder="请输入供应商名称" />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>供应商名称</label>
+              <Form.Item name="supplierName" noStyle>
+                <Input placeholder="请输入供应商名称" style={{ width: 200 }} />
               </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="status" label="订单状态" initialValue="all">
-                <Select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>订单状态</label>
+              <Form.Item name="status" noStyle initialValue="all">
+                <Select style={{ width: 150 }}>
                   <Option value="all">全部状态</Option>
                   <Option value="已拒收">已拒收</Option>
                   <Option value="超时未验收">超时未验收</Option>
                 </Select>
               </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="department" label="采购部门">
-                <Select placeholder="请选择采购部门">
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>采购部门</label>
+              <Form.Item name="department" noStyle>
+                <Select placeholder="请选择采购部门" style={{ width: 150 }}>
                   <Option value="采购部">采购部</Option>
                   <Option value="检验科">检验科</Option>
                   <Option value="手术室">手术室</Option>
                   <Option value="急诊科">急诊科</Option>
                 </Select>
               </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row>
-            <Col span={24} style={{ textAlign: 'right' }}>
-              <Space>
-                <Button type="primary" icon={<SearchOutlined />} htmlType="submit">
-                  查询
-                </Button>
-                <Button onClick={handleReset}>
-                  重置
-                </Button>
-                <Button icon={<ReloadOutlined />} onClick={() => {
-                  setFilteredOrders(abnormalOrders);
-                  searchForm.resetFields();
-                }}>
-                  刷新
-                </Button>
-              </Space>
-            </Col>
-          </Row>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Button type="primary" icon={<SearchOutlined />} htmlType="submit">
+                查询
+              </Button>
+              <Button onClick={handleReset}>
+                重置
+              </Button>
+              <Button icon={<ReloadOutlined />} onClick={() => {
+                setFilteredOrders(abnormalOrders);
+                searchForm.resetFields();
+              }}>
+                刷新
+              </Button>
+            </div>
+          </div>
         </Form>
       </Card>
       

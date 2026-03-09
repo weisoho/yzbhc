@@ -55,8 +55,8 @@ const UDIMaintenance = () => {
       
       setIsModalVisible(false);
       form.resetFields();
-    } catch (error) {
-      console.error('表单验证失败:', error);
+    } catch {
+      // 表单验证失败
     }
   };
 

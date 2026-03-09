@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Card, Button, Table, Form, Input, Space, Modal, Popconfirm, Checkbox, Select, Radio, Row, Col } from 'antd';
+import { Card, Button, Table, Form, Input, Space, Modal, Popconfirm, Checkbox, Radio, Row, Col } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, DownloadOutlined } from '@ant-design/icons';
-import { FORM_STYLES, getResponsiveColProps, getFormLayoutStyle, getModalConfig } from '../utils/formStyles';
+import { FORM_STYLES, getFormLayoutStyle, getModalConfig } from '../utils/formStyles';
 
-const { Option } = Select;
+
 
 const SupplierMaintenance = () => {
   const [visible, setVisible] = useState(false);
@@ -14,30 +14,32 @@ const SupplierMaintenance = () => {
   const [pageSize, setPageSize] = useState(10);
 
   const suppliers = [
-    { key: '1', name: '供应商A', contact: '张三', phone: '13800138001', address: '北京市朝阳区', registrationNumber: '1234567890' },
-    { key: '2', name: '供应商B', contact: '李四', phone: '13900139001', address: '上海市浦东新区', registrationNumber: '0987654321' },
-    { key: '3', name: '供应商C', contact: '王五', phone: '13700137001', address: '广州市天河区', registrationNumber: '1122334455' },
+    { key: '1', name: '供应商A', enterpriseType: '经营企业', creditCode: '123456789012345678', legalRepresentative: '张三', registeredCapital: '1000万', registrationDate: '2020-01-01', phone: '13800138001', address: '北京市朝阳区' },
+    { key: '2', name: '供应商B', enterpriseType: '生产企业', creditCode: '876543210987654321', legalRepresentative: '李四', registeredCapital: '5000万', registrationDate: '2019-03-15', phone: '13900139001', address: '上海市浦东新区' },
+    { key: '3', name: '供应商C', enterpriseType: '医疗机构', creditCode: '112233445566778899', legalRepresentative: '王五', registeredCapital: '2000万', registrationDate: '2021-06-10', phone: '13700137001', address: '广州市天河区' },
   ];
 
   const handleEdit = (record) => {
     setEditingRecord(record);
     form.setFieldsValue({
       name: record.name,
-      contactPerson: record.contact,
-      contactPhone: record.phone,
-      address: record.address,
-      registrationNumber: record.registrationNumber,
-      enterpriseType: '经营企业'
+      enterpriseType: record.enterpriseType,
+      creditCode: record.creditCode,
+      legalRepresentative: record.legalRepresentative,
+      registeredCapital: record.registeredCapital,
+      registrationDate: record.registrationDate,
+      phone: record.phone,
+      address: record.address
     });
     setVisible(true);
   };
 
   const handleModalOk = () => {
-    form.validateFields().then((values) => {
+    form.validateFields().then(() => {
       if (editingRecord) {
-        console.log('编辑供应商:', values);
+        // 编辑供应商
       } else {
-        console.log('新增供应商:', values);
+        // 新增供应商
       }
       setVisible(false);
       setEditingRecord(null);
@@ -87,14 +89,85 @@ const SupplierMaintenance = () => {
       width: 60,
       render: (_, record, index) => (currentPage - 1) * pageSize + index + 1
     },
-    { title: '供应商名称', dataIndex: 'name', key: 'name' },
-    { title: '联系人', dataIndex: 'contact', key: 'contact' },
-    { title: '联系电话', dataIndex: 'phone', key: 'phone' },
-    { title: '地址', dataIndex: 'address', key: 'address' },
-    { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber' },
+    { 
+      title: '名称', 
+      dataIndex: 'name', 
+      key: 'name',
+      ellipsis: false,
+      align: 'center',
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { whiteSpace: 'nowrap' } })
+    },
+    { 
+      title: '企业类型', 
+      dataIndex: 'enterpriseType', 
+      key: 'enterpriseType',
+      ellipsis: false,
+      align: 'center',
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { whiteSpace: 'nowrap' } })
+    },
+    { 
+      title: '统一社会信用代码', 
+      dataIndex: 'creditCode', 
+      key: 'creditCode',
+      ellipsis: false,
+      align: 'center',
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { whiteSpace: 'nowrap' } })
+    },
+    { 
+      title: '法定代表人', 
+      dataIndex: 'legalRepresentative', 
+      key: 'legalRepresentative',
+      ellipsis: false,
+      align: 'center',
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { whiteSpace: 'nowrap' } })
+    },
+    { 
+      title: '注册资本', 
+      dataIndex: 'registeredCapital', 
+      key: 'registeredCapital',
+      ellipsis: false,
+      align: 'center',
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { whiteSpace: 'nowrap' } })
+    },
+    { 
+      title: '注册时间', 
+      dataIndex: 'registrationDate', 
+      key: 'registrationDate',
+      ellipsis: false,
+      align: 'center',
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { whiteSpace: 'nowrap' } })
+    },
+    { 
+      title: '联系电话', 
+      dataIndex: 'phone', 
+      key: 'phone',
+      ellipsis: false,
+      align: 'center',
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { whiteSpace: 'nowrap' } })
+    },
+    { 
+      title: '联系地址', 
+      dataIndex: 'address', 
+      key: 'address',
+      ellipsis: false,
+      align: 'center',
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { whiteSpace: 'nowrap' } })
+    },
     { 
       title: '操作', 
       key: 'action',
+      ellipsis: false,
+      align: 'center',
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { whiteSpace: 'nowrap' } }),
       render: (_, record) => (
         <Space size="middle">
           <a onClick={() => handleEdit(record)}><EditOutlined />编辑</a>
@@ -116,51 +189,39 @@ const SupplierMaintenance = () => {
       <h1 style={FORM_STYLES.title}>供应商管理</h1>
       
       <Card style={FORM_STYLES.card}>
-        <Form {...getFormLayoutStyle('search')}>
-          <Row gutter={FORM_STYLES.form.search.rowGutter} style={{ width: '100%' }}>
-            <Col {...getResponsiveColProps()}>
-              <Form.Item name="name" label="供应商名称">
-                <Input placeholder="请输入供应商名称" />
-              </Form.Item>
-            </Col>
-            <Col {...getResponsiveColProps()}>
-              <Form.Item name="contact" label="联系人">
-                <Input placeholder="请输入联系人" />
-              </Form.Item>
-            </Col>
-            <Col {...getResponsiveColProps()}>
-              <Form.Item name="phone" label="联系电话">
-                <Input placeholder="请输入联系电话" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={24} md={24} lg={24}>
-              <Form.Item>
-                <Space>
-                  <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-                    setEditingRecord(null);
-                    form.resetFields();
-                    setVisible(true);
-                  }}>
-                    新增供应商
-                  </Button>
-                  {selectedRowKeys.length > 0 && (
-                    <Button 
-                      type="primary" 
-                      icon={<DownloadOutlined />}
-                      onClick={() => {
-                        console.log('批量导出选中的供应商:', selectedRowKeys);
-                        alert(`已导出 ${selectedRowKeys.length} 条供应商记录`);
-                      }}
-                    >
-                      批量导出
-                    </Button>
-                  )}
-                </Space>
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+            <Form.Item name="name" label="名称" style={{ marginBottom: 0 }}>
+              <Input placeholder="请输入名称" style={{ width: 200 }} />
+            </Form.Item>
+            <Form.Item name="legalRepresentative" label="法定代表人" style={{ marginBottom: 0 }}>
+              <Input placeholder="请输入法定代表人" style={{ width: 200 }} />
+            </Form.Item>
+            <Form.Item name="phone" label="联系电话" style={{ marginBottom: 0 }}>
+              <Input placeholder="请输入联系电话" style={{ width: 200 }} />
+            </Form.Item>
+          </div>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <Button type="primary" icon={<SearchOutlined />}>查询</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+              setEditingRecord(null);
+              form.resetFields();
+              setVisible(true);
+            }}>
+              新增供应商
+            </Button>
+            <Button 
+              type="primary" 
+              icon={<DownloadOutlined />}
+              onClick={() => {
+                // 批量导出选中的供应商
+                alert(`已导出 ${selectedRowKeys.length} 条供应商记录`);
+              }}
+            >
+              批量导出
+            </Button>
+          </div>
+        </div>
       </Card>
       
       <div style={{ overflowX: 'auto' }}>
@@ -181,6 +242,7 @@ const SupplierMaintenance = () => {
             style: FORM_STYLES.table.pagination.style
           }} 
           size={FORM_STYLES.table.size}
+          scroll={{ x: 1600 }}
         />
       </div>
 
@@ -216,19 +278,19 @@ const SupplierMaintenance = () => {
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
                 name="name"
-                label="供应商名称"
-                rules={[{ required: true, message: '请输入供应商名称' }]}
+                label="名称"
+                rules={[{ required: true, message: '请输入名称' }]}
               >
-                <Input placeholder="请输入供应商名称" />
+                <Input placeholder="请输入名称" />
               </Form.Item>
             </Col>
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
                 name="creditCode"
-                label="企业信用代码"
-                rules={[{ required: true, message: '请输入企业信用代码' }]}
+                label="统一社会信用代码"
+                rules={[{ required: true, message: '请输入统一社会信用代码' }]}
               >
-                <Input placeholder="请输入企业信用代码" />
+                <Input placeholder="请输入统一社会信用代码" />
               </Form.Item>
             </Col>
           </Row>
@@ -236,69 +298,56 @@ const SupplierMaintenance = () => {
           <Row gutter={FORM_STYLES.form.edit.rowGutter}>
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
-                name="taxNumber"
-                label="企业税号"
+                name="legalRepresentative"
+                label="法定代表人"
+                rules={[{ required: true, message: '请输入法定代表人' }]}
               >
-                <Input placeholder="请输入企业税号" />
+                <Input placeholder="请输入法定代表人" />
               </Form.Item>
             </Col>
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
-                label="院内供应商编码"
-                tooltip="按默认的数字进行编号，不可自行填写"
+                name="registeredCapital"
+                label="注册资本"
+                rules={[{ required: true, message: '请输入注册资本' }]}
               >
-                <Input placeholder="请输入院内供应商编码" disabled />
+                <Input placeholder="请输入注册资本" />
               </Form.Item>
             </Col>
           </Row>
           
-          <Form.Item
-            name="address"
-            label="地址"
-          >
-            <Input placeholder="请输入地址" />
-          </Form.Item>
+          <Row gutter={FORM_STYLES.form.edit.rowGutter}>
+            <Col span={FORM_STYLES.form.edit.colSpan}>
+              <Form.Item
+                name="registrationDate"
+                label="注册时间"
+                rules={[{ required: true, message: '请输入注册时间' }]}
+              >
+                <Input placeholder="请输入注册时间" />
+              </Form.Item>
+            </Col>
+            <Col span={FORM_STYLES.form.edit.colSpan}>
+              <Form.Item
+                name="phone"
+                label="联系电话"
+                rules={[{ required: true, message: '请输入联系电话' }]}
+              >
+                <Input placeholder="请输入联系电话" />
+              </Form.Item>
+            </Col>
+          </Row>
           
-          <div style={{ marginBottom: FORM_STYLES.spacing.cardBottom }}>
-            <h3 style={{ marginBottom: 8 }}>联系人信息</h3>
-            <Row gutter={FORM_STYLES.form.edit.rowGutter}>
-              <Col span={FORM_STYLES.form.edit.colSpan}>
-                <Form.Item
-                  name="contactPerson"
-                  label="企业联系人"
-                >
-                  <Input placeholder="请输入联系人" />
-                </Form.Item>
-              </Col>
-              <Col span={FORM_STYLES.form.edit.colSpan}>
-                <Form.Item
-                  name="contactPhone"
-                  label="联系电话"
-                >
-                  <Input placeholder="请输入联系电话" />
-                </Form.Item>
-              </Col>
-            </Row>
-            <Row gutter={FORM_STYLES.form.edit.rowGutter}>
-              <Col span={FORM_STYLES.form.edit.colSpan}>
-                <Form.Item
-                  name="contactCategory"
-                  label="类别"
-                >
-                  <Select placeholder="请选择联系人类别">
-                    <Option value="primary">主要联系人</Option>
-                    <Option value="technical">技术联系人</Option>
-                    <Option value="financial">财务联系人</Option>
-                  </Select>
-                </Form.Item>
-              </Col>
-              <Col span={FORM_STYLES.form.edit.colSpan} style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <Form.Item>
-                  <Button type="primary" icon={<PlusOutlined />}>添加联系人</Button>
-                </Form.Item>
-              </Col>
-            </Row>
-          </div>
+          <Row gutter={FORM_STYLES.form.edit.rowGutter}>
+            <Col span={FORM_STYLES.form.edit.colSpan}>
+              <Form.Item
+                name="address"
+                label="联系地址"
+                rules={[{ required: true, message: '请输入联系地址' }]}
+              >
+                <Input placeholder="请输入联系地址" />
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Modal>
     </div>

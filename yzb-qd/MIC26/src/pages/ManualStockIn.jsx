@@ -18,8 +18,10 @@ import {
   Typography,
   Tooltip,
   InputNumber,
-  Checkbox
+  Checkbox,
+  Spin
 } from 'antd';
+import api from '../utils/api';
 import {
   SearchOutlined,
   PlusOutlined,
@@ -405,202 +407,281 @@ const ManualStockIn = () => {
   // 初始化数据
   // 初始化物资目录数据
   useEffect(() => {
-    const materialCatalogData = [
-      {
-        key: '1',
-        materialCode: 'MAT001',
-        materialName: '医用口罩',
-        specification: 'N95',
-        model: 'N95-001',
-        manufacturer: '医疗用品有限公司',
-        supplier: '医疗用品供应商',
-        materialType: '低值耗材',
-        minPackage: '10只/盒',
-        minOrderQuantity: 1,
-        quantity: 1,
-        selected: false,
-        unit: '盒',
-        unitPrice: 25.00,
-        stock: 100
-      },
-      {
-        key: '2',
-        materialCode: 'MAT002',
-        materialName: '医用防护服',
-        specification: 'L号',
-        model: 'PF-202',
-        manufacturer: '防护设备制造厂',
-        supplier: '防护用品供应商',
-        materialType: '高值耗材',
-        minPackage: '1件/袋',
-        minOrderQuantity: 1,
-        quantity: 1,
-        selected: false,
-        unit: '件',
-        unitPrice: 85.00,
-        stock: 50
-      },
-      {
-        key: '3',
-        materialCode: 'MAT003',
-        materialName: '医用手套',
-        specification: '乳胶',
-        model: 'GL-301',
-        manufacturer: '乳胶制品厂',
-        supplier: '医疗耗材供应商',
-        materialType: '低值耗材',
-        minPackage: '100双/箱',
-        minOrderQuantity: 1,
-        quantity: 10,
-        selected: false,
-        unit: '双',
-        unitPrice: 3.50,
-        stock: 200
-      },
-      {
-        key: '4',
-        materialCode: 'MAT004',
-        materialName: '消毒液',
-        specification: '500ml',
-        model: 'DL-450',
-        manufacturer: '消毒制品公司',
-        supplier: '清洁用品供应商',
-        materialType: '试剂',
-        minPackage: '12瓶/箱',
-        minOrderQuantity: 1,
-        quantity: 5,
-        selected: false,
-        unit: '瓶',
-        unitPrice: 18.00,
-        stock: 80
-      },
-      {
-        key: '5',
-        materialCode: 'MAT005',
-        materialName: '体温计',
-        specification: '电子',
-        model: 'TM-550',
-        manufacturer: '医疗器械公司',
-        supplier: '医疗设备供应商',
-        materialType: '高值耗材',
-        minPackage: '1支/盒',
-        minOrderQuantity: 1,
-        quantity: 2,
-        selected: false,
-        unit: '支',
-        unitPrice: 32.00,
-        stock: 60
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // 同时获取物资目录和入库数据
+        const [materialCatalogResponse, stockInResponse] = await Promise.all([
+          api.get('/api/materials'),
+          api.get('/api/manual-stock-in')
+        ]);
+        
+        // 处理物资目录数据
+        const materialCatalogData = materialCatalogResponse.data.map((item, index) => ({
+          ...item,
+          key: item.id || index.toString(),
+          quantity: item.minOrderQuantity || 1,
+          selected: false
+        }));
+        setMaterialCatalog(materialCatalogData);
+        setFilteredMaterials(materialCatalogData);
+        
+        // 处理入库数据
+        const stockInData = stockInResponse.data.map((item, index) => ({
+          ...item,
+          key: item.id || index.toString()
+        }));
+        setData(stockInData);
+        setFilteredData(stockInData);
+        setPagination(prev => ({
+          ...prev,
+          total: stockInData.length
+        }));
+      } catch (error) {
+        console.error('获取数据失败:', error);
+        message.error('获取数据失败，请稍后重试');
+        
+        // 使用模拟数据作为备用
+        const materialCatalogData = [
+          {
+            key: '1',
+            id: '1',
+            materialCode: 'MAT001',
+            materialName: '医用口罩',
+            specification: 'N95',
+            model: 'N95-001',
+            manufacturer: '医疗用品有限公司',
+            supplier: '医疗用品供应商',
+            materialType: '低值耗材',
+            minPackage: '10只/盒',
+            minOrderQuantity: 1,
+            quantity: 1,
+            selected: false,
+            unit: '盒',
+            unitPrice: 25.00,
+            stock: 100,
+            registrationNumber: 'REG-2024-001',
+            storageCondition: '常温'
+          },
+          {
+            key: '2',
+            id: '2',
+            materialCode: 'MAT002',
+            materialName: '医用防护服',
+            specification: 'L号',
+            model: 'PF-202',
+            manufacturer: '防护设备制造厂',
+            supplier: '防护用品供应商',
+            materialType: '高值耗材',
+            minPackage: '1件/袋',
+            minOrderQuantity: 1,
+            quantity: 1,
+            selected: false,
+            unit: '件',
+            unitPrice: 85.00,
+            stock: 50,
+            registrationNumber: 'REG-2024-002',
+            storageCondition: '常温'
+          },
+          {
+            key: '3',
+            id: '3',
+            materialCode: 'MAT003',
+            materialName: '医用手套',
+            specification: '乳胶',
+            model: 'GL-301',
+            manufacturer: '乳胶制品厂',
+            supplier: '医疗耗材供应商',
+            materialType: '低值耗材',
+            minPackage: '100双/箱',
+            minOrderQuantity: 1,
+            quantity: 10,
+            selected: false,
+            unit: '双',
+            unitPrice: 3.50,
+            stock: 200,
+            registrationNumber: 'REG-2024-003',
+            storageCondition: '常温'
+          },
+          {
+            key: '4',
+            id: '4',
+            materialCode: 'MAT004',
+            materialName: '消毒液',
+            specification: '500ml',
+            model: 'DL-450',
+            manufacturer: '消毒制品公司',
+            supplier: '清洁用品供应商',
+            materialType: '试剂',
+            minPackage: '12瓶/箱',
+            minOrderQuantity: 1,
+            quantity: 5,
+            selected: false,
+            unit: '瓶',
+            unitPrice: 18.00,
+            stock: 80,
+            registrationNumber: 'REG-2024-004',
+            storageCondition: '阴凉处'
+          },
+          {
+            key: '5',
+            id: '5',
+            materialCode: 'MAT005',
+            materialName: '体温计',
+            specification: '电子',
+            model: 'TM-550',
+            manufacturer: '医疗器械公司',
+            supplier: '医疗设备供应商',
+            materialType: '高值耗材',
+            minPackage: '1支/盒',
+            minOrderQuantity: 1,
+            quantity: 2,
+            selected: false,
+            unit: '支',
+            unitPrice: 32.00,
+            stock: 60,
+            registrationNumber: 'REG-2024-005',
+            storageCondition: '常温'
+          }
+        ];
+        
+        setMaterialCatalog(materialCatalogData);
+        setFilteredMaterials(materialCatalogData);
+        
+        const mockData = [
+          {
+            key: '1',
+            id: '1',
+            productCode: 'PROD001',
+            productName: '一次性医用口罩',
+            materialType: '低值耗材',
+            specification: '三层防护',
+            model: 'MASK-001',
+            batchNumber: 'BATCH20260115',
+            productionDate: '2026-01-01',
+            expiryDate: '2027-01-01',
+            minPackage: '10个/盒',
+            orderUnit: '个',
+            purchasePrice: 1.50,
+            instockQuantity: 1000,
+            registrationNumber: 'REG-2024-001',
+            supplierName: '医疗用品供应商A',
+            manufacturer: '口罩制造厂A',
+            remark: '手动入库测试'
+          },
+          {
+            key: '2',
+            id: '2',
+            productCode: 'PROD002',
+            productName: '乳胶手套',
+            materialType: '低值耗材',
+            specification: '无粉',
+            model: 'GLOVE-001',
+            batchNumber: 'BATCH20260114',
+            productionDate: '2026-01-01',
+            expiryDate: '2027-01-01',
+            minPackage: '100双/盒',
+            orderUnit: '双',
+            purchasePrice: 3.00,
+            instockQuantity: 500,
+            registrationNumber: 'REG-2024-002',
+            supplierName: '医疗用品供应商B',
+            manufacturer: '手套制造厂B',
+            remark: '检验科专用'
+          },
+          {
+            key: '3',
+            id: '3',
+            productCode: 'PROD003',
+            productName: '消毒液',
+            materialType: '试剂',
+            specification: '500ml/瓶',
+            model: 'DISINFECT-001',
+            batchNumber: 'BATCH20260113',
+            productionDate: '2026-01-01',
+            expiryDate: '2027-01-01',
+            minPackage: '12瓶/箱',
+            orderUnit: '瓶',
+            purchasePrice: 15.00,
+            instockQuantity: 200,
+            registrationNumber: 'REG-2024-003',
+            supplierName: '消毒用品供应商C',
+            manufacturer: '消毒液制造厂C',
+            remark: '手术室专用消毒'
+          }
+        ];
+        
+        setData(mockData);
+        setFilteredData(mockData);
+        setPagination(prev => ({
+          ...prev,
+          total: mockData.length
+        }));
+      } finally {
+        setLoading(false);
       }
-    ];
-    
-    setMaterialCatalog(materialCatalogData);
-    setFilteredMaterials(materialCatalogData);
-    
-    const mockData = [
-      {
-        key: '1',
-        orderNumber: 'PO-20260115-001',
-        productCode: 'PROD001',
-        specification: '一次性医用口罩',
-        model: 'MASK-001',
-        manufacturer: '口罩制造厂A',
-        supplierName: '医疗用品供应商A',
-        registrationNumber: 'REG-2024-001',
-        orderQuantity: 1000,
-        orderUnit: '个',
-        instockQuantity: 1000,
-        packUnit: '箱',
-        batchNumber: 'BATCH20260115',
-        productionDate: '2026-01-01',
-        expiryDate: '2027-01-01',
-        purchasePrice: 1.50,
-        purchaseAmount: 1500.00,
-        department: '采购部',
-        createTime: '2026-01-15 10:30:00',
-        remark: '手动入库测试'
-      },
-      {
-        key: '2',
-        orderNumber: 'PO-20260115-002',
-        productCode: 'PROD002',
-        specification: '乳胶手套',
-        model: 'GLOVE-001',
-        manufacturer: '手套制造厂B',
-        supplierName: '医疗用品供应商B',
-        registrationNumber: 'REG-2024-002',
-        orderQuantity: 500,
-        orderUnit: '双',
-        instockQuantity: 500,
-        packUnit: '盒',
-        batchNumber: 'BATCH20260114',
-        productionDate: '2026-01-01',
-        expiryDate: '2027-01-01',
-        purchasePrice: 3.00,
-        purchaseAmount: 1500.00,
-        department: '检验科',
-        createTime: '2026-01-15 11:15:00',
-        remark: '检验科专用'
-      },
-      {
-        key: '3',
-        orderNumber: 'PO-20260115-003',
-        productCode: 'PROD003',
-        specification: '500ml/瓶',
-        model: 'DISINFECT-001',
-        manufacturer: '消毒液制造厂C',
-        supplierName: '消毒用品供应商C',
-        registrationNumber: 'REG-2024-003',
-        orderQuantity: 200,
-        orderUnit: '瓶',
-        instockQuantity: 200,
-        packUnit: '箱',
-        batchNumber: 'BATCH20260113',
-        productionDate: '2026-01-01',
-        expiryDate: '2027-01-01',
-        purchasePrice: 15.00,
-        purchaseAmount: 3000.00,
-        department: '手术室',
-        createTime: '2026-01-15 14:20:00',
-        remark: '手术室专用消毒'
-      }
-    ];
-    
-    setData(mockData);
-    setFilteredData(mockData);
-    setPagination(prev => ({
-      ...prev,
-      total: mockData.length
-    }));
+    };
+
+    fetchData();
   }, []);
 
   // 处理搜索
-  const handleSearch = (values) => {
-    let filtered = [...data];
-    
-    if (values.orderNumber) {
-      filtered = filtered.filter(item => 
-        item.orderNumber.toLowerCase().includes(values.orderNumber.toLowerCase())
-      );
+  const handleSearch = async (values) => {
+    setLoading(true);
+    try {
+      // 发送搜索请求到后端
+      const response = await api.get('/api/manual-stock-in/search', values);
+      // 为每个记录添加key属性
+      const data = response.data.map((item, index) => ({
+        ...item,
+        key: item.id || index.toString()
+      }));
+      setFilteredData(data);
+      setPagination(prev => ({
+        ...prev,
+        current: 1,
+        total: data.length,
+      }));
+    } catch (error) {
+      console.error('搜索初始化入库数据失败:', error);
+      message.error('搜索初始化入库数据失败，请稍后重试');
+      // 在前端进行过滤作为备用
+      let filtered = [...data];
+      
+      if (values.productCode) {
+        filtered = filtered.filter(item => 
+          item.productCode.toLowerCase().includes(values.productCode.toLowerCase())
+        );
+      }
+      
+      if (values.productName) {
+        filtered = filtered.filter(item => 
+          (item.productName && item.productName.toLowerCase().includes(values.productName.toLowerCase())) ||
+          (item.materialName && item.materialName.toLowerCase().includes(values.productName.toLowerCase()))
+        );
+      }
+      
+      if (values.supplierName) {
+        filtered = filtered.filter(item => 
+          item.supplierName.toLowerCase().includes(values.supplierName.toLowerCase())
+        );
+      }
+      
+      if (values.manufacturer) {
+        filtered = filtered.filter(item => 
+          item.manufacturer.toLowerCase().includes(values.manufacturer.toLowerCase())
+        );
+      }
+      
+      setFilteredData(filtered);
+      setPagination(prev => ({
+        ...prev,
+        current: 1,
+        total: filtered.length,
+      }));
+    } finally {
+      setLoading(false);
     }
-    
-    if (values.productCode) {
-      filtered = filtered.filter(item => 
-        item.productCode.toLowerCase().includes(values.productCode.toLowerCase())
-      );
-    }
-    
-    if (values.supplierName) {
-      filtered = filtered.filter(item => 
-        item.supplierName.toLowerCase().includes(values.supplierName.toLowerCase())
-      );
-    }
-    
-    setFilteredData(filtered);
-    setPagination(prev => ({
-      ...prev,
-      current: 1,
-      total: filtered.length,
-    }));
   };
 
   // 重置搜索
@@ -674,13 +755,11 @@ const ManualStockIn = () => {
 
   // 处理保存
   const handleSave = () => {
-    form.validateFields().then(values => {
+    form.validateFields().then(async values => {
       setLoading(true);
       
-      // 模拟API调用
-      setTimeout(() => {
-        const newItem = {
-          key: isEditMode ? selectedItem.key : `new-${Date.now()}`,
+      try {
+        const saveData = {
           stockInNumber: values.stockInNumber,
           productCode: values.productCode,
           productName: values.productName,
@@ -699,19 +778,30 @@ const ManualStockIn = () => {
           purchasePrice: values.purchasePrice,
           purchaseAmount: values.purchaseAmount,
           department: values.department,
-          createTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
-          remark: values.remark,
-          status: '已入库'
+          remark: values.remark
         };
         
+        let response;
         if (isEditMode) {
+          // 更新操作
+          response = await api.put(`/api/manual-stock-in/${selectedItem.id || selectedItem.key}`, saveData);
+          const updatedItem = {
+            ...response.data,
+            key: response.data.id || selectedItem.key
+          };
           const newData = data.map(item => 
-            item.key === selectedItem.key ? newItem : item
+            item.key === selectedItem.key ? updatedItem : item
           );
           setData(newData);
           setFilteredData(newData);
           message.success('入库单已更新');
         } else {
+          // 创建操作
+          response = await api.post('/api/manual-stock-in', saveData);
+          const newItem = {
+            ...response.data,
+            key: response.data.id || `new-${Date.now()}`
+          };
           const newData = [newItem, ...data];
           setData(newData);
           setFilteredData(newData);
@@ -722,10 +812,14 @@ const ManualStockIn = () => {
           message.success('入库单已创建');
         }
         
-        setLoading(false);
         setIsModalVisible(false);
         form.resetFields();
-      }, 1000);
+      } catch (error) {
+        console.error('保存入库单失败:', error);
+        message.error('保存入库单失败，请稍后重试');
+      } finally {
+        setLoading(false);
+      }
     }).catch(error => {
       console.error('表单验证失败:', error);
     });
@@ -734,17 +828,22 @@ const ManualStockIn = () => {
   // 表格列配置
   const columns = [
     {
-      title: '订单号',
-      dataIndex: 'orderNumber',
-      key: 'orderNumber',
-      width: 180,
-      render: (text) => <Tag color="blue">{text}</Tag>,
-    },
-    {
       title: '物资编码',
       dataIndex: 'productCode',
       key: 'productCode',
       width: 120,
+    },
+    {
+      title: '物资名称',
+      key: 'productName',
+      width: 150,
+      render: (_, record) => record.productName || record.materialName || '',
+    },
+    {
+      title: '物资类型',
+      key: 'materialType',
+      width: 100,
+      render: (_, record) => record.materialType || '',
     },
     {
       title: '规格',
@@ -759,9 +858,72 @@ const ManualStockIn = () => {
       width: 100,
     },
     {
-      title: '生产厂家',
-      dataIndex: 'manufacturer',
-      key: 'manufacturer',
+      title: '批号',
+      key: 'batchNumber',
+      width: 120,
+      render: (_, record) => {
+        const itemEditValues = editValues[record.key] || {};
+        const batchNumber = itemEditValues.batchNumber || record.batchNumber || '';
+        return <div style={styles.readonlyText}>{batchNumber}</div>;
+      },
+    },
+    {
+      title: '生产日期',
+      key: 'productionDate',
+      width: 120,
+      render: (_, record) => {
+        const itemEditValues = editValues[record.key] || {};
+        const productionDate = itemEditValues.productionDate ? 
+          itemEditValues.productionDate.format('YYYY年MM月DD日') : 
+          (record.productionDate ? moment(record.productionDate).format('YYYY年MM月DD日') : '');
+        return <div style={styles.readonlyText}>{productionDate}</div>;
+      },
+    },
+    {
+      title: '失效日期',
+      key: 'expiryDate',
+      width: 120,
+      render: (_, record) => {
+        const itemEditValues = editValues[record.key] || {};
+        const expiryDate = itemEditValues.expiryDate ? 
+          itemEditValues.expiryDate.format('YYYY年MM月DD日') : 
+          (record.expiryDate ? moment(record.expiryDate).format('YYYY年MM月DD日') : '');
+        return <div style={styles.readonlyText}>{expiryDate}</div>;
+      },
+    },
+    {
+      title: '最小包装',
+      key: 'minPackage',
+      width: 100,
+      render: (_, record) => <div style={styles.readonlyText}>{record.minPackage || ''}</div>,
+    },
+    {
+      title: '单位',
+      key: 'unit',
+      width: 80,
+      render: (_, record) => <div style={styles.readonlyText}>{record.orderUnit || record.unit || ''}</div>,
+    },
+    {
+      title: '采购价格',
+      dataIndex: 'purchasePrice',
+      key: 'purchasePrice',
+      width: 100,
+      render: (price) => <div style={styles.readonlyText}>¥{price?.toFixed(2) || '0.00'}</div>,
+    },
+    {
+      title: '入库数量',
+      key: 'instockQuantity',
+      width: 100,
+      render: (_, record) => {
+        const itemEditValues = editValues[record.key] || {};
+        const instockQuantity = itemEditValues.instockQuantity !== undefined ? itemEditValues.instockQuantity : record.instockQuantity || 0;
+        return <div style={styles.readonlyText}>{instockQuantity}</div>;
+      },
+    },
+    {
+      title: '注册证号',
+      dataIndex: 'registrationNumber',
+      key: 'registrationNumber',
       width: 150,
     },
     {
@@ -771,190 +933,10 @@ const ManualStockIn = () => {
       width: 150,
     },
     {
-      title: '注册证号',
-      dataIndex: 'registrationNumber',
-      key: 'registrationNumber',
+      title: '生产厂家',
+      dataIndex: 'manufacturer',
+      key: 'manufacturer',
       width: 150,
-    },
-    {
-      title: '订货数量',
-      dataIndex: 'orderQuantity',
-      key: 'orderQuantity',
-      width: 100,
-    },
-    {
-      title: '订货单位',
-      dataIndex: 'orderUnit',
-      key: 'orderUnit',
-      width: 100,
-    },
-    {
-      title: '入库数量',
-      key: 'instockQuantity',
-      width: 100,
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const instockQuantity = itemEditValues.instockQuantity !== undefined ? itemEditValues.instockQuantity : record.instockQuantity || 0;
-        const errorKey = `${record.key}_instockQuantity`;
-        const hasError = validationErrors[errorKey];
-        
-        return (
-          <div>
-            <InputNumber
-              min={0}
-              max={record.orderQuantity}
-              value={instockQuantity}
-              onChange={(value) => handleEditChange(record.key, 'instockQuantity', value)}
-              style={{ 
-                width: '100%', 
-                ...styles.editableField,
-                ...(hasError ? styles.errorField : {})
-              }}
-            />
-            {hasError && (
-              <div style={{ fontSize: '12px', color: '#ff4d4f', marginTop: '2px' }}>
-                {validationErrors[errorKey]}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: '打包单位',
-      key: 'packUnit',
-      width: 100,
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        return (
-          <Input
-            value={itemEditValues.packUnit || record.packUnit || ''}
-            onChange={(e) => handleEditChange(record.key, 'packUnit', e.target.value)}
-            placeholder="请输入"
-            style={{ width: '100%', ...styles.editableField }}
-          />
-        );
-      },
-    },
-    {
-      title: '批号',
-      key: 'batchNumber',
-      width: 120,
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const errorKey = `${record.key}_batchNumber`;
-        const hasError = validationErrors[errorKey];
-        
-        return (
-          <div>
-            <Input
-              value={itemEditValues.batchNumber || record.batchNumber || ''}
-              onChange={(e) => handleEditChange(record.key, 'batchNumber', e.target.value)}
-              placeholder="请输入"
-              style={{ 
-                width: '100%', 
-                ...styles.editableField,
-                ...(hasError ? styles.errorField : {})
-              }}
-            />
-            {hasError && (
-              <div style={{ fontSize: '12px', color: '#ff4d4f', marginTop: '2px' }}>
-                {validationErrors[errorKey]}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: '生产日期',
-      key: 'productionDate',
-      width: 120,
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const productionDate = itemEditValues.productionDate || (record.productionDate ? moment(record.productionDate) : null);
-        const errorKey = `${record.key}_productionDate`;
-        const hasError = validationErrors[errorKey];
-        
-        return (
-          <div>
-            <DatePicker
-              value={productionDate}
-              onChange={(date) => handleEditChange(record.key, 'productionDate', date)}
-              placeholder="请选择"
-              format="YYYY年MM月DD日"
-              style={{ 
-                width: '100%', 
-                ...styles.editableField,
-                ...(hasError ? styles.errorField : {})
-              }}
-            />
-            {hasError && (
-              <div style={{ fontSize: '12px', color: '#ff4d4f', marginTop: '2px' }}>
-                {validationErrors[errorKey]}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: '失效日期',
-      key: 'expiryDate',
-      width: 120,
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const expiryDate = itemEditValues.expiryDate || (record.expiryDate ? moment(record.expiryDate) : null);
-        const errorKey = `${record.key}_expiryDate`;
-        const hasError = validationErrors[errorKey];
-        
-        return (
-          <div>
-            <DatePicker
-              value={expiryDate}
-              onChange={(date) => handleEditChange(record.key, 'expiryDate', date)}
-              placeholder="请选择"
-              format="YYYY年MM月DD日"
-              style={{ 
-                width: '100%', 
-                ...styles.editableField,
-                ...(hasError ? styles.errorField : {})
-              }}
-            />
-            {hasError && (
-              <div style={{ fontSize: '12px', color: '#ff4d4f', marginTop: '2px' }}>
-                {validationErrors[errorKey]}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: '采购单价',
-      dataIndex: 'purchasePrice',
-      key: 'purchasePrice',
-      width: 100,
-      render: (price) => `¥${price?.toFixed(2) || '0.00'}`,
-    },
-    {
-      title: '采购金额',
-      dataIndex: 'purchaseAmount',
-      key: 'purchaseAmount',
-      width: 100,
-      render: (amount) => `¥${amount?.toFixed(2) || '0.00'}`,
-    },
-    {
-      title: '申领科室',
-      dataIndex: 'department',
-      key: 'department',
-      width: 120,
-    },
-    {
-      title: '创建时间',
-      dataIndex: 'createTime',
-      key: 'createTime',
-      width: 160,
     },
     {
       title: '备注',
@@ -977,48 +959,51 @@ const ManualStockIn = () => {
       <h1 style={{ marginBottom: 24 }}>初始化入库</h1>
       
       {/* 搜索区域 */}
-      <Card style={{ marginBottom: 24 }}>
+      <Card style={{ marginBottom: 24, padding: '16px' }}>
         <Form
           form={searchForm}
-          layout="vertical"
           onFinish={handleSearch}
         >
-          <Row gutter={16}>
-            <Col span={6}>
-              <Form.Item name="orderNumber" label="订单号">
-                <Input placeholder="请输入订单号" />
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>物资编码</label>
+              <Form.Item name="productCode" noStyle>
+                <Input placeholder="请输入物资编码" style={{ width: 200 }} />
               </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="productCode" label="物资编码">
-                <Input placeholder="请输入物资编码" />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>物资名称</label>
+              <Form.Item name="productName" noStyle>
+                <Input placeholder="请输入物资名称" style={{ width: 200 }} />
               </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="supplierName" label="供应商名称">
-                <Input placeholder="请输入供应商名称" />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>供应商</label>
+              <Form.Item name="supplierName" noStyle>
+                <Input placeholder="请输入供应商" style={{ width: 200 }} />
               </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row>
-            <Col span={24} style={{ textAlign: 'right' }}>
-              <Space>
-                <Button type="primary" icon={<SearchOutlined />} htmlType="submit">
-                  查询
-                </Button>
-                <Button onClick={handleReset}>
-                  重置
-                </Button>
-                <Button icon={<ReloadOutlined />} onClick={() => {
-                  setFilteredData(data);
-                  searchForm.resetFields();
-                }}>
-                  刷新
-                </Button>
-              </Space>
-            </Col>
-          </Row>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>生产厂家</label>
+              <Form.Item name="manufacturer" noStyle>
+                <Input placeholder="请输入生产厂家" style={{ width: 200 }} />
+              </Form.Item>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Button type="primary" icon={<SearchOutlined />} htmlType="submit">
+                查询
+              </Button>
+              <Button onClick={handleReset}>
+                重置
+              </Button>
+              <Button icon={<ReloadOutlined />} onClick={() => {
+                setFilteredData(data);
+                searchForm.resetFields();
+              }}>
+                刷新
+              </Button>
+            </div>
+          </div>
         </Form>
       </Card>
       
@@ -1072,52 +1057,7 @@ const ManualStockIn = () => {
         />
       </Card>
 
-      {/* 页面底部备注框和提交按钮 */}
-      <Card style={{ marginTop: 24 }}>
-        {/* 文字备注框 */}
-        <div style={{ 
-          marginBottom: 24,
-          padding: '16px',
-          border: '1px solid #f0f0f0',
-          borderRadius: 8,
-          backgroundColor: '#fafafa'
-        }}>
-          <div style={{ 
-            fontWeight: '500', 
-            marginBottom: 12,
-            color: '#333',
-            fontSize: '16px'
-          }}>
-            入库备注
-          </div>
-          <TextArea
-            placeholder="请输入入库备注信息，例如：特殊存储要求、验收注意事项、供应商特殊说明等"
-            rows={4}
-            value={remark}
-            onChange={(e) => setRemark(e.target.value)}
-            style={{ 
-              width: '100%',
-              resize: 'vertical',
-              fontSize: '14px'
-            }}
-          />
-        </div>
 
-        {/* 提交单据按钮 */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'flex-end', 
-          marginTop: 24
-        }}>
-          <Button 
-            type="primary" 
-            onClick={handleSubmitDocument}
-            loading={submitting}
-          >
-            提交入库单据
-          </Button>
-        </div>
-      </Card>
       
       {/* 新增/编辑模态框 */}
       <Modal
@@ -1377,76 +1317,39 @@ const ManualStockIn = () => {
         >
           <Form 
             form={materialSearchForm} 
-            layout="inline" 
+            layout="vertical" 
             onFinish={handleSearchMaterials}
           >
-            <Row gutter={[12, 12]} style={{ width: '100%' }}>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="materialName" style={{ width: '100%', marginBottom: 0 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>物资编码</label>
+                <Form.Item name="materialCode" noStyle>
                   <Input 
-                    placeholder="物资名称" 
+                    placeholder="请输入物资编码" 
                     allowClear
-                    style={{ width: '100%' }}
+                    style={{ width: 200 }}
                     size="middle"
                   />
                 </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="materialCode" style={{ width: '100%', marginBottom: 0 }}>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>物资名称</label>
+                <Form.Item name="materialName" noStyle>
                   <Input 
-                    placeholder="物资编码" 
+                    placeholder="请输入物资名称" 
                     allowClear
-                    style={{ width: '100%' }}
+                    style={{ width: 200 }}
                     size="middle"
                   />
                 </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="specification" style={{ width: '100%', marginBottom: 0 }}>
-                  <Input 
-                    placeholder="规格" 
-                    allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="model" style={{ width: '100%', marginBottom: 0 }}>
-                  <Input 
-                    placeholder="型号" 
-                    allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="manufacturer" style={{ width: '100%', marginBottom: 0 }}>
-                  <Input 
-                    placeholder="生产厂家" 
-                    allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="supplier" style={{ width: '100%', marginBottom: 0 }}>
-                  <Input 
-                    placeholder="供应商" 
-                    allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="materialType" style={{ width: '100%', marginBottom: 0 }}>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>物资类型</label>
+                <Form.Item name="materialType" noStyle>
                   <Select 
                     placeholder="物资类型" 
                     allowClear
-                    style={{ width: '100%' }}
+                    style={{ width: 200 }}
                     size="middle"
                     options={[
                       { value: '试剂', label: '试剂' },
@@ -1455,27 +1358,45 @@ const ManualStockIn = () => {
                     ]}
                   />
                 </Form.Item>
-              </Col>
-              <Col xs={24} sm={24} md={24} lg={24} xl={24} style={{ textAlign: 'right' }}>
-                <Form.Item style={{ marginBottom: 0 }}>
-                  <Space size="middle">
-                    <Button 
-                      type="primary" 
-                      htmlType="submit"
-                      style={{ minWidth: 90 }}
-                    >
-                      查询
-                    </Button>
-                    <Button 
-                      onClick={handleResetSearch}
-                      style={{ minWidth: 90 }}
-                    >
-                      重置
-                    </Button>
-                  </Space>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>供应商</label>
+                <Form.Item name="supplier" noStyle>
+                  <Input 
+                    placeholder="请输入供应商" 
+                    allowClear
+                    style={{ width: 200 }}
+                    size="middle"
+                  />
                 </Form.Item>
-              </Col>
-            </Row>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>生产厂家</label>
+                <Form.Item name="manufacturer" noStyle>
+                  <Input 
+                    placeholder="请输入生产厂家" 
+                    allowClear
+                    style={{ width: 200 }}
+                    size="middle"
+                  />
+                </Form.Item>
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <Button 
+                  onClick={handleResetSearch}
+                  style={{ minWidth: 90 }}
+                >
+                  重置
+                </Button>
+                <Button 
+                  type="primary" 
+                  htmlType="submit"
+                  style={{ minWidth: 90 }}
+                >
+                  搜索
+                </Button>
+              </div>
+            </div>
           </Form>
         </Card>
 
@@ -1497,17 +1418,20 @@ const ManualStockIn = () => {
                 </th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资编码</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>物资名称</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资类型</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>规格</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>型号</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>生产厂家</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>供应商</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资类型</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>批号</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>生产日期</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>失效日期</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>最小包装</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>起订量</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>单位</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>采购价格</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>数量</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>单位</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>单价</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>剩余库存</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>注册证号</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>供应商</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>生产厂家</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>储存条件</th>
               </tr>
             </thead>
             <tbody>
@@ -1523,13 +1447,74 @@ const ManualStockIn = () => {
                   </td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialCode}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialName}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialType}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.specification}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.model}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.manufacturer}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.supplier}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialType}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
+                    <Input 
+                      value={item.batchNumber || ''}
+                      onChange={(e) => {
+                        const newCatalog = materialCatalog.map(catalogItem => 
+                          catalogItem.key === item.key ? { ...catalogItem, batchNumber: e.target.value } : catalogItem
+                        );
+                        setMaterialCatalog(newCatalog);
+                        
+                        if (filteredMaterials.length > 0) {
+                          const newFiltered = filteredMaterials.map(filteredItem => 
+                            filteredItem.key === item.key ? { ...filteredItem, batchNumber: e.target.value } : filteredItem
+                          );
+                          setFilteredMaterials(newFiltered);
+                        }
+                      }} 
+                      placeholder="请输入批号"
+                      style={{ width: '100px' }}
+                    />
+                  </td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
+                    <DatePicker 
+                      value={item.productionDate ? moment(item.productionDate) : null}
+                      onChange={(date) => {
+                        const newCatalog = materialCatalog.map(catalogItem => 
+                          catalogItem.key === item.key ? { ...catalogItem, productionDate: date } : catalogItem
+                        );
+                        setMaterialCatalog(newCatalog);
+                        
+                        if (filteredMaterials.length > 0) {
+                          const newFiltered = filteredMaterials.map(filteredItem => 
+                            filteredItem.key === item.key ? { ...filteredItem, productionDate: date } : filteredItem
+                          );
+                          setFilteredMaterials(newFiltered);
+                        }
+                      }} 
+                      placeholder="请选择"
+                      format="YYYY年MM月DD日"
+                      style={{ width: '120px' }}
+                    />
+                  </td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
+                    <DatePicker 
+                      value={item.expiryDate ? moment(item.expiryDate) : null}
+                      onChange={(date) => {
+                        const newCatalog = materialCatalog.map(catalogItem => 
+                          catalogItem.key === item.key ? { ...catalogItem, expiryDate: date } : catalogItem
+                        );
+                        setMaterialCatalog(newCatalog);
+                        
+                        if (filteredMaterials.length > 0) {
+                          const newFiltered = filteredMaterials.map(filteredItem => 
+                            filteredItem.key === item.key ? { ...filteredItem, expiryDate: date } : filteredItem
+                          );
+                          setFilteredMaterials(newFiltered);
+                        }
+                      }} 
+                      placeholder="请选择"
+                      format="YYYY年MM月DD日"
+                      style={{ width: '120px' }}
+                    />
+                  </td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.minPackage}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.minOrderQuantity}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.unit}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>¥{item.unitPrice?.toFixed(2)}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
                     <InputNumber
                       min={item.minOrderQuantity}
@@ -1550,9 +1535,10 @@ const ManualStockIn = () => {
                       style={{ width: '80px' }}
                     />
                   </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.unit}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>¥{item.unitPrice?.toFixed(2)}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.stock}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.registrationNumber || ''}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.supplier}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.manufacturer}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.storageCondition || '常温'}</td>
                 </tr>
               ))}
             </tbody>

@@ -404,10 +404,10 @@ const PurchaseOrderApproval = () => {
         />
       )
     },
-    { title: '订单号', dataIndex: 'orderNo', key: 'orderNo' },
-    { title: '申领科室', dataIndex: 'department', key: 'department' },
+    { title: '采购单号', dataIndex: 'orderNo', key: 'orderNo' },
+    { title: '采购分院', dataIndex: 'department', key: 'department' },
     { 
-      title: '采购数量', 
+      title: '物资数量', 
       dataIndex: 'totalQuantity', 
       key: 'totalQuantity',
       render: (quantity) => <span style={{ fontWeight: '500' }}>{quantity}</span>
@@ -418,20 +418,8 @@ const PurchaseOrderApproval = () => {
       key: 'totalAmount',
       render: (amount) => <span style={{ fontWeight: '500', color: '#1890ff' }}>¥{amount?.toFixed(2)}</span>
     },
-    { title: '创建时间', dataIndex: 'createTime', key: 'createTime' },
-    {
-      title: '状态', 
-      dataIndex: 'status', 
-      key: 'status',
-      render: (status) => {
-        const colors = {
-          '待审核': 'orange',
-          '已审核': 'green',
-          '已驳回': 'red'
-        };
-        return <Tag color={colors[status]}>{status}</Tag>;
-      }
-    },
+    { title: '申请人', dataIndex: 'applicant', key: 'applicant' },
+    { title: '创建日期', dataIndex: 'createTime', key: 'createTime' },
     {
       title: '备注',
       dataIndex: 'remark',
@@ -617,36 +605,75 @@ const PurchaseOrderApproval = () => {
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>采购审核</h1>
       
-      <Card style={{ marginBottom: 16 }}>
-        <Space wrap>
-          <Input placeholder="订单号" style={{ width: 200 }} />
-          <Select placeholder="申领科室" style={{ width: 150 }}>
-            {departments.map((dept, index) => (
-              <Select.Option key={index} value={dept}>{dept}</Select.Option>
-            ))}
-          </Select>
-          <Select placeholder="状态" style={{ width: 120 }}>
-            <Select.Option value="pending">待审核</Select.Option>
-            <Select.Option value="approved">已审核</Select.Option>
-            <Select.Option value="rejected">已驳回</Select.Option>
-          </Select>
-          <Select
-            placeholder="单据筛选"
-            style={{ width: 150 }}
-            value={hasSelectedView ? (viewMode === 'summary' ? 'summary' : 'detail') : undefined}
-            onChange={(value) => {
-              setViewMode(value);
-              setHasSelectedView(true);
-              message.info(`已切换到${value === 'detail' ? '采购明细' : '采购单'}视图`);
-            }}
-          >
-            <Select.Option value="summary">采购单据</Select.Option>
-            <Select.Option value="detail">采购明细</Select.Option>
-          </Select>
-          <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-          <Button type="primary" style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }} onClick={handleBatchApprove}>通过</Button>
-          <Button type="primary" danger onClick={handleBatchReject}>驳回</Button>
-        </Space>
+      <Card style={{ marginBottom: 16, padding: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ whiteSpace: 'nowrap' }}>采购单号：</span>
+              <Input 
+                placeholder="请输入采购单号" 
+                allowClear
+                style={{ width: 180 }}
+                size="middle"
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ whiteSpace: 'nowrap' }}>采购分院：</span>
+              <Select 
+                placeholder="请选择采购分院" 
+                allowClear
+                style={{ width: 180 }}
+                size="middle"
+              >
+                {departments.map((dept, index) => (
+                  <Select.Option key={index} value={dept}>{dept}</Select.Option>
+                ))}
+              </Select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ whiteSpace: 'nowrap' }}>物资编码：</span>
+              <Input 
+                placeholder="请输入物资编码" 
+                allowClear
+                style={{ width: 180 }}
+                size="middle"
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ whiteSpace: 'nowrap' }}>物资名称：</span>
+              <Input 
+                placeholder="请输入物资名称" 
+                allowClear
+                style={{ width: 180 }}
+                size="middle"
+              />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <Button 
+              type="primary" 
+              icon={<SearchOutlined />}
+              style={{ minWidth: 90 }}
+            >
+              查询
+            </Button>
+            <Button 
+              type="primary" 
+              style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', minWidth: 90 }}
+              onClick={handleBatchApprove}
+            >
+              通过
+            </Button>
+            <Button 
+              type="primary" 
+              danger
+              style={{ minWidth: 90 }}
+              onClick={handleBatchReject}
+            >
+              驳回
+            </Button>
+          </div>
+        </div>
       </Card>
 
       <Card>
@@ -710,15 +737,15 @@ const PurchaseOrderApproval = () => {
                   marginRight: '8px',
                   borderRadius: '2px'
                 }} />
-                订单信息
+                采购审核
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                 <div>
-                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>订单号</div>
+                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>采购单号</div>
                   <div style={{ fontWeight: '500' }}>{currentOrder.orderNo}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>申领科室</div>
+                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>采购分院</div>
                   <div style={{ fontWeight: '500' }}>{currentOrder.department}</div>
                 </div>
                 <div>
@@ -726,7 +753,7 @@ const PurchaseOrderApproval = () => {
                   <div style={{ fontWeight: '500' }}>{currentOrder.applicant}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>创建时间</div>
+                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>创建日期</div>
                   <div style={{ fontWeight: '500' }}>{currentOrder.createTime}</div>
                 </div>
                 <div>
@@ -773,13 +800,13 @@ const PurchaseOrderApproval = () => {
                 <thead>
                   <tr style={{ backgroundColor: '#fafafa' }}>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资编码</th>
-                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>商品名称</th>
+                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>物资名称</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>规格</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>型号</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>单位</th>
-                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>单价</th>
+                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>采购价格</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>采购数量</th>
-                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>总价</th>
+                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>合计金额</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>生产厂家</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>通过</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>驳回</th>
@@ -906,14 +933,14 @@ const PurchaseOrderApproval = () => {
                   {/* 汇总行（仅汇总视图显示） */}
                   {currentOrder.items && currentOrder.items.length > 0 && (
                     <tr style={{ backgroundColor: '#f6ffed', borderTop: '2px solid #52c41a' }}>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', fontWeight: 'bold' }} colSpan="8">合计</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', fontWeight: 'bold' }} colSpan="6">合计</td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', fontWeight: 'bold', color: '#1890ff' }}>
                         {calculateTotals().totalQuantity}
                       </td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', fontWeight: 'bold', color: '#52c41a' }}>
                         ¥{calculateTotals().totalAmount}
                       </td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', fontWeight: 'bold' }}>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', fontWeight: 'bold' }} colSpan="3">
                         共 {currentOrder.items.length} 项商品
                       </td>
                     </tr>

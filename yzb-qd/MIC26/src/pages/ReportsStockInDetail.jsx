@@ -1,8 +1,10 @@
 import React from 'react';
-import { Card, Table, DatePicker, Select, Button, Space } from 'antd';
+import { Card, Table, DatePicker, Select, Button } from 'antd';
 import { SearchOutlined, ExportOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
+
+
 const { RangePicker } = DatePicker;
 
 const ReportsStockInDetail = () => {
@@ -27,22 +29,33 @@ const ReportsStockInDetail = () => {
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>仓库入库明细</h1>
       
-      <Card style={{ marginBottom: 16 }}>
-        <Space wrap style={{ width: '100%' }}>
-          <RangePicker placeholder={['开始日期', '结束日期']} />
-          <Select placeholder="供应商" style={{ minWidth: 120 }}>
-            <Option value="all">全部供应商</Option>
-            <Option value="supplierA">供应商A</Option>
-            <Option value="supplierB">供应商B</Option>
-          </Select>
-          <Select placeholder="仓库" style={{ minWidth: 120 }}>
-            <Option value="all">全部仓库</Option>
-            <Option value="warehouse1">仓库1</Option>
-            <Option value="warehouse2">仓库2</Option>
-          </Select>
+      <Card style={{ marginBottom: 16, padding: '16px' }}>
+        <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>日期范围：</span>
+            <RangePicker placeholder={['开始日期', '结束日期']} style={{ width: '300px' }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>供应商：</span>
+            <Select placeholder="请选择供应商" style={{ width: '200px' }}>
+              <Option value="all">全部供应商</Option>
+              <Option value="supplierA">供应商A</Option>
+              <Option value="supplierB">供应商B</Option>
+            </Select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>仓库：</span>
+            <Select placeholder="请选择仓库" style={{ width: '200px' }}>
+              <Option value="all">全部仓库</Option>
+              <Option value="warehouse1">仓库1</Option>
+              <Option value="warehouse2">仓库2</Option>
+            </Select>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
           <Button type="primary" icon={<SearchOutlined />}>查询</Button>
           <Button icon={<ExportOutlined />}>导出</Button>
-        </Space>
+        </div>
       </Card>
       
       <div style={{ overflowX: 'auto' }}>

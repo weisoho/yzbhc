@@ -60,34 +60,35 @@ const InventoryAdjust = () => {
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>商品信息调整</h1>
       
-      <Card style={{ marginBottom: 16 }}>
-        <Row gutter={[16, 0]} align="middle">
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Input placeholder="商品名称" style={{ width: '100%' }} />
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Select placeholder="修改类型" style={{ width: '100%' }}>
+      <Card style={{ marginBottom: 16, padding: '16px' }}>
+        <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>商品名称：</span>
+            <Input placeholder="请输入商品名称" style={{ width: '200px' }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>修改类型：</span>
+            <Select placeholder="请选择修改类型" style={{ width: '200px' }}>
               <Select.Option value="all">全部类型</Select.Option>
               <Select.Option value="price">价格调整</Select.Option>
               <Select.Option value="quantity">数量调整</Select.Option>
               <Select.Option value="info">信息修改</Select.Option>
             </Select>
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
-            <Select placeholder="审核状态" style={{ width: '100%' }}>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>审核状态：</span>
+            <Select placeholder="请选择审核状态" style={{ width: '200px' }}>
               <Select.Option value="all">全部状态</Select.Option>
               <Select.Option value="pending">待审核</Select.Option>
               <Select.Option value="approved">已通过</Select.Option>
               <Select.Option value="rejected">已拒绝</Select.Option>
             </Select>
-          </Col>
-          <Col xs={24} sm={12} md={12} lg={6}>
-            <Space>
-              <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-              <Button type="primary" icon={<EditOutlined />} onClick={() => setModalVisible(true)}>申请调整</Button>
-            </Space>
-          </Col>
-        </Row>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <Button type="primary" icon={<SearchOutlined />}>查询</Button>
+          <Button type="primary" icon={<EditOutlined />} onClick={() => setModalVisible(true)}>申请调整</Button>
+        </div>
       </Card>
       
       <div style={{ overflowX: 'auto' }}>

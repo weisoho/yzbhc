@@ -8,7 +8,7 @@
 const STORAGE_KEY = 'featureVisibilityConfig';
 const BACKUP_STORAGE_KEY = 'featureVisibilityConfig_backup';
 
-// 默认配置（所有功能隐藏，仅显示首页）
+// 默认配置（默认显示所有页面）
 const DEFAULT_CONFIG = {
   version: '1.0.0',
   schema: 'feature-visibility',
@@ -23,8 +23,60 @@ const DEFAULT_CONFIG = {
       group: 'root',
       alwaysVisible: true
     },
-    // 其他所有功能默认隐藏
-    visibleKeys: []
+    // 默认显示所有页面
+    visibleKeys: [
+      '/supplier-maintenance',
+      '/supplier-inspection-report',
+      '/supplier-business-license',
+      '/supplier-business-certificate',
+      '/supplier-qualification-warning',
+      '/product-catalog',
+      '/product-price-adjustment',
+      '/purchase-order-request',
+      '/purchase-order-approval',
+      '/purchase-order-query',
+      '/purchase-receipt',
+      '/purchase-order-acceptance',
+      '/manual-stock-in',
+      '/transfer-acceptance',
+      '/stock-in-detail',
+      '/abnormal-order-management',
+      '/inventory-detail',
+      '/inventory-transfer',
+      '/inventory-expiry',
+      '/stock-out-consumption',
+      '/stock-out-detail',
+      '/stock-out-stats',
+      '/stock-out-consumption-undo',
+      '/inventory-check-generate',
+      '/inventory-check-detail',
+      '/inventory-check-diff',
+      '/reports-stock-in-detail',
+      '/reports-stock-in-summary',
+      '/reports-consumption-detail',
+      '/reports-consumption-summary',
+      '/reports-loss-summary',
+      '/user-account-management',
+      '/user-permission-settings',
+      '/user-role-template',
+      '/department-management',
+      '/campus-management',
+      '/fixed-assets-dictionary',
+      '/fixed-assets-add',
+      '/fixed-assets-detail-query',
+      '/fixed-assets-transfer',
+      '/fixed-assets-scrap',
+      '/fixed-assets-scrap-detail',
+      '/fixed-assets-change-audit',
+      '/fixed-assets-warning',
+      '/fixed-assets-maintenance-record',
+      '/sample-project-management',
+      '/sample-quantity-management',
+      '/consumables-quality-issue',
+      '/medical-device-adverse-event',
+      '/instrument-maintenance-record',
+      '/operation-log'
+    ]
   }
 };
 
@@ -184,8 +236,7 @@ export const getAllPagesConfig = () => [
   { key: '/abnormal-order-management', title: '异常订单管理', path: '/abnormal-order-management', group: 'stock-in' },
   { key: '/inventory-detail', title: '物资库存', path: '/inventory-detail', group: 'inventory' },
   { key: '/inventory-transfer', title: '物资调拨', path: '/inventory-transfer', group: 'inventory' },
-  { key: '/inventory-shelf', title: '物资库位维护（已弃置）', path: '/inventory-shelf', group: 'inventory' },
-  { key: '/inventory-location', title: '物资库位调整', path: '/inventory-location', group: 'inventory' },
+
   { key: '/inventory-expiry', title: '近效期查询', path: '/inventory-expiry', group: 'inventory' },
   { key: '/stock-out-consumption', title: '消耗出库', path: '/stock-out-consumption', group: 'stock-out' },
   { key: '/stock-out-detail', title: '消耗明细查询', path: '/stock-out-detail', group: 'stock-out' },
@@ -282,8 +333,7 @@ export const generateTreeData = () => [
     children: [
       { title: '物资库存', key: '/inventory-detail' },
       { title: '物资调拨', key: '/inventory-transfer' },
-      { title: '物资库位维护（已弃置）', key: '/inventory-shelf' },
-      { title: '物资库位调整', key: '/inventory-location' },
+
       { title: '近效期查询', key: '/inventory-expiry' },
     ]
   },

@@ -15,6 +15,9 @@ import {
   isPageVisible as isPageVisibleUtil
 } from '../utils/featureConfig';
 
+// 存储键常量
+const STORAGE_VERSION_KEY = 'pageStructureVersion';
+
 // 创建页面可见性上下文
 const PageVisibilityContext = createContext();
 

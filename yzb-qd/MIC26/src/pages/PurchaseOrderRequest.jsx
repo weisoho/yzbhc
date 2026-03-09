@@ -59,7 +59,8 @@ const PurchaseOrderRequest = () => {
       selected: false,
       unit: '盒',
       unitPrice: 25.00,
-      stock: 100
+      stock: 100,
+      registrationNumber: '国械注准202326400123'
     },
     {
       key: '2',
@@ -76,7 +77,8 @@ const PurchaseOrderRequest = () => {
       selected: false,
       unit: '件',
       unitPrice: 85.00,
-      stock: 50
+      stock: 50,
+      registrationNumber: '国械注准202326400456'
     },
     {
       key: '3',
@@ -93,7 +95,8 @@ const PurchaseOrderRequest = () => {
       selected: false,
       unit: '双',
       unitPrice: 3.50,
-      stock: 200
+      stock: 200,
+      registrationNumber: '国械注准202326400789'
     },
     {
       key: '4',
@@ -110,7 +113,8 @@ const PurchaseOrderRequest = () => {
       selected: false,
       unit: '瓶',
       unitPrice: 18.00,
-      stock: 80
+      stock: 80,
+      registrationNumber: '国械注准202326401234'
     },
     {
       key: '5',
@@ -127,7 +131,8 @@ const PurchaseOrderRequest = () => {
       selected: false,
       unit: '支',
       unitPrice: 32.00,
-      stock: 60
+      stock: 60,
+      registrationNumber: '国械注准202326405678'
     },
     {
       key: '6',
@@ -144,7 +149,8 @@ const PurchaseOrderRequest = () => {
       selected: false,
       unit: '支',
       unitPrice: 1.20,
-      stock: 300
+      stock: 300,
+      registrationNumber: '国械注准202326409012'
     },
     {
       key: '7',
@@ -161,7 +167,8 @@ const PurchaseOrderRequest = () => {
       selected: false,
       unit: '套',
       unitPrice: 4.80,
-      stock: 150
+      stock: 150,
+      registrationNumber: '国械注准202326403456'
     },
     {
       key: '8',
@@ -178,7 +185,8 @@ const PurchaseOrderRequest = () => {
       selected: false,
       unit: '包',
       unitPrice: 8.50,
-      stock: 120
+      stock: 120,
+      registrationNumber: '国械注准202326407890'
     },
     {
       key: '9',
@@ -195,7 +203,8 @@ const PurchaseOrderRequest = () => {
       selected: false,
       unit: '包',
       unitPrice: 2.50,
-      stock: 180
+      stock: 180,
+      registrationNumber: '国械注准202326401234'
     },
     {
       key: '10',
@@ -212,7 +221,8 @@ const PurchaseOrderRequest = () => {
       selected: false,
       unit: '片',
       unitPrice: 0.80,
-      stock: 500
+      stock: 500,
+      registrationNumber: '国械注准202326405678'
     }
   ]);
   
@@ -711,13 +721,12 @@ const PurchaseOrderRequest = () => {
           key: selectedItem.key,
           materialCode: selectedItem.materialCode,
           materialName: selectedItem.materialName,
-          specification: selectedItem.specification,
+          materialType: selectedItem.materialType,
           unit: selectedItem.unit,
           unitPrice: selectedItem.unitPrice,
           stock: selectedItem.stock,
           selected: true,
-          quantity: selectedItem.quantity,
-          packageUnit: selectedItem.unit
+          quantity: selectedItem.quantity
         });
       } else {
         // 更新现有物资的数量
@@ -779,50 +788,20 @@ const PurchaseOrderRequest = () => {
   // 采购单汇总视图列配置
   const summaryColumns = [
     {
-      title: () => (
-        <Checkbox 
-          indeterminate={selectedRowKeys.length > 0 && selectedRowKeys.length < filteredPurchaseOrders.length}
-          checked={filteredPurchaseOrders.length > 0 && selectedRowKeys.length === filteredPurchaseOrders.length}
-          onChange={(e) => {
-            if (e.target.checked) {
-              setSelectedRowKeys(filteredPurchaseOrders.map(item => item.key));
-            } else {
-              setSelectedRowKeys([]);
-            }
-          }}
-        />
-      ),
-      dataIndex: 'selection',
-      key: 'selection',
-      width: 50,
-      fixed: 'left',
-      render: (_, record) => (
-        <Checkbox 
-          checked={selectedRowKeys.includes(record.key)}
-          onChange={(e) => {
-            const newSelectedRowKeys = e.target.checked
-              ? [...selectedRowKeys, record.key]
-              : selectedRowKeys.filter(key => key !== record.key);
-            setSelectedRowKeys(newSelectedRowKeys);
-          }}
-        />
-      ),
-    },
-    {
-      title: '单号',
+      title: '采购单号',
       dataIndex: 'orderNumber',
       key: 'orderNumber',
       width: 150,
       render: (text) => <Tag color="blue">{text}</Tag>
     },
     {
-      title: '申领科室',
+      title: '采购分院',
       dataIndex: 'department',
       key: 'department',
       width: 120
     },
     {
-      title: '商品数量',
+      title: '物资数量',
       dataIndex: 'itemCount',
       key: 'itemCount',
       width: 100
@@ -835,13 +814,13 @@ const PurchaseOrderRequest = () => {
       render: (value) => <strong>¥{value.toFixed(2)}</strong>
     },
     {
-      title: '操作人',
+      title: '申请人',
       dataIndex: 'operator',
       key: 'operator',
       width: 100
     },
     {
-      title: '创建时间',
+      title: '创建日期',
       dataIndex: 'createTime',
       key: 'createTime',
       width: 180
@@ -1158,127 +1137,74 @@ const PurchaseOrderRequest = () => {
       <Card 
         style={{ marginBottom: 24, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
       >
-        <Form form={form} layout="inline" onFinish={handleSearch}>
-          <Row gutter={[12, 12]} style={{ width: '100%' }}>
-            <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-              <Form.Item name="orderNumber" style={{ width: '100%', marginBottom: 0 }}>
+        <div style={{ padding: '16px', border: '1px solid #e8e8e8', borderRadius: '4px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ whiteSpace: 'nowrap' }}>物资编码：</span>
                 <Input 
-                  placeholder="单号" 
+                  placeholder="请输入物资编码" 
                   allowClear
-                  style={{ width: '100%' }}
+                  style={{ width: 180 }}
                   size="middle"
                 />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-              <Form.Item name="createTime" style={{ width: '100%', marginBottom: 0 }}>
-                <DatePicker 
-                  placeholder="创建时间" 
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ whiteSpace: 'nowrap' }}>物资名称：</span>
+                <Input 
+                  placeholder="请输入物资名称" 
                   allowClear
-                  style={{ width: '100%' }}
+                  style={{ width: 180 }}
+                  size="middle"
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ whiteSpace: 'nowrap' }}>采购单号：</span>
+                <Input 
+                  placeholder="请输入采购单号" 
+                  allowClear
+                  style={{ width: 180 }}
+                  size="middle"
+                />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ whiteSpace: 'nowrap' }}>创建日期：</span>
+                <DatePicker 
+                  placeholder="请选择创建日期" 
+                  allowClear
+                  style={{ width: 180 }}
                   size="middle"
                   format="YYYY年MM月DD日"
                   locale={zhCN}
                   popupClassName="chinese-datepicker"
                 />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-              <Form.Item name="endTime" style={{ width: '100%', marginBottom: 0 }}>
-                <DatePicker 
-                  placeholder="结束时间" 
-                  allowClear
-                  style={{ width: '100%' }}
-                  size="middle"
-                  format="YYYY年MM月DD日"
-                  locale={zhCN}
-                  popupClassName="chinese-datepicker"
-                />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-              <Form.Item name="status" style={{ width: '100%', marginBottom: 0 }}>
-                <Select 
-                  placeholder="状态" 
-                  allowClear
-                  style={{ width: '100%' }}
-                  size="middle"
-                  options={statusOptions}
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-              <Form.Item name="supplier" style={{ width: '100%', marginBottom: 0 }}>
-                <Input 
-                  placeholder="供应商" 
-                  allowClear
-                  style={{ width: '100%' }}
-                  size="middle"
-                />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-              <Form.Item name="department" style={{ width: '100%', marginBottom: 0 }}>
-                <Select 
-                  placeholder="申领科室" 
-                  allowClear
-                  style={{ width: '100%' }}
-                  size="middle"
-                  options={departmentOptions}
-                />
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-              <Form.Item style={{ width: '100%', marginBottom: 0 }}>
-                <Select
-                  placeholder="单据筛选"
-                  style={{ width: '100%' }}
-                  value={hasSelectedView ? (viewMode === 'summary' ? 'summary' : 'detail') : undefined}
-                  onChange={(value) => {
-                    setViewMode(value);
-                    setHasSelectedView(true);
-                    message.info(`已切换到${value === 'detail' ? '采购明细' : '采购单'}视图`);
-                  }}
-                >
-                  <Select.Option value="summary">采购单据</Select.Option>
-                  <Select.Option value="detail">采购明细</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-
-            <Col xs={24} sm={24} md={24} lg={24} xl={24} style={{ textAlign: 'right' }}>
-              <Form.Item style={{ marginBottom: 0 }}>
-                <Space size="middle">
-                  <Button 
-                    type="primary" 
-                    htmlType="submit"
-                    icon={<SearchOutlined />}
-                    style={{ minWidth: 90 }}
-                  >
-                    搜索
-                  </Button>
-                  <Button 
-                    icon={<ReloadOutlined />}
-                    onClick={handleReset}
-                    style={{ minWidth: 90 }}
-                  >
-                    重置
-                  </Button>
-                  <Button 
-                    icon={<ExportOutlined />}
-                    style={{ minWidth: 90 }}
-                  >
-                    导出
-                  </Button>
-                </Space>
-              </Form.Item>
-            </Col>
-          </Row>
-        </Form>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              <Button 
+                type="primary" 
+                icon={<SearchOutlined />}
+                style={{ minWidth: 90 }}
+                onClick={handleSearch}
+              >
+                搜索
+              </Button>
+              <Button 
+                icon={<ReloadOutlined />}
+                onClick={handleReset}
+                style={{ minWidth: 90 }}
+              >
+                重置
+              </Button>
+              <Button 
+                icon={<ExportOutlined />}
+                style={{ minWidth: 90 }}
+              >
+                导出
+              </Button>
+            </div>
+          </div>
+        </div>
       </Card>
 
       {/* 新建采购申请按钮 */}
@@ -1293,17 +1219,17 @@ const PurchaseOrderRequest = () => {
 
       {/* 采购单汇总表单 */}
       <Card 
-        title={`${viewMode === 'detail' ? '采购明细' : '采购单汇总'} (共 ${viewMode === 'detail' ? getDetailData().length : getFilteredPurchaseOrders().length} 条)`}
+        title={`采购计划申请 (共 ${getFilteredPurchaseOrders().length} 条)`}
         style={{ borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
       >
         <Table
-          columns={viewMode === 'detail' ? detailColumns : summaryColumns}
-          dataSource={viewMode === 'detail' ? getDetailData() : getFilteredPurchaseOrders()}
+          columns={summaryColumns}
+          dataSource={getFilteredPurchaseOrders()}
           rowKey="key"
           pagination={{ 
             current: pagination.current,
             pageSize: pagination.pageSize,
-            total: viewMode === 'detail' ? getDetailData().length : getFilteredPurchaseOrders().length,
+            total: getFilteredPurchaseOrders().length,
             showSizeChanger: true,
             showTotal: (total) => `共 ${total} 条记录`,
             position: ['bottomCenter'],
@@ -1378,14 +1304,12 @@ const PurchaseOrderRequest = () => {
                   />
                 </th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资编码</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>商品名称</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>规格</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>物资名称</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资类型</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>单位</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>单价</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>剩余库存</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>采购价格</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>采购数量</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>包装单位</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>操作</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>现有库存</th>
               </tr>
             </thead>
             <tbody>
@@ -1399,10 +1323,9 @@ const PurchaseOrderRequest = () => {
                   </td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialCode}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialName}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.specification}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialType}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.unit}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>¥{item.unitPrice.toFixed(2)}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.stock}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
                     <InputNumber
                       min={1}
@@ -1411,22 +1334,7 @@ const PurchaseOrderRequest = () => {
                       style={{ width: '100%' }}
                     />
                   </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
-                    <Select
-                      value={item.packageUnit}
-                      onChange={(value) => handlePackageUnitChange(item.key, value)}
-                      style={{ width: '100%' }}
-                      options={[
-                        { value: '盒', label: '盒' },
-                        { value: '件', label: '件' },
-                        { value: '包', label: '包' },
-                        { value: '箱', label: '箱' },
-                        { value: '支', label: '支' }
-                      ]}
-                    />
-                  </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
-                  </td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.stock}</td>
                 </tr>
               ))}
             </tbody>
@@ -1569,102 +1477,70 @@ const PurchaseOrderRequest = () => {
             layout="inline" 
             onFinish={handleSearchMaterials}
           >
-            <Row gutter={[12, 12]} style={{ width: '100%' }}>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="materialName" style={{ width: '100%', marginBottom: 0 }}>
-                  <Input 
-                    placeholder="物资名称" 
-                    allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="materialCode" style={{ width: '100%', marginBottom: 0 }}>
-                  <Input 
-                    placeholder="物资编码" 
-                    allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="specification" style={{ width: '100%', marginBottom: 0 }}>
-                  <Input 
-                    placeholder="规格" 
-                    allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="model" style={{ width: '100%', marginBottom: 0 }}>
-                  <Input 
-                    placeholder="型号" 
-                    allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="manufacturer" style={{ width: '100%', marginBottom: 0 }}>
-                  <Input 
-                    placeholder="生产厂家" 
-                    allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="supplier" style={{ width: '100%', marginBottom: 0 }}>
-                  <Input 
-                    placeholder="供应商" 
-                    allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="materialType" style={{ width: '100%', marginBottom: 0 }}>
-                  <Select 
-                    placeholder="物资类型" 
-                    allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
-                    options={[
-                      { value: '试剂', label: '试剂' },
-                      { value: '低值耗材', label: '低值耗材' },
-                      { value: '高值耗材', label: '高值耗材' }
-                    ]}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={24} md={24} lg={24} xl={24} style={{ textAlign: 'right' }}>
-                <Form.Item style={{ marginBottom: 0 }}>
-                  <Space size="middle">
-                    <Button 
-                      type="primary" 
-                      htmlType="submit"
-                      style={{ minWidth: 90 }}
-                    >
-                      查询
-                    </Button>
-                    <Button 
-                      onClick={handleResetSearch}
-                      style={{ minWidth: 90 }}
-                    >
-                      重置
-                    </Button>
-                  </Space>
-                </Form.Item>
-              </Col>
-            </Row>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ whiteSpace: 'nowrap' }}>物资编码：</span>
+                  <Form.Item name="materialCode" style={{ marginBottom: 0 }}>
+                    <Input 
+                      placeholder="请输入物资编码" 
+                      allowClear
+                      style={{ width: 180 }}
+                      size="middle"
+                    />
+                  </Form.Item>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ whiteSpace: 'nowrap' }}>物资名称：</span>
+                  <Form.Item name="materialName" style={{ marginBottom: 0 }}>
+                    <Input 
+                      placeholder="请输入物资名称" 
+                      allowClear
+                      style={{ width: 180 }}
+                      size="middle"
+                    />
+                  </Form.Item>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ whiteSpace: 'nowrap' }}>供应商：</span>
+                  <Form.Item name="supplier" style={{ marginBottom: 0 }}>
+                    <Input 
+                      placeholder="请输入供应商" 
+                      allowClear
+                      style={{ width: 180 }}
+                      size="middle"
+                    />
+                  </Form.Item>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ whiteSpace: 'nowrap' }}>生产厂家：</span>
+                  <Form.Item name="manufacturer" style={{ marginBottom: 0 }}>
+                    <Input 
+                      placeholder="请输入生产厂家" 
+                      allowClear
+                      style={{ width: 180 }}
+                      size="middle"
+                    />
+                  </Form.Item>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <Button 
+                  type="primary" 
+                  htmlType="submit"
+                  icon={<SearchOutlined />}
+                  style={{ minWidth: 90 }}
+                >
+                  搜索
+                </Button>
+                <Button 
+                  onClick={handleResetSearch}
+                  style={{ minWidth: 90 }}
+                >
+                  重置
+                </Button>
+              </div>
+            </div>
           </Form>
         </Card>
 
@@ -1686,17 +1562,18 @@ const PurchaseOrderRequest = () => {
                 </th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资编码</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>物资名称</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资类型</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>规格</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>型号</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>生产厂家</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>供应商</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资类型</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>最小包装</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>起订量</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>数量</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>单位</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>单价</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>剩余库存</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>采购价格</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>采购数量</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>现有库存</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>注册证号</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>供应商</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>生产厂家</th>
               </tr>
             </thead>
             <tbody>
@@ -1712,13 +1589,13 @@ const PurchaseOrderRequest = () => {
                   </td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialCode}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialName}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialType}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.specification}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.model}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.manufacturer}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.supplier}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialType}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.minPackage}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.minOrderQuantity}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.unit}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>¥{item.unitPrice.toFixed(2)}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
                     <InputNumber
                       min={item.minOrderQuantity}
@@ -1727,9 +1604,10 @@ const PurchaseOrderRequest = () => {
                       style={{ width: '100%' }}
                     />
                   </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.unit}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>¥{item.unitPrice.toFixed(2)}</td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.stock}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.registrationNumber}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.supplier}</td>
+                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.manufacturer}</td>
                 </tr>
               ))}
             </tbody>
@@ -1838,7 +1716,7 @@ const PurchaseOrderRequest = () => {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
                 <div>
-                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>订单编号</div>
+                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>采购单号</div>
                   <div style={{ fontWeight: '500' }}>{currentOrderDetails.orderNumber}</div>
                 </div>
                 <div>
@@ -1846,11 +1724,11 @@ const PurchaseOrderRequest = () => {
                   <div style={{ fontWeight: '500' }}>{currentOrderDetails.supplier}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>申领科室</div>
+                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>采购分院</div>
                   <div style={{ fontWeight: '500' }}>{currentOrderDetails.department}</div>
                 </div>
                 <div>
-                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>创建时间</div>
+                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>创建日期</div>
                   <div style={{ fontWeight: '500' }}>{currentOrderDetails.createTime}</div>
                 </div>
                 <div>
@@ -1868,7 +1746,7 @@ const PurchaseOrderRequest = () => {
                   </div>
                 </div>
                 <div>
-                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>操作人</div>
+                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>申请人</div>
                   <div style={{ fontWeight: '500' }}>{currentOrderDetails.operator}</div>
                 </div>
               </div>
@@ -1893,10 +1771,10 @@ const PurchaseOrderRequest = () => {
                     </th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资编码</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>物资名称</th>
-                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>规格</th>
+                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资类型</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>单位</th>
-                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>单价</th>
-                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>数量</th>
+                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>采购价格</th>
+                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>采购数量</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>金额</th>
                   </tr>
                 </thead>
@@ -1912,7 +1790,7 @@ const PurchaseOrderRequest = () => {
                         </td>
                         <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialCode}</td>
                         <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialName}</td>
-                        <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.specification}</td>
+                        <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialType || '-'}</td>
                         <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
                           <Input
                             value={item.unit}
@@ -2020,7 +1898,7 @@ const PurchaseOrderRequest = () => {
                         key: item.key,
                         materialCode: item.materialCode,
                         materialName: item.materialName,
-                        specification: item.specification,
+                        materialType: item.materialType,
                         unit: item.unit,
                         unitPrice: item.unitPrice,
                         quantity: item.quantity,

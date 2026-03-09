@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, Select, message } from 'antd';
+import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import moment from 'moment';
 
@@ -10,61 +10,55 @@ const SupplierBusinessLicense = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  const suppliers = [
-    { key: '1', name: '供应商A', contact: '张三', phone: '13800138001' },
-    { key: '2', name: '供应商B', contact: '李四', phone: '13900139001' },
-    { key: '3', name: '供应商C', contact: '王五', phone: '13700137001' },
-  ];
-
   const [businessLicenses, setBusinessLicenses] = useState([
     { 
       key: '1', 
-      supplierName: '供应商A', 
       licenseNumber: 'BL2024001',
-      licenseType: '医疗器械经营许可证',
-      issueDate: '2024-01-15',
-      expiryDate: '2029-01-15',
+      companyName: '供应商A',
+      unifiedSocialCreditCode: '91110000MA12345678',
+      legalRepresentative: '张三',
       issuingAuthority: '北京市药监局',
-      status: '有效',
-      licenseFile: '经营许可证_供应商A.pdf',
-      remark: ''
+      effectiveDate: '2024-01-15',
+      expiryDate: '2029-01-15',
+      attachment: '经营许可证_供应商A.pdf'
     },
     { 
       key: '2', 
-      supplierName: '供应商B', 
       licenseNumber: 'BL2024002',
-      licenseType: '医疗器械经营许可证',
-      issueDate: '2023-06-20',
-      expiryDate: '2028-06-20',
+      companyName: '供应商B',
+      unifiedSocialCreditCode: '91310000MA87654321',
+      legalRepresentative: '李四',
       issuingAuthority: '上海市药监局',
-      status: '有效',
-      licenseFile: '经营许可证_供应商B.pdf',
-      remark: ''
+      effectiveDate: '2023-06-20',
+      expiryDate: '2028-06-20',
+      attachment: '经营许可证_供应商B.pdf'
     },
     { 
       key: '3', 
-      supplierName: '供应商C', 
       licenseNumber: 'BL2024003',
-      licenseType: '医疗器械经营许可证',
-      issueDate: '2022-12-10',
-      expiryDate: '2027-12-10',
+      companyName: '供应商C',
+      unifiedSocialCreditCode: '91440000MA13579246',
+      legalRepresentative: '王五',
       issuingAuthority: '广东省药监局',
-      status: '即将过期',
-      licenseFile: '经营许可证_供应商C.pdf',
-      remark: ''
+      effectiveDate: '2022-12-10',
+      expiryDate: '2027-12-10',
+      attachment: '经营许可证_供应商C.pdf'
     },
   ]);
 
   // 编辑处理函数
   const handleEdit = (record) => {
     setEditingRecord(record);
+    // 设置所有字段，包括附件为空数组
     editForm.setFieldsValue({
       licenseNumber: record.licenseNumber,
-      licenseType: record.licenseType,
-      issueDate: record.issueDate ? moment(record.issueDate) : null,
-      expiryDate: record.expiryDate ? moment(record.expiryDate) : null,
+      companyName: record.companyName,
+      unifiedSocialCreditCode: record.unifiedSocialCreditCode,
+      legalRepresentative: record.legalRepresentative,
       issuingAuthority: record.issuingAuthority,
-      remark: record.remark || ''
+      effectiveDate: record.effectiveDate ? moment(record.effectiveDate) : null,
+      expiryDate: record.expiryDate ? moment(record.expiryDate) : null,
+      attachment: []
     });
     setEditVisible(true);
   };
@@ -74,14 +68,24 @@ const SupplierBusinessLicense = () => {
     editForm.validateFields().then(values => {
       const updatedLicenses = businessLicenses.map(license => {
         if (license.key === editingRecord.key) {
+          // 处理附件
+          let attachment = editingRecord.attachment;
+          // 检查 values.attachment 是否存在且是数组
+          if (values.attachment && Array.isArray(values.attachment) && values.attachment.length > 0) {
+            // 取数组中的第一个文件
+            attachment = values.attachment[0].name;
+          }
+          
           return {
             ...license,
             licenseNumber: values.licenseNumber,
-            licenseType: values.licenseType,
-            issueDate: values.issueDate ? values.issueDate.format('YYYY-MM-DD') : '',
-            expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : '',
+            companyName: values.companyName,
+            unifiedSocialCreditCode: values.unifiedSocialCreditCode,
+            legalRepresentative: values.legalRepresentative,
             issuingAuthority: values.issuingAuthority,
-            remark: values.remark || ''
+            effectiveDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : '',
+            expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : '',
+            attachment: attachment
           };
         }
         return license;
@@ -92,6 +96,8 @@ const SupplierBusinessLicense = () => {
       setEditingRecord(null);
       editForm.resetFields();
       message.success('经营许可证更新成功');
+    }).catch(() => {
+      // 表单验证失败
     });
   };
 
@@ -113,19 +119,6 @@ const SupplierBusinessLicense = () => {
 
   const columns = [
     { 
-      title: '供应商名称', 
-      dataIndex: 'supplierName', 
-      key: 'supplierName',
-      width: 150,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      })
-    },
-    { 
       title: '许可证编号', 
       dataIndex: 'licenseNumber', 
       key: 'licenseNumber',
@@ -139,10 +132,10 @@ const SupplierBusinessLicense = () => {
       })
     },
     { 
-      title: '许可证类型', 
-      dataIndex: 'licenseType', 
-      key: 'licenseType',
-      width: 160,
+      title: '企业名称', 
+      dataIndex: 'companyName', 
+      key: 'companyName',
+      width: 150,
       align: 'center',
       onCell: () => ({
         style: {
@@ -152,10 +145,10 @@ const SupplierBusinessLicense = () => {
       })
     },
     { 
-      title: '发证日期', 
-      dataIndex: 'issueDate', 
-      key: 'issueDate',
-      width: 100,
+      title: '统一社会信用代码', 
+      dataIndex: 'unifiedSocialCreditCode', 
+      key: 'unifiedSocialCreditCode',
+      width: 200,
       align: 'center',
       onCell: () => ({
         style: {
@@ -165,10 +158,10 @@ const SupplierBusinessLicense = () => {
       })
     },
     { 
-      title: '有效期至', 
-      dataIndex: 'expiryDate', 
-      key: 'expiryDate',
-      width: 100,
+      title: '法定代表人', 
+      dataIndex: 'legalRepresentative', 
+      key: 'legalRepresentative',
+      width: 120,
       align: 'center',
       onCell: () => ({
         style: {
@@ -178,7 +171,7 @@ const SupplierBusinessLicense = () => {
       })
     },
     { 
-      title: '发证机关', 
+      title: '发证部门', 
       dataIndex: 'issuingAuthority', 
       key: 'issuingAuthority',
       width: 120,
@@ -191,31 +184,10 @@ const SupplierBusinessLicense = () => {
       })
     },
     { 
-      title: '状态', 
-      dataIndex: 'status', 
-      key: 'status',
-      width: 80,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (status) => (
-        <span style={{ 
-          color: status === '有效' ? '#52c41a' : status === '即将过期' ? '#faad14' : '#f5222d',
-          fontWeight: 'bold'
-        }}>
-          {status}
-        </span>
-      )
-    },
-    { 
-      title: '许可证文件', 
-      dataIndex: 'licenseFile', 
-      key: 'licenseFile',
-      width: 150,
+      title: '生效日期', 
+      dataIndex: 'effectiveDate', 
+      key: 'effectiveDate',
+      width: 100,
       align: 'center',
       onCell: () => ({
         style: {
@@ -225,10 +197,23 @@ const SupplierBusinessLicense = () => {
       })
     },
     { 
-      title: '备注', 
-      dataIndex: 'remark', 
-      key: 'remark',
-      width: 200,
+      title: '失效日期', 
+      dataIndex: 'expiryDate', 
+      key: 'expiryDate',
+      width: 100,
+      align: 'center',
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
+    },
+    { 
+      title: '附件', 
+      dataIndex: 'attachment', 
+      key: 'attachment',
+      width: 150,
       align: 'center',
       onCell: () => ({
         style: {
@@ -265,9 +250,9 @@ const SupplierBusinessLicense = () => {
     },
     onChange(info) {
       if (info.file.status === 'done') {
-        console.log('文件上传成功');
+        // 文件上传成功
       } else if (info.file.status === 'error') {
-        console.log('文件上传失败');
+        // 文件上传失败
       }
     },
   };
@@ -277,30 +262,28 @@ const SupplierBusinessLicense = () => {
       <h1 style={{ marginBottom: 24 }}>供应商经营许可证</h1>
       
       <Card style={{ marginBottom: 16 }}>
-        <Space wrap style={{ width: '100%' }}>
-          <Select placeholder="选择供应商" style={{ width: 200 }}>
-            {suppliers.map(supplier => (
-              <Select.Option key={supplier.key} value={supplier.name}>
-                {supplier.name}
-              </Select.Option>
-            ))}
-          </Select>
-          <Input placeholder="许可证编号" style={{ width: 200 }} />
-          <Select placeholder="许可证类型" style={{ width: 180 }}>
-            <Select.Option value="医疗器械经营许可证">医疗器械经营许可证</Select.Option>
-            <Select.Option value="药品经营许可证">药品经营许可证</Select.Option>
-            <Select.Option value="营业执照">营业执照</Select.Option>
-          </Select>
-          <Select placeholder="状态" style={{ width: 120 }}>
-            <Select.Option value="有效">有效</Select.Option>
-            <Select.Option value="即将过期">即将过期</Select.Option>
-            <Select.Option value="已过期">已过期</Select.Option>
-          </Select>
-          <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setVisible(true)}>
-            新增经营许可证
-          </Button>
-        </Space>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ whiteSpace: 'nowrap' }}>许可证编号：</span>
+              <Input placeholder="请输入许可证编号" style={{ width: 200 }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ whiteSpace: 'nowrap' }}>企业名称：</span>
+              <Input placeholder="请输入企业名称" style={{ width: 200 }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ whiteSpace: 'nowrap' }}>统一社会信用代码：</span>
+              <Input placeholder="请输入统一社会信用代码" style={{ width: 200 }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+            <Button type="primary" icon={<SearchOutlined />}>查询</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setVisible(true)}>
+              新增供应商经营许可证
+            </Button>
+          </div>
+        </div>
       </Card>
       
       <div style={{ overflowX: 'auto' }}>
@@ -323,13 +306,32 @@ const SupplierBusinessLicense = () => {
       </div>
 
       <Modal
-        title="新增经营许可证"
+        title="新增供应商经营许可证"
         open={visible}
         onOk={() => {
-          form.validateFields().then(() => {
-            // 新增经营许可证处理
+          form.validateFields().then(values => {
+            let attachment = '';
+            // 检查 values.attachment 是否存在且是数组
+            if (values.attachment && Array.isArray(values.attachment) && values.attachment.length > 0) {
+              attachment = values.attachment[0].name;
+            }
+            const newLicense = {
+              key: (businessLicenses.length + 1).toString(),
+              licenseNumber: values.licenseNumber,
+              companyName: values.companyName,
+              unifiedSocialCreditCode: values.unifiedSocialCreditCode,
+              legalRepresentative: values.legalRepresentative,
+              issuingAuthority: values.issuingAuthority,
+              effectiveDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : '',
+              expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : '',
+              attachment: attachment
+            };
+            setBusinessLicenses([...businessLicenses, newLicense]);
             setVisible(false);
             form.resetFields();
+            message.success('经营许可证新增成功');
+          }).catch(() => {
+            // 表单验证失败
           });
         }}
         onCancel={() => {
@@ -338,23 +340,9 @@ const SupplierBusinessLicense = () => {
         }}
         okText="确定"
         cancelText="取消"
-        width={800}
+        width={600}
       >
         <Form form={form} layout="vertical">
-          <Form.Item
-            name="supplierName"
-            label="供应商名称"
-            rules={[{ required: true, message: '请选择供应商' }]}
-          >
-            <Select placeholder="请选择供应商">
-              {suppliers.map(supplier => (
-                <Select.Option key={supplier.key} value={supplier.name}>
-                  {supplier.name}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-          
           <Form.Item
             name="licenseNumber"
             label="许可证编号"
@@ -364,154 +352,61 @@ const SupplierBusinessLicense = () => {
           </Form.Item>
           
           <Form.Item
-            name="licenseType"
-            label="许可证类型"
-            rules={[{ required: true, message: '请选择许可证类型' }]}
+            name="companyName"
+            label="企业名称"
+            rules={[{ required: true, message: '请输入企业名称' }]}
           >
-            <Select placeholder="请选择许可证类型">
-              <Select.Option value="医疗器械经营许可证">医疗器械经营许可证</Select.Option>
-              <Select.Option value="第二类医疗器械经营备案凭证">第二类医疗器械经营备案凭证</Select.Option>
-              <Select.Option value="第三类医疗器械经营许可证">第三类医疗器械经营许可证</Select.Option>
-              <Select.Option value="药品经营许可证">药品经营许可证</Select.Option>
-              <Select.Option value="药品经营质量管理规范认证证书">药品经营质量管理规范认证证书</Select.Option>
-              <Select.Option value="营业执照">营业执照</Select.Option>
-              <Select.Option value="食品经营许可证">食品经营许可证</Select.Option>
-              <Select.Option value="化妆品生产许可证">化妆品生产许可证</Select.Option>
-              <Select.Option value="消毒产品生产企业卫生许可证">消毒产品生产企业卫生许可证</Select.Option>
-              <Select.Option value="其他许可证">其他许可证</Select.Option>
-            </Select>
+            <Input placeholder="请输入企业名称" />
           </Form.Item>
           
           <Form.Item
-            name="businessScope"
-            label="经营范围"
-            rules={[{ required: true, message: '请输入经营范围' }]}
+            name="unifiedSocialCreditCode"
+            label="统一社会信用代码"
+            rules={[{ required: true, message: '请输入统一社会信用代码' }]}
           >
-            <Input.TextArea 
-              placeholder="请输入许可证允许的经营范围" 
-              rows={3}
-              showCount
-              maxLength={500}
-            />
+            <Input placeholder="请输入统一社会信用代码" />
           </Form.Item>
           
           <Form.Item
-            name="businessMode"
-            label="经营方式"
-            rules={[{ required: true, message: '请选择经营方式' }]}
+            name="legalRepresentative"
+            label="法定代表人"
+            rules={[{ required: true, message: '请输入法定代表人' }]}
           >
-            <Select placeholder="请选择经营方式">
-              <Select.Option value="批发">批发</Select.Option>
-              <Select.Option value="零售">零售</Select.Option>
-              <Select.Option value="批零兼营">批零兼营</Select.Option>
-              <Select.Option value="生产">生产</Select.Option>
-              <Select.Option value="研发">研发</Select.Option>
-              <Select.Option value="其他">其他</Select.Option>
-            </Select>
-          </Form.Item>
-          
-          <Form.Item
-            name="issueDate"
-            label="发证日期"
-            rules={[{ required: true, message: '请选择发证日期' }]}
-          >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择发证日期" />
-          </Form.Item>
-          
-          <Form.Item
-            name="expiryDate"
-            label="有效期至"
-            rules={[{ required: true, message: '请选择有效期' }]}
-          >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择有效期" />
-          </Form.Item>
-          
-          <Form.Item
-            name="registeredAddress"
-            label="注册地址"
-            rules={[{ required: true, message: '请输入注册地址' }]}
-          >
-            <Input placeholder="请输入许可证上的注册地址" />
-          </Form.Item>
-          
-          <Form.Item
-            name="warehouseAddress"
-            label="仓库地址"
-          >
-            <Input placeholder="请输入仓库地址（如有）" />
+            <Input placeholder="请输入法定代表人" />
           </Form.Item>
           
           <Form.Item
             name="issuingAuthority"
-            label="发证机关"
-            rules={[{ required: true, message: '请输入发证机关' }]}
+            label="发证部门"
+            rules={[{ required: true, message: '请输入发证部门' }]}
           >
-            <Input placeholder="请输入发证机关" />
-          </Form.Item>
-          
-          <div style={{ marginBottom: 16 }}>
-            <h3 style={{ marginBottom: 8 }}>负责人信息</h3>
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              <Form.Item
-                name="legalRepresentative"
-                label="法定代表人"
-                style={{ flex: '1 1 0%', minWidth: '200px' }}
-              >
-                <Input placeholder="请输入法定代表人" />
-              </Form.Item>
-              
-              <Form.Item
-                name="enterpriseResponsiblePerson"
-                label="企业负责人"
-                style={{ flex: '1 1 0%', minWidth: '200px' }}
-              >
-                <Input placeholder="请输入企业负责人" />
-              </Form.Item>
-              
-              <Form.Item
-                name="qualityResponsiblePerson"
-                label="质量负责人"
-                style={{ flex: '1 1 0%', minWidth: '200px' }}
-              >
-                <Input placeholder="请输入质量负责人" />
-              </Form.Item>
-            </div>
-          </div>
-          
-          <Form.Item
-            name="licenseStatus"
-            label="许可证状态"
-            rules={[{ required: true, message: '请选择许可证状态' }]}
-          >
-            <Select placeholder="请选择许可证状态">
-              <Select.Option value="有效">有效</Select.Option>
-              <Select.Option value="即将过期">即将过期</Select.Option>
-              <Select.Option value="已过期">已过期</Select.Option>
-              <Select.Option value="注销">注销</Select.Option>
-              <Select.Option value="吊销">吊销</Select.Option>
-            </Select>
+            <Input placeholder="请输入发证部门" />
           </Form.Item>
           
           <Form.Item
-            name="remarks"
-            label="备注"
+            name="effectiveDate"
+            label="生效日期"
+            rules={[{ required: true, message: '请选择生效日期' }]}
           >
-            <Input.TextArea 
-              placeholder="请输入其他需要说明的信息" 
-              rows={2}
-              showCount
-              maxLength={200}
-            />
+            <DatePicker style={{ width: '100%' }} placeholder="请选择生效日期" />
           </Form.Item>
           
           <Form.Item
-            name="licenseFile"
-            label="许可证文件"
-            rules={[{ required: true, message: '请上传许可证文件' }]}
+            name="expiryDate"
+            label="失效日期"
+            rules={[{ required: true, message: '请选择失效日期' }]}
+          >
+            <DatePicker style={{ width: '100%' }} placeholder="请选择失效日期" />
+          </Form.Item>
+          
+          <Form.Item
+            name="attachment"
+            label="附件"
+            rules={[{ required: true, message: '请上传附件' }]}
             valuePropName="fileList"
           >
             <Upload {...uploadProps}>
-              <Button icon={<UploadOutlined />}>上传许可证</Button>
+              <Button icon={<UploadOutlined />}>上传附件</Button>
             </Upload>
           </Form.Item>
         </Form>
@@ -529,7 +424,7 @@ const SupplierBusinessLicense = () => {
         }}
         okText="保存"
         cancelText="取消"
-        width={800}
+        width={600}
       >
         <Form form={editForm} layout="vertical">
           <Form.Item
@@ -541,68 +436,61 @@ const SupplierBusinessLicense = () => {
           </Form.Item>
           
           <Form.Item
-            name="licenseType"
-            label="许可证类型"
-            rules={[{ required: true, message: '请选择许可证类型' }]}
+            name="companyName"
+            label="企业名称"
+            rules={[{ required: true, message: '请输入企业名称' }]}
           >
-            <Select placeholder="请选择许可证类型">
-              <Select.Option value="医疗器械经营许可证">医疗器械经营许可证</Select.Option>
-              <Select.Option value="第二类医疗器械经营备案凭证">第二类医疗器械经营备案凭证</Select.Option>
-              <Select.Option value="第三类医疗器械经营许可证">第三类医疗器械经营许可证</Select.Option>
-              <Select.Option value="药品经营许可证">药品经营许可证</Select.Option>
-              <Select.Option value="药品经营质量管理规范认证证书">药品经营质量管理规范认证证书</Select.Option>
-              <Select.Option value="营业执照">营业执照</Select.Option>
-              <Select.Option value="食品经营许可证">食品经营许可证</Select.Option>
-              <Select.Option value="化妆品生产许可证">化妆品生产许可证</Select.Option>
-              <Select.Option value="消毒产品生产企业卫生许可证">消毒产品生产企业卫生许可证</Select.Option>
-              <Select.Option value="其他许可证">其他许可证</Select.Option>
-            </Select>
+            <Input placeholder="请输入企业名称" />
           </Form.Item>
           
           <Form.Item
-            name="issueDate"
-            label="发证日期"
-            rules={[{ required: true, message: '请选择发证日期' }]}
+            name="unifiedSocialCreditCode"
+            label="统一社会信用代码"
+            rules={[{ required: true, message: '请输入统一社会信用代码' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择发证日期" />
+            <Input placeholder="请输入统一社会信用代码" />
           </Form.Item>
           
           <Form.Item
-            name="expiryDate"
-            label="有效期至"
-            rules={[{ required: true, message: '请选择有效期' }]}
+            name="legalRepresentative"
+            label="法定代表人"
+            rules={[{ required: true, message: '请输入法定代表人' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择有效期" />
+            <Input placeholder="请输入法定代表人" />
           </Form.Item>
           
           <Form.Item
             name="issuingAuthority"
-            label="发证机关"
-            rules={[{ required: true, message: '请输入发证机关' }]}
+            label="发证部门"
+            rules={[{ required: true, message: '请输入发证部门' }]}
           >
-            <Input placeholder="请输入发证机关" />
+            <Input placeholder="请输入发证部门" />
           </Form.Item>
           
           <Form.Item
-            name="licenseFile"
-            label="许可证文件"
+            name="effectiveDate"
+            label="生效日期"
+            rules={[{ required: true, message: '请选择生效日期' }]}
+          >
+            <DatePicker style={{ width: '100%' }} placeholder="请选择生效日期" />
+          </Form.Item>
+          
+          <Form.Item
+            name="expiryDate"
+            label="失效日期"
+            rules={[{ required: true, message: '请选择失效日期' }]}
+          >
+            <DatePicker style={{ width: '100%' }} placeholder="请选择失效日期" />
+          </Form.Item>
+          
+          <Form.Item
+            name="attachment"
+            label="附件"
             valuePropName="fileList"
           >
             <Upload {...uploadProps}>
-              <Button icon={<UploadOutlined />}>重新上传许可证</Button>
+              <Button icon={<UploadOutlined />}>重新上传附件</Button>
             </Upload>
-          </Form.Item>
-          
-          <Form.Item
-            name="remark"
-            label="备注"
-          >
-            <Input.TextArea 
-              placeholder="请输入备注信息" 
-              rows={4}
-              showCount 
-              maxLength={500}
-            />
           </Form.Item>
         </Form>
       </Modal>

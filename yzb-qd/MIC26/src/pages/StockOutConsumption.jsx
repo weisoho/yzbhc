@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Form, Input, Select, DatePicker, Button, Card, Row, Radio, Space, message, Modal, Checkbox, Col } from 'antd';
-import { MinusCircleOutlined, PlusOutlined, BarcodeOutlined, EditOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Form, Input, Select, Button, Card, Radio, Space, message, Modal, Checkbox, Tag } from 'antd';
+import { MinusCircleOutlined, PlusOutlined, BarcodeOutlined, EditOutlined, SearchOutlined, ExportOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import api from '../utils/api';
 
 const { TextArea } = Input;
 
@@ -35,7 +36,46 @@ const StockOutConsumption = () => {
   const [currentQuantityKey, setCurrentQuantityKey] = useState(null);
 
   // 扫码数据状态管理
-  const [scanMaterialsState, setScanMaterialsState] = useState([]);
+  const [scanMaterialsState, setScanMaterialsState] = useState([
+    {
+      key: '1',
+      materialCode: 'YZS-001',
+      materialName: '一次性注射器',
+      materialType: '低值耗材',
+      specification: '10ml',
+      model: 'YZS-10ML',
+      batchNumber: 'BATCH-202401001',
+      productionDate: '2024-01-15',
+      expiryDate: '2026-01-14',
+      unit: '支',
+      orderQuantity: 10,
+      supplier: '医疗用品供应商',
+      manufacturer: '医疗器械有限公司',
+      reason: '消耗出库',
+      outboundDate: '2026-03-07',
+      status: '待撤销',
+      createTime: '2026-03-07 10:00:00'
+    },
+    {
+      key: '2',
+      materialCode: 'YZS-002',
+      materialName: '输液器',
+      materialType: '高值耗材',
+      specification: '500ml',
+      model: 'SYQ-500ML',
+      batchNumber: 'BATCH-202402001',
+      productionDate: '2024-02-10',
+      expiryDate: '2026-02-09',
+      unit: '个',
+      orderQuantity: 5,
+      supplier: '医疗设备供应商',
+      manufacturer: '输液器制造厂',
+      reason: '质控出库',
+      outboundDate: '2026-03-06',
+      status: '已撤销',
+      createTime: '2026-03-06 14:30:00'
+    }
+  ]);
   
   // 模拟有库存的耗材数据
   const materialsWithStock = [
@@ -170,7 +210,7 @@ const StockOutConsumption = () => {
   ];
 
   // 物资目录数据（用于选择弹窗）- 参考采购计划申请页面
-  const materialCatalogData = [
+  const materialCatalogData = useMemo(() => [
     {
       key: '1',
       materialCode: 'MAT001',
@@ -190,7 +230,8 @@ const StockOutConsumption = () => {
       outboundQuantity: '',
       batchNumber: 'BATCH-202401001',
       productionDate: '2024-01-15',
-      expiryDate: '2026-01-14'
+      expiryDate: '2026-01-14',
+      registrationNumber: '国药准字H20240001'
     },
     {
       key: '2',
@@ -211,7 +252,8 @@ const StockOutConsumption = () => {
       outboundQuantity: '',
       batchNumber: 'BATCH-202402001',
       productionDate: '2024-02-10',
-      expiryDate: '2026-02-09'
+      expiryDate: '2026-02-09',
+      registrationNumber: '国药准字H20240002'
     },
     {
       key: '3',
@@ -232,7 +274,8 @@ const StockOutConsumption = () => {
       outboundQuantity: '',
       batchNumber: 'BATCH-202403001',
       productionDate: '2024-03-05',
-      expiryDate: '2026-03-04'
+      expiryDate: '2026-03-04',
+      registrationNumber: '国药准字H20240003'
     },
     {
       key: '4',
@@ -253,7 +296,8 @@ const StockOutConsumption = () => {
       outboundQuantity: '',
       batchNumber: 'BATCH-202404001',
       productionDate: '2024-04-20',
-      expiryDate: '2026-04-19'
+      expiryDate: '2026-04-19',
+      registrationNumber: '国药准字H20240004'
     },
     {
       key: '5',
@@ -273,7 +317,8 @@ const StockOutConsumption = () => {
       stock: 30,
       batchNumber: 'BATCH-202405001',
       productionDate: '2024-05-12',
-      expiryDate: '2026-05-11'
+      expiryDate: '2026-05-11',
+      registrationNumber: '国药准字H20240005'
     },
     {
       key: '6',
@@ -291,9 +336,11 @@ const StockOutConsumption = () => {
       unit: '支',
       unitPrice: 1.20,
       stock: 300,
+      outboundQuantity: '',
       batchNumber: 'BATCH-202406001',
       productionDate: '2024-06-18',
-      expiryDate: '2026-06-17'
+      expiryDate: '2026-06-17',
+      registrationNumber: '国药准字H20240006'
     },
     {
       key: '7',
@@ -311,9 +358,11 @@ const StockOutConsumption = () => {
       unit: '套',
       unitPrice: 4.80,
       stock: 150,
+      outboundQuantity: '',
       batchNumber: 'BATCH-202407001',
       productionDate: '2024-07-22',
-      expiryDate: '2026-07-21'
+      expiryDate: '2026-07-21',
+      registrationNumber: '国药准字H20240007'
     },
     {
       key: '8',
@@ -331,9 +380,11 @@ const StockOutConsumption = () => {
       unit: '包',
       unitPrice: 8.50,
       stock: 120,
+      outboundQuantity: '',
       batchNumber: 'BATCH-202408001',
       productionDate: '2024-08-05',
-      expiryDate: '2026-08-04'
+      expiryDate: '2026-08-04',
+      registrationNumber: '国药准字H20240008'
     },
     {
       key: '9',
@@ -351,9 +402,11 @@ const StockOutConsumption = () => {
       unit: '包',
       unitPrice: 2.50,
       stock: 180,
+      outboundQuantity: '',
       batchNumber: 'BATCH-202409001',
       productionDate: '2024-09-14',
-      expiryDate: '2026-09-13'
+      expiryDate: '2026-09-13',
+      registrationNumber: '国药准字H20240009'
     },
     {
       key: '10',
@@ -371,38 +424,72 @@ const StockOutConsumption = () => {
       unit: '瓶',
       unitPrice: 12.00,
       stock: 90,
+      outboundQuantity: '',
       batchNumber: 'BATCH-202410001',
       productionDate: '2024-10-30',
-      expiryDate: '2026-10-29'
+      expiryDate: '2026-10-29',
+      registrationNumber: '国药准字H20240010'
     }
-  ];
+  ], []);
 
-  // 获取当前日期
-  const currentDate = dayjs();
-  
   // 表单初始值
   const initialValues = {
     outType: 'consumption',
     scanMaterials: [],
-    manualMaterials: []
+    manualMaterials: [
+      {
+        key: '3',
+        materialCode: 'YZS-003',
+        materialName: '医用棉签',
+        materialType: '低值耗材',
+        specification: '100支/包',
+        model: 'MQ-100',
+        batchNumber: 'BATCH-202403001',
+        productionDate: '2024-03-05',
+        expiryDate: '2026-03-04',
+        unit: '包',
+        orderQuantity: 20,
+        supplier: '医疗用品供应商',
+        manufacturer: '卫生材料公司',
+        reason: '消耗出库',
+        outboundDate: '2026-03-07',
+        status: '待撤销',
+        createTime: '2026-03-07 11:00:00'
+      },
+      {
+        key: '4',
+        materialCode: 'YLQ-001',
+        materialName: '碘伏消毒液',
+        materialType: '低值耗材',
+        specification: '500ml',
+        model: 'DF-500ML',
+        batchNumber: 'BATCH-202405001',
+        productionDate: '2024-05-12',
+        expiryDate: '2026-05-11',
+        unit: '瓶',
+        orderQuantity: 8,
+        supplier: '医疗用品供应商',
+        manufacturer: '消毒液制造公司',
+        reason: '损耗出库',
+        outboundDate: '2026-03-05',
+        status: '已撤销',
+        createTime: '2026-03-05 09:30:00'
+      }
+    ]
   };
 
   // 监听科室变化，实时更新表单
   React.useEffect(() => {
     // 这个useEffect现在为空，因为消耗科室和操作人表单项已被删除
-  }, [form]);
+  }, []);
 
-  const handleStockOut = (values) => {
-    // 根据模式获取对应的物料列表
-    const materials = mode === 'scan' ? values.scanMaterials : values.manualMaterials;
-    
+  const handleStockOut = () => {
     // 记录操作日志
-    console.log('出库操作日志:', {
-      operationTime: new Date().toLocaleString(),
-      mode: mode === 'scan' ? '扫码出库' : '手动出库',
-      出库类型: values.outType,
-      materials: materials,
-    });
+    // 生产环境中可以使用专业的日志库
+    // console.log('出库操作日志:', {
+    //   operationTime: new Date().toLocaleString(),
+    //   mode: mode === 'scan' ? '扫码出库' : '手动出库',
+    // });
     
     setVisible(true);
   };
@@ -466,7 +553,7 @@ const StockOutConsumption = () => {
   React.useEffect(() => {
     setMaterialCatalog([...materialCatalogData]);
     setFilteredMaterials([...materialCatalogData]);
-  }, []);
+  }, [materialCatalogData]);
 
   // 物资选择弹窗相关方法
   const handleOpenMaterialSelect = () => {
@@ -578,12 +665,7 @@ const StockOutConsumption = () => {
     setCatalogSelectAll(false);
   };
 
-  const handleResetSearch = () => {
-    searchForm.resetFields();
-    setFilteredMaterials([...materialCatalog]);
-    setCatalogCurrentPage(1);
-    setCatalogSelectAll(false);
-  };
+
 
   const handleConfirmMaterialSelection = () => {
     const selectedMaterials = materialCatalog.filter(item => item.selected);
@@ -834,7 +916,44 @@ const StockOutConsumption = () => {
     };
   }, [quantityPopupVisible]);
 
+  // 加载状态
+  const [loading, setLoading] = useState(false);
 
+  // 撤销出库处理函数
+  const handleUndoStockOut = async (item) => {
+    // 准备撤销数据
+    const undoData = {
+      materialCode: item.materialCode || item.code,
+      materialName: item.materialName || item.name,
+      materialType: item.materialType || '低值耗材',
+      specification: item.specification,
+      model: item.model,
+      batchNumber: item.batchNumber,
+      effectiveDate: item.productionDate,
+      expiryDate: item.expiryDate,
+      unit: item.unit || item.orderUnit,
+      outboundQuantity: item.orderQuantity || 1,
+      supplier: item.supplier,
+      manufacturer: item.manufacturer,
+      operator: '管理员',
+      outboundReason: item.reason || '扫码出库',
+      outboundDate: item.outboundDate || item.createTime || dayjs().format('YYYY-MM-DD'),
+      status: '待撤销'
+    };
+
+    try {
+      setLoading(true);
+      // 调用API提交撤销申请
+      await api.post('/api/consumption/undo', undoData);
+      // 显示成功消息
+      message.success('已提交撤销申请');
+    } catch (error) {
+      // 显示错误消息
+      message.error(`提交撤销申请失败: ${error.message || '未知错误'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={{ padding: '0 16px' }}>
@@ -857,24 +976,20 @@ const StockOutConsumption = () => {
             </Radio.Group>
           </Form.Item>
 
-          {/* 出库类型（仅手动出库模式显示） */}
-          {mode === 'manual' && (
-            <Form.Item
-              name="outType"
-              label="出库类型"
-              rules={[{ required: true, message: '请选择出库类型' }]}
-              xs={{ span: 24 }}
-              sm={{ span: 12 }}
-              md={{ span: 8 }}
-            >
-              <Select placeholder="请选择出库类型">
-                <Select.Option value="consumption">消耗出库</Select.Option>
-                <Select.Option value="quality">质控出库</Select.Option>
-                <Select.Option value="review">复查出库</Select.Option>
-                <Select.Option value="loss">损耗出库</Select.Option>
-              </Select>
-            </Form.Item>
-          )}
+          {/* 出库类型（两种模式都显示） */}
+          <Form.Item
+            name="outType"
+            label="出库类型"
+            rules={[{ required: true, message: '请选择出库类型' }]}
+            style={{ marginBottom: 24 }}
+          >
+            <Select placeholder="请选择出库类型" style={{ width: '300px' }}>
+              <Select.Option value="consumption">消耗出库</Select.Option>
+              <Select.Option value="quality">质控出库</Select.Option>
+              <Select.Option value="review">复查出库</Select.Option>
+              <Select.Option value="loss">损耗出库</Select.Option>
+            </Select>
+          </Form.Item>
 
           {/* 扫码出库模式 */}
           {mode === 'scan' && (
@@ -907,27 +1022,38 @@ const StockOutConsumption = () => {
             </Card>
           )}
 
+          {/* 添加物资按钮 - 只在手动出库模式下显示 */}
+          {mode === 'manual' && (
+            <Form.Item style={{ marginBottom: 16 }}>
+              <Button type="dashed" block icon={<PlusOutlined />} onClick={handleOpenMaterialSelect}>
+                添加物资
+              </Button>
+            </Form.Item>
+          )}
+
           {/* 物资明细表单 */}
           <Card>
             <div className="ant-table-content" style={{ overflow: 'auto hidden', position: 'relative', minHeight: '200px' }}>
               <table style={{ width: '1600px', minWidth: '100%', tableLayout: 'auto' }}>
                 <colgroup>
                   <col style={{ width: '60px' }} />
-                  <col style={{ width: '140px' }} />
+                  <col style={{ width: '120px' }} />
+                  <col style={{ width: '150px' }} />
                   <col style={{ width: '100px' }} />
                   <col style={{ width: '120px' }} />
-                  <col style={{ width: '80px' }} />
+                  <col style={{ width: '100px' }} />
                   <col style={{ width: '120px' }} />
                   <col style={{ width: '120px' }} />
                   <col style={{ width: '120px' }} />
                   <col style={{ width: '80px' }} />
-                  <col style={{ width: '80px' }} />
                   <col style={{ width: '100px' }} />
+                  <col style={{ width: '150px' }} />
+                  <col style={{ width: '150px' }} />
                   <col style={{ width: '100px' }} />
-                  <col style={{ width: '100px' }} />
+                  <col style={{ width: '120px' }} />
+                  <col style={{ width: '120px' }} />
                   <col style={{ width: '80px' }} />
                   <col style={{ width: '80px' }} />
-                  <col style={{ width: '140px' }} />
                 </colgroup>
                 <thead className="ant-table-thead">
                   <tr>
@@ -947,21 +1073,23 @@ const StockOutConsumption = () => {
                         </label>
                       </div>
                     </th>
-                    <th className="ant-table-cell" scope="col">订单号</th>
                     <th className="ant-table-cell" scope="col">物资编码</th>
+                    <th className="ant-table-cell" scope="col">物资名称</th>
+                    <th className="ant-table-cell" scope="col">物资类型</th>
                     <th className="ant-table-cell" scope="col">规格</th>
                     <th className="ant-table-cell" scope="col">型号</th>
-                    <th className="ant-table-cell" scope="col">生产厂家</th>
-                    <th className="ant-table-cell" scope="col">供应商</th>
-                    <th className="ant-table-cell" scope="col">注册证号</th>
-                    <th className="ant-table-cell" scope="col">数量</th>
-                    <th className="ant-table-cell" scope="col">单位</th>
                     <th className="ant-table-cell" scope="col">批号</th>
-                    <th className="ant-table-cell" scope="col">生产日期</th>
+                    <th className="ant-table-cell" scope="col">生效日期</th>
                     <th className="ant-table-cell" scope="col">失效日期</th>
-                    <th className="ant-table-cell" scope="col">单价</th>
-                    <th className="ant-table-cell" scope="col">金额</th>
-                    <th className="ant-table-cell" scope="col">创建时间</th>
+                    <th className="ant-table-cell" scope="col">单位</th>
+                    <th className="ant-table-cell" scope="col">出库数量</th>
+                    <th className="ant-table-cell" scope="col">供应商</th>
+                    <th className="ant-table-cell" scope="col">生产厂家</th>
+                    <th className="ant-table-cell" scope="col">操作人</th>
+                    <th className="ant-table-cell" scope="col">出库原因</th>
+                    <th className="ant-table-cell" scope="col">出库日期</th>
+                    <th className="ant-table-cell" scope="col">状态</th>
+                    <th className="ant-table-cell" scope="col">操作</th>
                   </tr>
                 </thead>
                 <tbody className="ant-table-tbody">
@@ -990,21 +1118,35 @@ const StockOutConsumption = () => {
                             </label>
                           </div>
                         </td>
-                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.orderNumber || '-'}</td>
                         <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.materialCode || '-'}</td>
+                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.materialName || '-'}</td>
+                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.materialType || '-'}</td>
                         <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.specification || '-'}</td>
                         <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.model || '-'}</td>
-                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.manufacturer || '-'}</td>
-                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.supplier || '-'}</td>
-                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.registrationNumber || '-'}</td>
-                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.orderQuantity || 1}</td>
-                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.orderUnit || '-'}</td>
                         <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.batchNumber || '-'}</td>
                         <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.productionDate || '-'}</td>
                         <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.expiryDate || '-'}</td>
-                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>¥{(item.purchasePrice || 0).toFixed(2)}</td>
-                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>¥{(item.purchaseAmount || 0).toFixed(2)}</td>
-                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.createTime || dayjs().format('YYYY-MM-DD HH:mm:ss')}</td>
+                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.unit || item.orderUnit || '-'}</td>
+                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.orderQuantity || 1}</td>
+                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.supplier || '-'}</td>
+                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.manufacturer || '-'}</td>
+                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>管理员</td>
+                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.reason || '扫码出库'}</td>
+                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.outboundDate || item.createTime || dayjs().format('YYYY-MM-DD')}</td>
+                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>
+                          <Tag color={item.status === '已撤销' ? 'gray' : 'blue'}>{item.status || '待撤销'}</Tag>
+                        </td>
+                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>
+                          <Button 
+                            type="primary" 
+                            size="small" 
+                            disabled={item.status === '已撤销'}
+                            loading={loading}
+                            onClick={() => handleUndoStockOut(item)}
+                          >
+                            撤销出库
+                          </Button>
+                        </td>
                       </tr>
                     ));
                   })()}
@@ -1049,19 +1191,12 @@ const StockOutConsumption = () => {
             </div>
           </Card>
 
-          {/* 添加物资按钮 - 只在手动出库模式下显示 */}
+          {/* 备注栏 - 只在手动出库模式下显示 */}
           {mode === 'manual' && (
-            <Form.Item>
-              <Button type="dashed" block icon={<PlusOutlined />} onClick={handleOpenMaterialSelect}>
-                添加物资
-              </Button>
+            <Form.Item label="备注" style={{ marginBottom: 16 }}>
+              <TextArea rows={4} placeholder="请输入备注信息" />
             </Form.Item>
           )}
-
-          {/* 备注栏 - 两种模式都显示 */}
-          <Form.Item label="备注" style={{ marginBottom: 16 }}>
-            <TextArea rows={4} placeholder="请输入备注信息" />
-          </Form.Item>
 
           <Form.Item>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -1121,100 +1256,65 @@ const StockOutConsumption = () => {
           style={{ 
             marginBottom: 16,
             borderRadius: 8,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            padding: '16px'
           }}
         >
           <Form 
             form={searchForm} 
-            layout="inline" 
+            layout="vertical" 
             onFinish={handleSearchMaterials}
           >
-            <Row gutter={[12, 12]} style={{ width: '100%' }}>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="materialCode" style={{ width: '100%', marginBottom: 0 }}>
+            <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>物资编码：</span>
+                <Form.Item name="materialCode" style={{ marginBottom: 0 }}>
                   <Input 
-                    placeholder="物资编码" 
+                    placeholder="请输入物资编码" 
                     allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
+                    style={{ width: '180px' }}
                   />
                 </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="materialName" style={{ width: '100%', marginBottom: 0 }}>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>物资名称：</span>
+                <Form.Item name="materialName" style={{ marginBottom: 0 }}>
                   <Input 
-                    placeholder="物资名称" 
+                    placeholder="请输入物资名称" 
                     allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
+                    style={{ width: '180px' }}
                   />
                 </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="specification" style={{ width: '100%', marginBottom: 0 }}>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>供应商：</span>
+                <Form.Item name="supplier" style={{ marginBottom: 0 }}>
                   <Input 
-                    placeholder="规格" 
+                    placeholder="请输入供应商" 
                     allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
+                    style={{ width: '180px' }}
                   />
                 </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="manufacturer" style={{ width: '100%', marginBottom: 0 }}>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>生产厂家：</span>
+                <Form.Item name="manufacturer" style={{ marginBottom: 0 }}>
                   <Input 
-                    placeholder="生产厂家" 
+                    placeholder="请输入生产厂家" 
                     allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
+                    style={{ width: '180px' }}
                   />
                 </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="supplier" style={{ width: '100%', marginBottom: 0 }}>
-                  <Input 
-                    placeholder="供应商" 
-                    allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6} xl={4}>
-                <Form.Item name="materialType" style={{ width: '100%', marginBottom: 0 }}>
-                  <Select 
-                    placeholder="物资类型" 
-                    allowClear
-                    style={{ width: '100%' }}
-                    size="middle"
-                    options={[
-                      { value: '试剂', label: '试剂' },
-                      { value: '低值耗材', label: '低值耗材' },
-                      { value: '高值耗材', label: '高值耗材' }
-                    ]}
-                  />
-                </Form.Item>
-              </Col>
-              <Col xs={24} sm={24} md={24} lg={24} xl={24} style={{ textAlign: 'right' }}>
-                <Form.Item style={{ marginBottom: 0 }}>
-                  <Space size="middle">
-                    <Button 
-                      type="primary" 
-                      htmlType="submit"
-                      style={{ minWidth: 90 }}
-                    >
-                      查询
-                    </Button>
-                    <Button 
-                      onClick={handleResetSearch}
-                      style={{ minWidth: 90 }}
-                    >
-                      重置
-                    </Button>
-                  </Space>
-                </Form.Item>
-              </Col>
-            </Row>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
+                查询
+              </Button>
+              <Button icon={<ExportOutlined />}>
+                导出库存报表
+              </Button>
+            </div>
           </Form>
         </Card>
 
@@ -1236,19 +1336,20 @@ const StockOutConsumption = () => {
                 </th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资编码</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>物资名称</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资类型</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>规格</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>型号</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>库存数量</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>出库数量</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>批号</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>生产日期</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>生效日期</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>失效日期</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>生产厂家</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>供应商</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资类型</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>最小包装</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>单位</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>单价</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>采购价格</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>库存数量</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>出库数量</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>注册证号</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>供应商</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>生产厂家</th>
               </tr>
             </thead>
             <tbody>
@@ -1268,8 +1369,15 @@ const StockOutConsumption = () => {
                       </td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialCode}</td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialName}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialType}</td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.specification}</td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.model}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.batchNumber || '-'}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.productionDate || '-'}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.expiryDate || '-'}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.minPackage}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.unit}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>¥{item.unitPrice.toFixed(2)}</td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.stock}</td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', position: 'relative' }}>
                         <Input 
@@ -1281,15 +1389,9 @@ const StockOutConsumption = () => {
                           onFocus={(e) => handleQuantityInputFocus(item.key, e)}
                         />
                       </td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.batchNumber || '-'}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.productionDate || '-'}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.expiryDate || '-'}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.manufacturer}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.registrationNumber || '-'}</td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.supplier}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialType}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.minPackage}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.unit}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>¥{item.unitPrice.toFixed(2)}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.manufacturer}</td>
                     </tr>
                   );
                 })}

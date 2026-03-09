@@ -236,26 +236,21 @@ const InstrumentMaintenanceRecord = () => {
       <h1 style={{ marginBottom: 24 }}>仪器维修记录</h1>
       
       <Card style={{ marginBottom: 16 }}>
-        <Form form={form} layout="inline">
+        <Form form={form} layout="vertical">
           <Row gutter={[16, 16]} style={{ width: '100%' }}>
             <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="recordNo" label="维修编号">
-                <Input placeholder="请输入维修编号" />
+              <Form.Item name="instrumentName" label="仪器名称" style={{ marginBottom: 0 }}>
+                <Input placeholder="请输入仪器名称" style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="instrumentName" label="仪器名称">
-                <Input placeholder="请输入仪器名称" />
+              <Form.Item name="serialNo" label="序列号" style={{ marginBottom: 0 }}>
+                <Input placeholder="请输入序列号" style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="serialNo" label="序列号">
-                <Input placeholder="请输入序列号" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="department" label="使用科室">
-                <Select placeholder="请选择科室" allowClear>
+              <Form.Item name="department" label="使用科室" style={{ marginBottom: 0 }}>
+                <Select placeholder="请选择科室" allowClear style={{ width: '100%' }}>
                   <Option value="心内科">心内科</Option>
                   <Option value="ICU">ICU</Option>
                   <Option value="外科">外科</Option>
@@ -268,8 +263,8 @@ const InstrumentMaintenanceRecord = () => {
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="maintenanceType" label="维修类型">
-                <Select placeholder="请选择维修类型" allowClear>
+              <Form.Item name="maintenanceType" label="维修类型" style={{ marginBottom: 0 }}>
+                <Select placeholder="请选择维修类型" allowClear style={{ width: '100%' }}>
                   <Option value="故障维修">故障维修</Option>
                   <Option value="预防性维护">预防性维护</Option>
                   <Option value="定期保养">定期保养</Option>
@@ -278,8 +273,8 @@ const InstrumentMaintenanceRecord = () => {
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态" allowClear>
+              <Form.Item name="status" label="状态" style={{ marginBottom: 0 }}>
+                <Select placeholder="请选择状态" allowClear style={{ width: '100%' }}>
                   <Option value="待处理">待处理</Option>
                   <Option value="进行中">进行中</Option>
                   <Option value="已完成">已完成</Option>
@@ -287,12 +282,12 @@ const InstrumentMaintenanceRecord = () => {
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="dateRange" label="维修日期">
+              <Form.Item name="dateRange" label="维修日期" style={{ marginBottom: 0 }}>
                 <RangePicker style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={24} md={24} lg={24}>
-              <Form.Item>
+              <Form.Item style={{ marginBottom: 0 }}>
                 <Space>
                   <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} loading={loading}>
                     查询
@@ -355,7 +350,6 @@ const InstrumentMaintenanceRecord = () => {
         {selectedRecord && (
           <div>
             <Card>
-              <p><strong>维修编号：</strong>{selectedRecord.recordNo}</p>
               <p><strong>设备名称：</strong>{selectedRecord.deviceName}</p>
               <p><strong>序列号：</strong>{selectedRecord.serialNo}</p>
               <p><strong>故障原因：</strong>{selectedRecord.faultReason}</p>
@@ -393,18 +387,18 @@ const InstrumentMaintenanceRecord = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="recordNo"
-                label="维修编号"
-              >
-                <Input placeholder="请输入维修编号" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
                 name="deviceName"
                 label="设备名称"
               >
                 <Input placeholder="请输入设备名称" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="serialNo"
+                label="序列号"
+              >
+                <Input placeholder="请输入序列号" />
               </Form.Item>
             </Col>
           </Row>

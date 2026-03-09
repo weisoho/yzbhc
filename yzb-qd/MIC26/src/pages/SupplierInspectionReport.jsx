@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, Select, message } from 'antd';
+import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import moment from 'moment';
 
@@ -10,45 +10,42 @@ const SupplierInspectionReport = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
-  const suppliers = [
-    { key: '1', name: '供应商A', contact: '张三', phone: '13800138001' },
-    { key: '2', name: '供应商B', contact: '李四', phone: '13900139001' },
-    { key: '3', name: '供应商C', contact: '王五', phone: '13700137001' },
-  ];
-
-  const [inspectionReports, setInspectionReports] = useState([
+  const [registrationCertificates, setRegistrationCertificates] = useState([
     { 
       key: '1', 
-      supplierName: '供应商A', 
+      registeredCompany: '供应商A', 
       productName: '一次性输液器', 
-      reportNumber: 'IR2024001',
-      inspectionDate: '2024-01-15',
+      registrationNumber: '2023001',
+      packagingSpec: '50支/盒',
+      storageCondition: '阴凉干燥处',
+      effectiveDate: '2024-01-15',
       expiryDate: '2025-01-15',
-      status: '有效',
-      reportFile: '检验报告_供应商A_20240115.pdf',
-      remark: ''
+      attachment: '检验报告_供应商A_20240115.pdf',
+      status: '有效'
     },
     { 
       key: '2', 
-      supplierName: '供应商B', 
+      registeredCompany: '供应商B', 
       productName: '医用纱布', 
-      reportNumber: 'IR2024002',
-      inspectionDate: '2024-02-20',
+      registrationNumber: '2023002',
+      packagingSpec: '100片/包',
+      storageCondition: '常温',
+      effectiveDate: '2024-02-20',
       expiryDate: '2025-02-20',
-      status: '有效',
-      reportFile: '检验报告_供应商B_20240220.pdf',
-      remark: ''
+      attachment: '检验报告_供应商B_20240220.pdf',
+      status: '有效'
     },
     { 
       key: '3', 
-      supplierName: '供应商C', 
+      registeredCompany: '供应商C', 
       productName: '医用手套', 
-      reportNumber: 'IR2024003',
-      inspectionDate: '2023-12-10',
+      registrationNumber: '2023003',
+      packagingSpec: '100双/盒',
+      storageCondition: '常温干燥处',
+      effectiveDate: '2023-12-10',
       expiryDate: '2024-12-10',
-      status: '已过期',
-      reportFile: '检验报告_供应商C_20231210.pdf',
-      remark: ''
+      attachment: '检验报告_供应商C_20231210.pdf',
+      status: '已过期'
     },
   ]);
 
@@ -57,10 +54,11 @@ const SupplierInspectionReport = () => {
     setEditingRecord(record);
     editForm.setFieldsValue({
       productName: record.productName,
-      reportNumber: record.reportNumber,
-      inspectionDate: record.inspectionDate ? moment(record.inspectionDate) : null,
-      expiryDate: record.expiryDate ? moment(record.expiryDate) : null,
-      remark: record.remark || ''
+      registrationNumber: record.registrationNumber,
+      packagingSpec: record.packagingSpec,
+      storageCondition: record.storageCondition,
+      effectiveDate: record.effectiveDate ? moment(record.effectiveDate) : null,
+      expiryDate: record.expiryDate ? moment(record.expiryDate) : null
     });
     setEditVisible(true);
   };
@@ -68,25 +66,26 @@ const SupplierInspectionReport = () => {
   // 保存编辑
   const handleEditSave = () => {
     editForm.validateFields().then(values => {
-      const updatedReports = inspectionReports.map(report => {
-        if (report.key === editingRecord.key) {
+      const updatedCertificates = registrationCertificates.map(certificate => {
+        if (certificate.key === editingRecord.key) {
           return {
-            ...report,
+            ...certificate,
             productName: values.productName,
-            reportNumber: values.reportNumber,
-            inspectionDate: values.inspectionDate ? values.inspectionDate.format('YYYY-MM-DD') : '',
-            expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : '',
-            remark: values.remark || ''
+            registrationNumber: values.registrationNumber,
+            packagingSpec: values.packagingSpec,
+            storageCondition: values.storageCondition,
+            effectiveDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : '',
+            expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : ''
           };
         }
-        return report;
+        return certificate;
       });
       
-      setInspectionReports(updatedReports);
+      setRegistrationCertificates(updatedCertificates);
       setEditVisible(false);
       setEditingRecord(null);
       editForm.resetFields();
-      message.success('检验报告更新成功');
+      message.success('注册证更新成功');
     });
   };
 
@@ -94,54 +93,189 @@ const SupplierInspectionReport = () => {
   const handleDelete = (key) => {
     Modal.confirm({
       title: '确认删除',
-      content: '确定要删除这条检验报告吗？',
+      content: '确定要删除这条注册证吗？',
       okText: '确定',
       okType: 'danger',
       cancelText: '取消',
       onOk() {
-        const updatedReports = inspectionReports.filter(report => report.key !== key);
-        setInspectionReports(updatedReports);
-        message.success('检验报告删除成功');
+        const updatedCertificates = registrationCertificates.filter(certificate => certificate.key !== key);
+        setRegistrationCertificates(updatedCertificates);
+        message.success('注册证删除成功');
       }
     });
   };
 
   const columns = [
     { 
-      title: '供应商名称', 
-      dataIndex: 'supplierName', 
-      key: 'supplierName',
-      width: 150
+      title: '注册企业名称', 
+      dataIndex: 'registeredCompany', 
+      key: 'registeredCompany',
+      width: 150,
+      align: 'center',
+      ellipsis: false,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
     },
     { 
       title: '产品名称', 
       dataIndex: 'productName', 
       key: 'productName',
-      width: 150
+      width: 150,
+      align: 'center',
+      ellipsis: false,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
     },
     { 
-      title: '报告编号', 
-      dataIndex: 'reportNumber', 
-      key: 'reportNumber',
-      width: 120
+      title: '注册证编号', 
+      dataIndex: 'registrationNumber', 
+      key: 'registrationNumber',
+      width: 120,
+      align: 'center',
+      ellipsis: false,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
     },
     { 
-      title: '检验日期', 
-      dataIndex: 'inspectionDate', 
-      key: 'inspectionDate',
-      width: 100
+      title: '包装规格', 
+      dataIndex: 'packagingSpec', 
+      key: 'packagingSpec',
+      width: 100,
+      align: 'center',
+      ellipsis: false,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
     },
     { 
-      title: '有效期至', 
+      title: '储存条件', 
+      dataIndex: 'storageCondition', 
+      key: 'storageCondition',
+      width: 100,
+      align: 'center',
+      ellipsis: false,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
+    },
+    { 
+      title: '生效日期', 
+      dataIndex: 'effectiveDate', 
+      key: 'effectiveDate',
+      width: 100,
+      align: 'center',
+      ellipsis: false,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
+    },
+    { 
+      title: '失效日期', 
       dataIndex: 'expiryDate', 
       key: 'expiryDate',
-      width: 100
+      width: 100,
+      align: 'center',
+      ellipsis: false,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
+    },
+    { 
+      title: '附件', 
+      dataIndex: 'attachment', 
+      key: 'attachment',
+      width: 150,
+      align: 'center',
+      ellipsis: false,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
     },
     { 
       title: '状态', 
       dataIndex: 'status', 
       key: 'status',
       width: 80,
+      align: 'center',
+      ellipsis: false,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      }),
       render: (status) => (
         <span style={{ 
           color: status === '有效' ? '#52c41a' : '#f5222d',
@@ -152,22 +286,22 @@ const SupplierInspectionReport = () => {
       )
     },
     { 
-      title: '报告文件', 
-      dataIndex: 'reportFile', 
-      key: 'reportFile',
-      width: 150
-    },
-    { 
-      title: '备注', 
-      dataIndex: 'remark', 
-      key: 'remark',
-      width: 200,
-      ellipsis: true
-    },
-    { 
       title: '操作', 
       key: 'action',
       width: 150,
+      align: 'center',
+      ellipsis: false,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      }),
       render: (_, record) => (
         <Space size="middle">
           <a onClick={() => handleEdit(record)}><EditOutlined />编辑</a>
@@ -185,42 +319,46 @@ const SupplierInspectionReport = () => {
     },
     onChange(info) {
       if (info.file.status === 'done') {
-        console.log('文件上传成功');
+        // 文件上传成功
       } else if (info.file.status === 'error') {
-        console.log('文件上传失败');
+        // 文件上传失败
       }
     },
   };
 
   return (
     <div style={{ padding: '0 16px' }}>
-      <h1 style={{ marginBottom: 24 }}>供应商检验报告</h1>
+      <h1 style={{ marginBottom: 24 }}>供应商注册证</h1>
       
       <Card style={{ marginBottom: 16 }}>
-        <Space wrap style={{ width: '100%' }}>
-          <Select placeholder="选择供应商" style={{ width: 200 }}>
-            {suppliers.map(supplier => (
-              <Select.Option key={supplier.key} value={supplier.name}>
-                {supplier.name}
-              </Select.Option>
-            ))}
-          </Select>
-          <Input placeholder="产品名称" style={{ width: 200 }} />
-          <Select placeholder="状态" style={{ width: 120 }}>
-            <Select.Option value="有效">有效</Select.Option>
-            <Select.Option value="已过期">已过期</Select.Option>
-          </Select>
-          <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setVisible(true)}>
-            新增检验报告
-          </Button>
-        </Space>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>注册企业名称：</span>
+              <Input placeholder="请输入注册企业名称" style={{ width: 200 }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>产品名称：</span>
+              <Input placeholder="请输入产品名称" style={{ width: 200 }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>注册证编号：</span>
+              <Input placeholder="请输入注册证编号" style={{ width: 200 }} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <Button type="primary" icon={<SearchOutlined />}>查询</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setVisible(true)}>
+              新增注册证
+            </Button>
+          </div>
+        </div>
       </Card>
       
       <div style={{ overflowX: 'auto' }}>
         <Table 
           columns={columns} 
-          dataSource={inspectionReports} 
+          dataSource={registrationCertificates} 
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -232,16 +370,16 @@ const SupplierInspectionReport = () => {
               marginTop: '16px'
             }
           }}
-          scroll={{ x: 1200 }}
+          scroll={{ x: 1600 }}
         />
       </div>
 
       <Modal
-        title="新增检验报告"
+        title="新增注册证"
         open={visible}
         onOk={() => {
           form.validateFields().then(() => {
-            // 新增检验报告处理
+            // 新增注册证处理
             setVisible(false);
             form.resetFields();
           });
@@ -256,17 +394,11 @@ const SupplierInspectionReport = () => {
       >
         <Form form={form} layout="vertical">
           <Form.Item
-            name="supplierName"
-            label="供应商名称"
-            rules={[{ required: true, message: '请选择供应商' }]}
+            name="registeredCompany"
+            label="注册企业名称"
+            rules={[{ required: true, message: '请输入注册企业名称' }]}
           >
-            <Select placeholder="请选择供应商">
-              {suppliers.map(supplier => (
-                <Select.Option key={supplier.key} value={supplier.name}>
-                  {supplier.name}
-                </Select.Option>
-              ))}
-            </Select>
+            <Input placeholder="请输入注册企业名称" />
           </Form.Item>
           
           <Form.Item
@@ -278,45 +410,61 @@ const SupplierInspectionReport = () => {
           </Form.Item>
           
           <Form.Item
-            name="reportNumber"
-            label="报告编号"
-            rules={[{ required: true, message: '请输入报告编号' }]}
+            name="registrationNumber"
+            label="注册证编号"
+            rules={[{ required: true, message: '请输入注册证编号' }]}
           >
-            <Input placeholder="请输入报告编号" />
+            <Input placeholder="请输入注册证编号" />
           </Form.Item>
           
           <Form.Item
-            name="inspectionDate"
-            label="检验日期"
-            rules={[{ required: true, message: '请选择检验日期' }]}
+            name="packagingSpec"
+            label="包装规格"
+            rules={[{ required: true, message: '请输入包装规格' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择检验日期" />
+            <Input placeholder="请输入包装规格" />
+          </Form.Item>
+          
+          <Form.Item
+            name="storageCondition"
+            label="储存条件"
+            rules={[{ required: true, message: '请输入储存条件' }]}
+          >
+            <Input placeholder="请输入储存条件" />
+          </Form.Item>
+          
+          <Form.Item
+            name="effectiveDate"
+            label="生效日期"
+            rules={[{ required: true, message: '请选择生效日期' }]}
+          >
+            <DatePicker style={{ width: '100%' }} placeholder="请选择生效日期" />
           </Form.Item>
           
           <Form.Item
             name="expiryDate"
-            label="有效期至"
-            rules={[{ required: true, message: '请选择有效期' }]}
+            label="失效日期"
+            rules={[{ required: true, message: '请选择失效日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择有效期" />
+            <DatePicker style={{ width: '100%' }} placeholder="请选择失效日期" />
           </Form.Item>
           
           <Form.Item
-            name="reportFile"
-            label="检验报告文件"
-            rules={[{ required: true, message: '请上传检验报告文件' }]}
+            name="attachment"
+            label="附件"
+            rules={[{ required: true, message: '请上传附件' }]}
             valuePropName="fileList"
           >
             <Upload {...uploadProps}>
-              <Button icon={<UploadOutlined />}>上传检验报告</Button>
+              <Button icon={<UploadOutlined />}>上传附件</Button>
             </Upload>
           </Form.Item>
         </Form>
       </Modal>
 
-      {/* 编辑检验报告模态框 */}
+      {/* 编辑注册证模态框 */}
       <Modal
-        title="编辑检验报告"
+        title="编辑注册证"
         open={editVisible}
         onOk={handleEditSave}
         onCancel={() => {
@@ -338,49 +486,53 @@ const SupplierInspectionReport = () => {
           </Form.Item>
           
           <Form.Item
-            name="reportNumber"
-            label="报告编号"
-            rules={[{ required: true, message: '请输入报告编号' }]}
+            name="registrationNumber"
+            label="注册证编号"
+            rules={[{ required: true, message: '请输入注册证编号' }]}
           >
-            <Input placeholder="请输入报告编号" />
+            <Input placeholder="请输入注册证编号" />
           </Form.Item>
           
           <Form.Item
-            name="inspectionDate"
-            label="检验日期"
-            rules={[{ required: true, message: '请选择检验日期' }]}
+            name="packagingSpec"
+            label="包装规格"
+            rules={[{ required: true, message: '请输入包装规格' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择检验日期" />
+            <Input placeholder="请输入包装规格" />
+          </Form.Item>
+          
+          <Form.Item
+            name="storageCondition"
+            label="储存条件"
+            rules={[{ required: true, message: '请输入储存条件' }]}
+          >
+            <Input placeholder="请输入储存条件" />
+          </Form.Item>
+          
+          <Form.Item
+            name="effectiveDate"
+            label="生效日期"
+            rules={[{ required: true, message: '请选择生效日期' }]}
+          >
+            <DatePicker style={{ width: '100%' }} placeholder="请选择生效日期" />
           </Form.Item>
           
           <Form.Item
             name="expiryDate"
-            label="有效期至"
-            rules={[{ required: true, message: '请选择有效期' }]}
+            label="失效日期"
+            rules={[{ required: true, message: '请选择失效日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择有效期" />
+            <DatePicker style={{ width: '100%' }} placeholder="请选择失效日期" />
           </Form.Item>
           
           <Form.Item
-            name="reportFile"
-            label="检验报告文件"
+            name="attachment"
+            label="附件"
             valuePropName="fileList"
           >
             <Upload {...uploadProps}>
-              <Button icon={<UploadOutlined />}>重新上传检验报告</Button>
+              <Button icon={<UploadOutlined />}>重新上传附件</Button>
             </Upload>
-          </Form.Item>
-          
-          <Form.Item
-            name="remark"
-            label="备注"
-          >
-            <Input.TextArea 
-              placeholder="请输入备注信息" 
-              rows={4}
-              showCount 
-              maxLength={500}
-            />
           </Form.Item>
         </Form>
       </Modal>

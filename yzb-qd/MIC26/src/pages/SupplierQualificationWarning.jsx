@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Table, Space, Tag, Select, Input, Button, Modal, Checkbox, Divider, Typography } from 'antd';
+import { Card, Table, Space, Tag, Select, Input, Button, Modal, Checkbox, Typography } from 'antd';
 import { SearchOutlined, WarningOutlined, AlertOutlined, CheckCircleOutlined, EyeOutlined, PlusOutlined, FileOutlined, InboxOutlined, DownloadOutlined } from '@ant-design/icons';
 import moment from 'moment';
 
@@ -141,8 +141,8 @@ const SupplierQualificationWarning = () => {
       } else {
         return { status: '有效', daysUntilExpiry: diffDays };
       }
-    } catch (error) {
-      console.error('日期计算错误:', error);
+    } catch {
+      // 日期计算错误
       return { status: '计算错误', daysUntilExpiry: 0 };
     }
   };
@@ -339,50 +339,130 @@ const SupplierQualificationWarning = () => {
       dataIndex: 'supplierName',
       key: 'supplierName',
       width: 150,
+      align: 'center',
+      ellipsis: false,
       sorter: (a, b) => a.supplierName.localeCompare(b.supplierName),
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
     },
     {
       title: '资质类型',
       dataIndex: 'certificateType',
       key: 'certificateType',
       width: 120,
+      align: 'center',
+      ellipsis: false,
       sorter: (a, b) => a.certificateType.localeCompare(b.certificateType),
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
     },
     {
       title: '资质编号',
       dataIndex: 'certificateNumber',
       key: 'certificateNumber',
       width: 120,
+      align: 'center',
+      ellipsis: false,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
     },
     {
       title: '有效期至',
       dataIndex: 'expiryDate',
       key: 'expiryDate',
       width: 120,
+      align: 'center',
+      ellipsis: false,
       sorter: (a, b) => new Date(a.expiryDate) - new Date(b.expiryDate),
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
     },
     {
       title: '剩余天数',
       key: 'daysUntilExpiry',
       width: 100,
+      align: 'center',
+      ellipsis: false,
       render: (_, record) => renderDaysUntilExpiry(record.daysUntilExpiry),
       sorter: (a, b) => a.daysUntilExpiry - b.daysUntilExpiry,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
     },
     {
       title: '预警状态',
       dataIndex: 'status',
       key: 'status',
       width: 100,
+      align: 'center',
+      ellipsis: false,
       render: renderStatusTag,
       sorter: (a, b) => {
         const statusOrder = { '已过期': 0, '即将过期': 1, '有效': 2 };
         return statusOrder[a.status] - statusOrder[b.status];
       },
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
     },
     {
       title: '操作',
       key: 'action',
       width: 100,
+      align: 'center',
+      ellipsis: false,
       render: (_, record) => (
         <Space size="middle">
           <Button 
@@ -395,6 +475,17 @@ const SupplierQualificationWarning = () => {
           </Button>
         </Space>
       ),
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
     },
   ];
 
@@ -433,35 +524,51 @@ const SupplierQualificationWarning = () => {
       {mainTab === 'supplier' && (
         <div>
           {/* 搜索条件 */}
-          <Card style={{ marginBottom: 16 }}>
-            <Space wrap style={{ width: '100%' }}>
-              <Select placeholder="选择供应商" style={{ width: 200 }}>
-                <Select.Option value="">全部供应商</Select.Option>
-                <Select.Option value="供应商A">供应商A</Select.Option>
-                <Select.Option value="供应商B">供应商B</Select.Option>
-                <Select.Option value="供应商C">供应商C</Select.Option>
-              </Select>
-              <Select placeholder="选择资质类型" style={{ width: 180 }}>
-                <Select.Option value="">全部类型</Select.Option>
-                <Select.Option value="营业执照">营业执照</Select.Option>
-                <Select.Option value="经营许可证">经营许可证</Select.Option>
-                <Select.Option value="生产许可证">生产许可证</Select.Option>
-              </Select>
-              <Select placeholder="选择预警状态" style={{ width: 150 }}>
-                <Select.Option value="">全部状态</Select.Option>
-                <Select.Option value="已过期">已过期</Select.Option>
-                <Select.Option value="即将过期">即将过期</Select.Option>
-                <Select.Option value="有效">有效</Select.Option>
-              </Select>
-              <Input placeholder="搜索资质编号" style={{ width: 200 }} />
-              <Button type="primary" icon={<SearchOutlined />}>
-                查询
-              </Button>
-              <Button icon={<SearchOutlined />}>
-                重置
-              </Button>
-            </Space>
-          </Card>
+          <div style={{ marginBottom: 16, padding: '16px', border: '1px solid #e8e8e8', borderRadius: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>选择供应商：</span>
+                  <Select placeholder="选择供应商" style={{ width: 200 }}>
+                    <Select.Option value="">全部供应商</Select.Option>
+                    <Select.Option value="供应商A">供应商A</Select.Option>
+                    <Select.Option value="供应商B">供应商B</Select.Option>
+                    <Select.Option value="供应商C">供应商C</Select.Option>
+                  </Select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>选择资质类型：</span>
+                  <Select placeholder="选择资质类型" style={{ width: 180 }}>
+                    <Select.Option value="">全部类型</Select.Option>
+                    <Select.Option value="营业执照">营业执照</Select.Option>
+                    <Select.Option value="经营许可证">经营许可证</Select.Option>
+                    <Select.Option value="生产许可证">生产许可证</Select.Option>
+                  </Select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>选择预警状态：</span>
+                  <Select placeholder="选择预警状态" style={{ width: 150 }}>
+                    <Select.Option value="">全部状态</Select.Option>
+                    <Select.Option value="已过期">已过期</Select.Option>
+                    <Select.Option value="即将过期">即将过期</Select.Option>
+                    <Select.Option value="有效">有效</Select.Option>
+                  </Select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>搜索资质编号：</span>
+                  <Input placeholder="搜索资质编号" style={{ width: 200 }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <Button type="primary" icon={<SearchOutlined />}>
+                  查询
+                </Button>
+                <Button icon={<SearchOutlined />}>
+                  重置
+                </Button>
+              </div>
+            </div>
+          </div>
 
           {/* 批量操作 */}
           <Card style={{ marginBottom: 16 }}>
@@ -492,7 +599,7 @@ const SupplierQualificationWarning = () => {
                 }
               }}
               loading={loading}
-              scroll={{ x: 800 }}
+              scroll={{ x: 1600 }}
               rowKey="key"
               rowSelection={{}}
               size="small"
@@ -505,24 +612,37 @@ const SupplierQualificationWarning = () => {
       {mainTab === 'manufacturer' && (
         <div>
           {/* 搜索条件 */}
-          <Card style={{ marginBottom: 16 }}>
-            <Space wrap style={{ width: '100%' }}>
-              <Input placeholder="生产/代理商：输入名称/拼音查询" style={{ width: 250 }} />
-              <Input placeholder="供应商：输入名称/拼音缩写查询" style={{ width: 250 }} />
-              <Select placeholder="到期天数：请选择到期天数" style={{ width: 200 }}>
-                <Select.Option value="">全部</Select.Option>
-                <Select.Option value="30">30天内</Select.Option>
-                <Select.Option value="60">60天内</Select.Option>
-                <Select.Option value="90">90天内</Select.Option>
-              </Select>
-              <Button type="primary" icon={<SearchOutlined />}>
-                查询
-              </Button>
-              <Button icon={<SearchOutlined />}>
-                重置
-              </Button>
-            </Space>
-          </Card>
+          <div style={{ marginBottom: 16, padding: '16px', border: '1px solid #e8e8e8', borderRadius: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>生产/代理商：</span>
+                  <Input placeholder="输入名称/拼音查询" style={{ width: 250 }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>供应商：</span>
+                  <Input placeholder="输入名称/拼音缩写查询" style={{ width: 250 }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>到期天数：</span>
+                  <Select placeholder="请选择到期天数" style={{ width: 200 }}>
+                    <Select.Option value="">全部</Select.Option>
+                    <Select.Option value="30">30天内</Select.Option>
+                    <Select.Option value="60">60天内</Select.Option>
+                    <Select.Option value="90">90天内</Select.Option>
+                  </Select>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <Button type="primary" icon={<SearchOutlined />}>
+                  查询
+                </Button>
+                <Button icon={<SearchOutlined />}>
+                  重置
+                </Button>
+              </div>
+            </div>
+          </div>
 
           {/* 批量操作 */}
           <Card style={{ marginBottom: 16 }}>
@@ -546,59 +666,152 @@ const SupplierQualificationWarning = () => {
                   dataIndex: 'checkbox',
                   key: 'checkbox',
                   width: 40,
-                  render: () => <Checkbox />
+                  align: 'center',
+                  ellipsis: false,
+                  render: () => <Checkbox />,
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 },
                 {
                   title: '#',
                   dataIndex: 'index',
                   key: 'index',
                   width: 60,
-                  render: (_, record, index) => index + 1
+                  align: 'center',
+                  ellipsis: false,
+                  render: (_, record, index) => index + 1,
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 },
                 {
                   title: '生产/代理商',
                   dataIndex: 'manufacturer',
                   key: 'manufacturer',
                   width: 200,
-                  render: (text) => <Tag color="purple">{text}</Tag>
+                  align: 'center',
+                  ellipsis: false,
+                  render: (text) => <Tag color="purple">{text}</Tag>,
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 },
                 {
                   title: '拼音缩写',
                   dataIndex: 'pinyin',
                   key: 'pinyin',
-                  width: 150
+                  width: 150,
+                  align: 'center',
+                  ellipsis: false,
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 },
                 {
                   title: '供应商',
                   dataIndex: 'supplier',
                   key: 'supplier',
                   width: 200,
-                  render: (text) => <Tag color="blue">{text}</Tag>
+                  align: 'center',
+                  ellipsis: false,
+                  render: (text) => <Tag color="blue">{text}</Tag>,
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 },
                 {
                   title: '企业类型',
                   dataIndex: 'companyType',
                   key: 'companyType',
                   width: 100,
+                  align: 'center',
+                  ellipsis: false,
                   render: (text) => (
                     <Tag color={text === '生产企业' ? 'purple' : 'green'}>
                       {text}
                     </Tag>
-                  )
+                  ),
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 },
                 {
                   title: '过期资质',
                   dataIndex: 'expiredCount',
                   key: 'expiredCount',
                   width: 100,
+                  align: 'center',
+                  ellipsis: false,
                   render: (count) => (
                     <span style={{ color: '#52c41a', fontWeight: 'bold' }}>{count}个</span>
-                  )
+                  ),
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 },
                 {
                   title: '操作',
                   key: 'action',
                   width: 80,
+                  align: 'center',
+                  ellipsis: false,
                   render: (_, record) => (
                     <Button 
                       key={`view-${record.key}`}
@@ -607,7 +820,18 @@ const SupplierQualificationWarning = () => {
                     >
                       查看
                     </Button>
-                  )
+                  ),
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 }
               ]}
               dataSource={manufacturerData}
@@ -623,7 +847,7 @@ const SupplierQualificationWarning = () => {
                 }
               }}
               loading={loading}
-              scroll={{ x: 1000 }}
+              scroll={{ x: 1600 }}
               rowKey="key"
               rowSelection={{}}
               size="small"
@@ -636,24 +860,37 @@ const SupplierQualificationWarning = () => {
       {mainTab === 'product' && (
         <div>
           {/* 搜索条件 */}
-          <Card style={{ marginBottom: 16 }}>
-            <Space wrap style={{ width: '100%' }}>
-              <Input placeholder="产品名称：输入产品名称模糊查询" style={{ width: 250 }} />
-              <Select placeholder="到期天数：请选择到期天数" style={{ width: 200 }}>
-                <Select.Option value="">全部</Select.Option>
-                <Select.Option value="30">30天内</Select.Option>
-                <Select.Option value="60">60天内</Select.Option>
-                <Select.Option value="90">90天内</Select.Option>
-              </Select>
-              <Input placeholder="供应商：输入供应商名称模糊查询" style={{ width: 250 }} />
-              <Button type="primary" icon={<SearchOutlined />}>
-                查询
-              </Button>
-              <Button icon={<SearchOutlined />}>
-                重置
-              </Button>
-            </Space>
-          </Card>
+          <div style={{ marginBottom: 16, padding: '16px', border: '1px solid #e8e8e8', borderRadius: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>产品名称：</span>
+                  <Input placeholder="输入产品名称模糊查询" style={{ width: 250 }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>到期天数：</span>
+                  <Select placeholder="请选择到期天数" style={{ width: 200 }}>
+                    <Select.Option value="">全部</Select.Option>
+                    <Select.Option value="30">30天内</Select.Option>
+                    <Select.Option value="60">60天内</Select.Option>
+                    <Select.Option value="90">90天内</Select.Option>
+                  </Select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>供应商：</span>
+                  <Input placeholder="输入供应商名称模糊查询" style={{ width: 250 }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                <Button type="primary" icon={<SearchOutlined />}>
+                  查询
+                </Button>
+                <Button icon={<SearchOutlined />}>
+                  重置
+                </Button>
+              </div>
+            </div>
+          </div>
 
           {/* 批量操作 */}
           <Card style={{ marginBottom: 16 }}>
@@ -677,54 +914,147 @@ const SupplierQualificationWarning = () => {
                   dataIndex: 'checkbox',
                   key: 'checkbox',
                   width: 40,
-                  render: () => <Checkbox />
+                  align: 'center',
+                  ellipsis: false,
+                  render: () => <Checkbox />,
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 },
                 {
                   title: '#',
                   dataIndex: 'index',
                   key: 'index',
                   width: 60,
-                  render: (_, record, index) => index + 1
+                  align: 'center',
+                  ellipsis: false,
+                  render: (_, record, index) => index + 1,
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 },
                 {
                   title: '物资名称',
                   dataIndex: 'productName',
                   key: 'productName',
                   width: 150,
-                  render: (text) => <Tag color="blue">{text}</Tag>
+                  align: 'center',
+                  ellipsis: false,
+                  render: (text) => <Tag color="blue">{text}</Tag>,
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 },
                 {
                   title: '物资类型',
                   dataIndex: 'productType',
                   key: 'productType',
-                  width: 120
+                  width: 120,
+                  align: 'center',
+                  ellipsis: false,
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 },
                 {
                   title: '资质编号',
                   dataIndex: 'qualificationNumber',
                   key: 'qualificationNumber',
-                  width: 180
+                  width: 180,
+                  align: 'center',
+                  ellipsis: false,
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 },
                 {
                   title: '供应商',
                   dataIndex: 'supplier',
                   key: 'supplier',
                   width: 150,
-                  render: (text) => <Tag color="blue">{text}</Tag>
+                  align: 'center',
+                  ellipsis: false,
+                  render: (text) => <Tag color="blue">{text}</Tag>,
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 },
                 {
                   title: '证照到期',
                   dataIndex: 'expiryDate',
                   key: 'expiryDate',
                   width: 120,
+                  align: 'center',
+                  ellipsis: false,
                   render: (date) => (
                     <span style={{ color: '#52c41a' }}>{date}</span>
-                  )
+                  ),
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 },
                 {
                   title: '操作',
                   key: 'action',
                   width: 80,
+                  align: 'center',
+                  ellipsis: false,
                   render: (_, record) => (
                     <Button 
                       key={`view-${record.key}`}
@@ -733,7 +1063,18 @@ const SupplierQualificationWarning = () => {
                     >
                       查看
                     </Button>
-                  )
+                  ),
+                  onHeaderCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap'
+                    }
+                  }),
+                  onCell: () => ({
+                    style: {
+                      whiteSpace: 'nowrap',
+                      overflow: 'visible'
+                    }
+                  })
                 }
               ]}
               dataSource={productData}
@@ -749,7 +1090,7 @@ const SupplierQualificationWarning = () => {
                 }
               }}
               loading={loading}
-              scroll={{ x: 1000 }}
+              scroll={{ x: 1600 }}
               rowKey="key"
               rowSelection={{}}
               size="small"
@@ -760,7 +1101,7 @@ const SupplierQualificationWarning = () => {
 
       {/* 资质详情模态框 */}
       <Modal
-        title={selectedProduct ? `${selectedProduct.productName} - 产品详情` : `${selectedSupplier?.supplierName} - 资质信息`}
+        title={selectedProduct ? `${selectedProduct.productName} - 产品详情` : '资质信息'}
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
         width={900}

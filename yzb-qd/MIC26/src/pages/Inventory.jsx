@@ -287,32 +287,34 @@ const Inventory = () => {
       label: '库存明细查询',
       children: (
         <>
-          <Card style={{ marginBottom: 16 }}>
-            <Row gutter={[16, 0]} align="middle">
-              <Col xs={24} sm={12} md={8} lg={6}>
-                <Input placeholder="商品名称" style={{ width: '100%' }} />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6}>
-                <Select placeholder="所属仓库" style={{ width: '100%' }}>
+          <Card style={{ marginBottom: 16, padding: '16px' }}>
+            <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>商品名称：</span>
+                <Input placeholder="请输入商品名称" style={{ width: '200px' }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>所属仓库：</span>
+                <Select placeholder="请选择仓库" style={{ width: '200px' }}>
                   <Select.Option value="all">全部仓库</Select.Option>
                   <Select.Option value="warehouse1">仓库1</Select.Option>
                   <Select.Option value="warehouse2">仓库2</Select.Option>
                   <Select.Option value="warehouse3">仓库3</Select.Option>
                 </Select>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6}>
-                <Input placeholder="批号" style={{ width: '100%' }} />
-              </Col>
-              <Col xs={24} sm={12} md={12} lg={6}>
-                <RangePicker placeholder={['开始日期', '结束日期']} style={{ width: '100%' }} />
-              </Col>
-              <Col xs={24} sm={12} md={12} lg={8}>
-                <Space>
-                  <Button type="primary" icon={<SearchOutlined />} style={{ minWidth: 100 }}>查询</Button>
-                  <Button icon={<ExportOutlined />} style={{ minWidth: 100 }}>导出</Button>
-                </Space>
-              </Col>
-            </Row>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>批号：</span>
+                <Input placeholder="请输入批号" style={{ width: '200px' }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>日期范围：</span>
+                <RangePicker placeholder={['开始日期', '结束日期']} style={{ width: '300px' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <Button type="primary" icon={<SearchOutlined />}>查询</Button>
+              <Button icon={<ExportOutlined />}>导出</Button>
+            </div>
           </Card>
           
           <div style={{ overflowX: 'auto' }}>
@@ -342,32 +344,34 @@ const Inventory = () => {
       label: '商品信息调整',
       children: (
         <>
-          <Card style={{ marginBottom: 16 }}>
-            <Row gutter={[16, 0]} align="middle">
-              <Col xs={24} sm={12} md={8} lg={6}>
-                <Input placeholder="商品名称" style={{ width: '100%' }} />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6}>
-                <Select placeholder="所属仓库" style={{ width: '100%' }}>
+          <Card style={{ marginBottom: 16, padding: '16px' }}>
+            <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>商品名称：</span>
+                <Input placeholder="请输入商品名称" style={{ width: '200px' }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>所属仓库：</span>
+                <Select placeholder="请选择仓库" style={{ width: '200px' }}>
                   <Select.Option value="all">全部仓库</Select.Option>
                   <Select.Option value="warehouse1">仓库1</Select.Option>
                   <Select.Option value="warehouse2">仓库2</Select.Option>
                   <Select.Option value="warehouse3">仓库3</Select.Option>
                 </Select>
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={6}>
-                <Input placeholder="批号" style={{ width: '100%' }} />
-              </Col>
-              <Col xs={24} sm={12} md={12} lg={6}>
-                <RangePicker placeholder={['开始日期', '结束日期']} style={{ width: '100%' }} />
-              </Col>
-              <Col xs={24} sm={12} md={12} lg={8}>
-                <Space>
-                  <Button type="primary" icon={<SearchOutlined />} style={{ minWidth: 100 }}>查询</Button>
-                  <Button icon={<ExportOutlined />} style={{ minWidth: 100 }}>导出</Button>
-                </Space>
-              </Col>
-            </Row>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>批号：</span>
+                <Input placeholder="请输入批号" style={{ width: '200px' }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>日期范围：</span>
+                <RangePicker placeholder={['开始日期', '结束日期']} style={{ width: '300px' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <Button type="primary" icon={<SearchOutlined />}>查询</Button>
+              <Button icon={<ExportOutlined />}>导出</Button>
+            </div>
           </Card>
           
           <div style={{ overflowX: 'auto' }}>

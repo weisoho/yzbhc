@@ -150,7 +150,65 @@ const PurchaseOrderAcceptance = () => {
     // 模拟API调用
     setTimeout(() => {
       // 模拟采购订单数据
-      const mockPurchaseOrders = [];
+      const mockPurchaseOrders = [
+        {
+          key: '1',
+          orderNumber: 'PO-20260301-001',
+          supplierName: '医疗用品供应商A',
+          department: '采购部',
+          itemCount: 3,
+          totalAmount: 15000,
+          receiver: '张三',
+          receiptDate: '2026-03-01',
+          status: '待入库',
+          remark: '无',
+          productCode: 'P001',
+          productName: '医用口罩',
+          manufacturer: '口罩制造厂',
+          items: [
+            { key: '1-1', productCode: 'P001', productName: '医用口罩', specification: '三层防护', model: 'M-001', manufacturer: '口罩制造厂', registrationNumber: 'ZCBH001', unit: '盒', quantity: 100, price: 50, amount: 5000, status: '待验收' },
+            { key: '1-2', productCode: 'P002', productName: '医用手套', specification: '乳胶', model: 'L-001', manufacturer: '手套制造厂', registrationNumber: 'ZCBH002', unit: '盒', quantity: 200, price: 30, amount: 6000, status: '待验收' },
+            { key: '1-3', productCode: 'P003', productName: '消毒液', specification: '500ml', model: 'D-001', manufacturer: '消毒液制造厂', registrationNumber: 'ZCBH003', unit: '瓶', quantity: 100, price: 40, amount: 4000, status: '待验收' },
+          ]
+        },
+        {
+          key: '2',
+          orderNumber: 'PO-20260302-002',
+          supplierName: '医疗器械供应商B',
+          department: '采购部',
+          itemCount: 2,
+          totalAmount: 8000,
+          receiver: '李四',
+          receiptDate: '2026-03-02',
+          status: '待入库',
+          remark: '无',
+          productCode: 'P004',
+          productName: '体温计',
+          manufacturer: '体温计制造厂',
+          items: [
+            { key: '2-1', productCode: 'P004', productName: '体温计', specification: '电子', model: 'T-001', manufacturer: '体温计制造厂', registrationNumber: 'ZCBH004', unit: '支', quantity: 50, price: 100, amount: 5000, status: '已验收' },
+            { key: '2-2', productCode: 'P005', productName: '血压计', specification: '上臂式', model: 'B-001', manufacturer: '血压计制造厂', registrationNumber: 'ZCBH005', unit: '台', quantity: 20, price: 150, amount: 3000, status: '已验收' },
+          ]
+        },
+        {
+          key: '3',
+          orderNumber: 'PO-20260303-003',
+          supplierName: '消毒用品供应商C',
+          department: '采购部',
+          itemCount: 1,
+          totalAmount: 6000,
+          receiver: '王五',
+          receiptDate: '2026-03-03',
+          status: '待入库',
+          remark: '部分商品质量问题',
+          productCode: 'P006',
+          productName: '酒精',
+          manufacturer: '酒精制造厂',
+          items: [
+            { key: '3-1', productCode: 'P006', productName: '酒精', specification: '75%', model: 'A-001', manufacturer: '酒精制造厂', registrationNumber: 'ZCBH006', unit: '瓶', quantity: 100, price: 60, amount: 6000, status: '部分验收' },
+          ]
+        },
+      ];
       
       setData(mockPurchaseOrders);
       setFilteredData(mockPurchaseOrders);
@@ -170,28 +228,28 @@ const PurchaseOrderAcceptance = () => {
   const handleSearch = (values) => {
     let results = [...data];
     
-    if (values.orderNumber) {
+    if (values.productCode) {
       results = results.filter(item => 
-        item.orderNumber.toLowerCase().includes(values.orderNumber.toLowerCase())
+        item.productCode && item.productCode.toLowerCase().includes(values.productCode.toLowerCase())
+      );
+    }
+    
+    if (values.productName) {
+      results = results.filter(item => 
+        item.productName && item.productName.toLowerCase().includes(values.productName.toLowerCase())
       );
     }
     
     if (values.supplierName) {
       results = results.filter(item => 
-        item.supplierName.toLowerCase().includes(values.supplierName.toLowerCase())
+        item.supplierName && item.supplierName.toLowerCase().includes(values.supplierName.toLowerCase())
       );
     }
     
-    if (values.status && values.status !== 'all') {
-      results = results.filter(item => item.status === values.status);
-    }
-    
-    if (values.dateRange && values.dateRange.length === 2) {
-      const [startDate, endDate] = values.dateRange;
-      results = results.filter(item => {
-        const orderDate = new Date(item.orderDate);
-        return orderDate >= startDate && orderDate <= endDate;
-      });
+    if (values.manufacturer) {
+      results = results.filter(item => 
+        item.manufacturer && item.manufacturer.toLowerCase().includes(values.manufacturer.toLowerCase())
+      );
     }
     
     setFilteredData(results);
@@ -370,7 +428,7 @@ const PurchaseOrderAcceptance = () => {
             if (selectedRowKeys.includes(item.key)) {
               return {
                 ...item,
-                status: '已验收',
+                status: '待入库',
                 items: item.items.map(subItem => ({
                   ...subItem,
                   status: '已验收'
@@ -403,7 +461,7 @@ const PurchaseOrderAcceptance = () => {
             if (item.key === record.key) {
               return {
                 ...item,
-                status: '已验收',
+                status: '待入库',
                 items: item.items.map(subItem => ({
                   ...subItem,
                   status: '已验收'
@@ -513,606 +571,49 @@ const PurchaseOrderAcceptance = () => {
   // 表格列定义
   const columns = [
     {
-      title: '订单号',
+      title: '采购单号',
       dataIndex: 'orderNumber',
       key: 'orderNumber',
       width: 180,
       align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
       render: (text) => <Tag color="blue">{text}</Tag>,
     },
+
     {
-      title: '物资编码',
-      dataIndex: 'productCode',
-      key: 'productCode',
-      width: 120,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-    },
-    {
-      title: '规格',
-      dataIndex: 'specification',
-      key: 'specification',
-      width: 150,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-    },
-    {
-      title: '型号',
-      dataIndex: 'model',
-      key: 'model',
-      width: 100,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-    },
-    {
-      title: '生产厂家',
-      dataIndex: 'manufacturer',
-      key: 'manufacturer',
-      width: 150,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-    },
-    {
-      title: '供应商',
-      dataIndex: 'supplierName',
-      key: 'supplierName',
-      width: 150,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-    },
-    {
-      title: '注册证号',
-      dataIndex: 'registrationNumber',
-      key: 'registrationNumber',
-      width: 150,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-    },
-    {
-      title: '订货数量',
-      dataIndex: 'orderQuantity',
-      key: 'orderQuantity',
-      width: 100,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-    },
-    {
-      title: '订货单位',
-      dataIndex: 'orderUnit',
-      key: 'orderUnit',
-      width: 100,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-    },
-    {
-      title: '入库数量',
-      key: 'instockQuantity',
-      width: 100,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const instockQuantity = itemEditValues.instockQuantity !== undefined ? itemEditValues.instockQuantity : record.instockQuantity || 0;
-        const errorKey = `${record.key}_instockQuantity`;
-        const hasError = validationErrors[errorKey];
-        
-        return (
-          <div>
-            <InputNumber
-              min={0}
-              max={record.orderQuantity}
-              value={instockQuantity}
-              onChange={(value) => handleEditChange(record.key, 'instockQuantity', value)}
-              style={{ 
-                width: '100%', 
-                ...styles.editableField,
-                ...(hasError ? styles.errorField : {})
-              }}
-            />
-            {hasError && (
-              <div style={{ fontSize: '12px', color: '#ff4d4f', marginTop: '2px' }}>
-                {validationErrors[errorKey]}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: '单位',
-      key: 'unit',
-      width: 100,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        return (
-          <Input
-            value={itemEditValues.unit || record.unit || ''}
-            onChange={(e) => handleEditChange(record.key, 'unit', e.target.value)}
-            placeholder="请输入"
-            style={{ width: '100%', ...styles.editableField }}
-          />
-        );
-      },
-    },
-    {
-      title: '批号',
-      key: 'batchNumber',
-      width: 120,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const errorKey = `${record.key}_batchNumber`;
-        const hasError = validationErrors[errorKey];
-        
-        return (
-          <div>
-            <Input
-              value={itemEditValues.batchNumber || record.batchNumber || ''}
-              onChange={(e) => handleEditChange(record.key, 'batchNumber', e.target.value)}
-              placeholder="请输入"
-              style={{ 
-                width: '100%', 
-                ...styles.editableField,
-                ...(hasError ? styles.errorField : {})
-              }}
-            />
-            {hasError && (
-              <div style={{ fontSize: '12px', color: '#ff4d4f', marginTop: '2px' }}>
-                {validationErrors[errorKey]}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: '生产日期',
-      key: 'productionDate',
-      width: 120,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const productionDate = itemEditValues.productionDate || (record.productionDate ? moment(record.productionDate) : null);
-        const errorKey = `${record.key}_productionDate`;
-        const hasError = validationErrors[errorKey];
-        
-        return (
-          <div>
-            <DatePicker
-              value={productionDate}
-              onChange={(date) => handleEditChange(record.key, 'productionDate', date)}
-              placeholder="请选择"
-              style={{ 
-                width: '100%', 
-                ...styles.editableField,
-                ...(hasError ? styles.errorField : {})
-              }}
-            />
-            {hasError && (
-              <div style={{ fontSize: '12px', color: '#ff4d4f', marginTop: '2px' }}>
-                {validationErrors[errorKey]}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: '失效日期',
-      key: 'expiryDate',
-      width: 120,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const expiryDate = itemEditValues.expiryDate || (record.expiryDate ? moment(record.expiryDate) : null);
-        const errorKey = `${record.key}_expiryDate`;
-        const hasError = validationErrors[errorKey];
-        
-        return (
-          <div>
-            <DatePicker
-              value={expiryDate}
-              onChange={(date) => handleEditChange(record.key, 'expiryDate', date)}
-              placeholder="请选择"
-              style={{ 
-                width: '100%', 
-                ...styles.editableField,
-                ...(hasError ? styles.errorField : {})
-              }}
-            />
-            {hasError && (
-              <div style={{ fontSize: '12px', color: '#ff4d4f', marginTop: '2px' }}>
-                {validationErrors[errorKey]}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: '采购单价',
-      dataIndex: 'purchasePrice',
-      key: 'purchasePrice',
-      width: 100,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (price) => `¥${price?.toFixed(2) || '0.00'}`,
-    },
-    {
-      title: '采购金额',
-      dataIndex: 'purchaseAmount',
-      key: 'purchaseAmount',
-      width: 100,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (amount) => `¥${amount?.toFixed(2) || '0.00'}`,
-    },
-    {
-      title: '申领科室',
+      title: '采购分院',
       dataIndex: 'department',
       key: 'department',
       width: 120,
       align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
     },
     {
-      title: '创建时间',
-      dataIndex: 'createTime',
-      key: 'createTime',
-      width: 160,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-    },
-    {
-      title: '备注',
-      dataIndex: 'remark',
-      key: 'remark',
-      width: 150,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      })
-    },
-  ];
-
-  // 订单详情模态框中的商品列定义
-  const itemColumns = [
-    {
-      title: '物资编码',
-      dataIndex: 'productCode',
-      key: 'productCode',
+      title: '物资数量',
+      dataIndex: 'itemCount',
+      key: 'itemCount',
       width: 100,
       align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (text) => <div style={styles.readonlyText}>{text}</div>,
     },
     {
-      title: '商品名称',
-      dataIndex: 'productName',
-      key: 'productName',
+      title: '总金额',
+      dataIndex: 'totalAmount',
+      key: 'totalAmount',
       width: 120,
       align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (text, record) => (
-        <div>
-          <div style={styles.readonlyText}>{text}</div>
-          <div style={{ fontSize: '12px', color: '#bfbfbf', marginTop: '2px' }}>{record.specification}</div>
-        </div>
-      ),
+      render: (amount) => `¥${amount?.toFixed(2) || '0.00'}`,
     },
     {
-      title: '单位',
-      dataIndex: 'unit',
-      key: 'unit',
-      width: 80,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (text) => <div style={styles.readonlyText}>{text}</div>,
-    },
-    {
-      title: '订货数量',
-      dataIndex: 'quantity',
-      key: 'quantity',
+      title: '收货人',
+      dataIndex: 'receiver',
+      key: 'receiver',
       width: 100,
       align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (text) => <div style={styles.readonlyText}>{text}</div>,
     },
     {
-      title: '入库数量',
-      key: 'instockQuantity',
-      width: 100,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const instockQuantity = itemEditValues.instockQuantity !== undefined ? itemEditValues.instockQuantity : record.quantity;
-        const errorKey = `${record.key}_instockQuantity`;
-        const hasError = validationErrors[errorKey];
-        
-        return (
-          <div>
-            <InputNumber
-              min={0}
-              max={record.quantity}
-              value={instockQuantity}
-              onChange={(value) => handleEditChange(record.key, 'instockQuantity', value)}
-              style={{ 
-                width: '100%', 
-                ...styles.editableField,
-                ...(hasError ? styles.errorField : {})
-              }}
-            />
-            {hasError && (
-              <div style={{ fontSize: '12px', color: '#ff4d4f', marginTop: '2px' }}>
-                {validationErrors[errorKey]}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: '单位',
-      key: 'unit',
-      width: 100,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        return (
-          <Input
-            value={itemEditValues.unit || ''}
-            onChange={(e) => handleEditChange(record.key, 'unit', e.target.value)}
-            placeholder="请输入"
-            style={{ width: '100%', ...styles.editableField }}
-          />
-        );
-      },
-    },
-    {
-      title: '批号',
-      key: 'batchNumber',
+      title: '收货日期',
+      dataIndex: 'receiptDate',
+      key: 'receiptDate',
       width: 120,
       align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const errorKey = `${record.key}_batchNumber`;
-        const hasError = validationErrors[errorKey];
-        
-        return (
-          <div>
-            <Input
-              value={itemEditValues.batchNumber || ''}
-              onChange={(e) => handleEditChange(record.key, 'batchNumber', e.target.value)}
-              placeholder="请输入"
-              style={{ 
-                width: '100%', 
-                ...styles.editableField,
-                ...(hasError ? styles.errorField : {})
-              }}
-            />
-            {hasError && (
-              <div style={{ fontSize: '12px', color: '#ff4d4f', marginTop: '2px' }}>
-                {validationErrors[errorKey]}
-              </div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      title: '生产日期',
-      key: 'productionDate',
-      width: 120,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        return (
-          <DatePicker
-            value={itemEditValues.productionDate}
-            onChange={(date) => handleEditChange(record.key, 'productionDate', date)}
-            placeholder="请选择"
-            style={{ width: '100%', ...styles.editableField }}
-          />
-        );
-      },
-    },
-    {
-      title: '失效日期',
-      key: 'expiryDate',
-      width: 120,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        return (
-          <DatePicker
-            value={itemEditValues.expiryDate}
-            onChange={(date) => handleEditChange(record.key, 'expiryDate', date)}
-            placeholder="请选择"
-            style={{ width: '100%', ...styles.editableField }}
-          />
-        );
-      },
-    },
-    {
-      title: '采购单价',
-      dataIndex: 'price',
-      key: 'price',
-      width: 80,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (price) => <div style={styles.readonlyText}>¥{price.toFixed(2)}</div>,
-    },
-    {
-      title: '采购金额',
-      key: 'amount',
-      width: 100,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const instockQuantity = itemEditValues.instockQuantity !== undefined ? itemEditValues.instockQuantity : record.quantity;
-        const amount = (instockQuantity || 0) * record.price;
-        return <div style={styles.amountField}>¥{amount.toFixed(2)}</div>;
-      },
     },
     {
       title: '状态',
@@ -1120,18 +621,13 @@ const PurchaseOrderAcceptance = () => {
       key: 'status',
       width: 100,
       align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
       render: (status) => {
         const statusConfig = {
-          '待验收': { color: 'orange', text: '待验收' },
-          '已验收': { color: 'green', text: '已验收' },
+          '待入库': { color: 'orange', text: '待入库' },
+          '已入库': { color: 'green', text: '已入库' },
           '已拒收': { color: 'red', text: '已拒收' },
-          '超时未验收': { color: 'warning', text: '超时未验收' },
+          '部分入库': { color: 'blue', text: '部分入库' },
+          '超时未入库': { color: 'warning', text: '超时未入库' },
           '已终止': { color: 'error', text: '已终止' },
         };
         const config = statusConfig[status] || { color: 'default', text: status };
@@ -1139,103 +635,154 @@ const PurchaseOrderAcceptance = () => {
       },
     },
     {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      width: 150,
+      align: 'center',
+    },
+    {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 100,
       align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      }),
-      render: (_, item) => (
+      render: (_, record) => (
         <Space size="small">
-          {item.status === '待验收' && (
-            <>
-              <Tooltip title="确认收货">
-                <Button
-                  type="link"
-                  size="small"
-                  icon={<CheckCircleOutlined />}
-                  onClick={() => {
-                    // 检查是否可以提交
-                    if (!canSubmitItem(item.key)) {
-                      message.error('请先正确填写所有必填字段');
-                      return;
-                    }
-                    
-                    // 获取编辑后的值
-                    const itemEditValues = editValues[item.key] || {};
-                    const instockQuantity = itemEditValues.instockQuantity || item.quantity;
-                    
-                    // 模拟单条商品确认收货
-                    const updatedData = data.map(order => {
-                      if (order.key === selectedOrder.key) {
-                        const updatedItems = order.items.map(subItem => {
-                          if (subItem.key === item.key) {
-                            return {
-                              ...subItem,
-                              status: '已验收',
-                              instockQuantity: instockQuantity,
-                              unit: itemEditValues.unit || '',
-                              batchNumber: itemEditValues.batchNumber || '',
-                              productionDate: itemEditValues.productionDate,
-                              expiryDate: itemEditValues.expiryDate,
-                              amount: instockQuantity * subItem.price
-                            };
-                          }
-                          return subItem;
-                        });
-                        
-                        // 检查订单状态
-                        const allAccepted = updatedItems.every(subItem => subItem.status === '已验收');
-                        const allRejected = updatedItems.every(subItem => subItem.status === '已拒收');
-                        const hasPending = updatedItems.some(subItem => subItem.status === '待验收');
-                        
-                        let newStatus = order.status;
-                        if (allAccepted) {
-                          newStatus = '已验收';
-                        } else if (allRejected) {
-                          newStatus = '已拒收';
-                        } else if (!hasPending) {
-                          newStatus = '部分验收';
-                        }
-                        
-                        return {
-                          ...order,
-                          status: newStatus,
-                          items: updatedItems
-                        };
-                      }
-                      return order;
-                    });
-                    
-                    setData(updatedData);
-                    setFilteredData(updatedData);
-                    message.success(`商品 ${item.productName} 已确认收货`);
-                  }}
-                  style={{ color: '#52c41a' }}
-                >
-                  收货
-                </Button>
-              </Tooltip>
-              
-              <Tooltip title="拒收">
-                <Button
-                  type="link"
-                  danger
-                  size="small"
-                  icon={<CloseCircleOutlined />}
-                  onClick={() => handleOpenRejectModal('single', selectedOrder, item)}
-                >
-                  拒收
-                </Button>
-              </Tooltip>
-            </>
-          )}
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewOrder(record)}
+          >
+            入库详情
+          </Button>
         </Space>
       ),
+    },
+  ];
+
+  // 订单详情模态框中的商品列定义
+  const itemColumns = [
+    {
+      title: '采购单号',
+      dataIndex: 'orderNumber',
+      key: 'orderNumber',
+      width: 150,
+      align: 'center',
+      render: (_, record) => <div style={styles.readonlyText}>{selectedOrder?.orderNumber || ''}</div>,
+    },
+    {
+      title: '物资编码',
+      dataIndex: 'productCode',
+      key: 'productCode',
+      width: 100,
+      align: 'center',
+      render: (text) => <div style={styles.readonlyText}>{text}</div>,
+    },
+    {
+      title: '物资名称',
+      dataIndex: 'productName',
+      key: 'productName',
+      width: 120,
+      align: 'center',
+      render: (text) => <div style={styles.readonlyText}>{text}</div>,
+    },
+    {
+      title: '规格',
+      dataIndex: 'specification',
+      key: 'specification',
+      width: 100,
+      align: 'center',
+      render: (text) => <div style={styles.readonlyText}>{text}</div>,
+    },
+    {
+      title: '型号',
+      dataIndex: 'model',
+      key: 'model',
+      width: 100,
+      align: 'center',
+      render: (text) => <div style={styles.readonlyText}>{text || ''}</div>,
+    },
+    {
+      title: '单位',
+      dataIndex: 'unit',
+      key: 'unit',
+      width: 80,
+      align: 'center',
+      render: (text) => <div style={styles.readonlyText}>{text}</div>,
+    },
+    {
+      title: '批号',
+      dataIndex: 'batchNumber',
+      key: 'batchNumber',
+      width: 120,
+      align: 'center',
+      render: (text) => <div style={styles.readonlyText}>{text || ''}</div>,
+    },
+    {
+      title: '生产日期',
+      dataIndex: 'productionDate',
+      key: 'productionDate',
+      width: 120,
+      align: 'center',
+      render: (text) => <div style={styles.readonlyText}>{text || ''}</div>,
+    },
+    {
+      title: '失效日期',
+      dataIndex: 'expiryDate',
+      key: 'expiryDate',
+      width: 120,
+      align: 'center',
+      render: (text) => <div style={styles.readonlyText}>{text || ''}</div>,
+    },
+    {
+      title: '采购价格',
+      dataIndex: 'price',
+      key: 'price',
+      width: 100,
+      align: 'center',
+      render: (price) => <div style={styles.readonlyText}>¥{price?.toFixed(2) || '0.00'}</div>,
+    },
+
+    {
+      title: '生产厂家',
+      dataIndex: 'manufacturer',
+      key: 'manufacturer',
+      width: 120,
+      align: 'center',
+      render: (text) => <div style={styles.readonlyText}>{text || ''}</div>,
+    },
+    {
+      title: '入库数量',
+      dataIndex: 'instockQuantity',
+      key: 'instockQuantity',
+      width: 100,
+      align: 'center',
+      render: (text, record) => <div style={styles.readonlyText}>{text || record.quantity || 0}</div>,
+    },
+    {
+      title: '收货日期',
+      dataIndex: 'receiptDate',
+      key: 'receiptDate',
+      width: 120,
+      align: 'center',
+      render: (_, record) => <div style={styles.readonlyText}>{selectedOrder?.receiptDate || ''}</div>,
+    },
+    {
+      title: '收货人',
+      dataIndex: 'receiver',
+      key: 'receiver',
+      width: 100,
+      align: 'center',
+      render: (_, record) => <div style={styles.readonlyText}>{selectedOrder?.receiver || ''}</div>,
+    },
+    {
+      title: '备注',
+      dataIndex: 'remark',
+      key: 'remark',
+      width: 150,
+      align: 'center',
+      render: (_, record) => <div style={styles.readonlyText}>{selectedOrder?.remark || ''}</div>,
     },
   ];
 
@@ -1247,123 +794,42 @@ const PurchaseOrderAcceptance = () => {
       
 
       {/* 搜索区域 */}
-      <Card style={{ marginBottom: 24 }}>
+      <Card style={{ marginBottom: 24, padding: '16px' }}>
         <Form
           form={searchForm}
-          layout="vertical"
           onFinish={handleSearch}
         >
-          {/* 按键栏 */}
-          <Row style={{ marginBottom: 16 }}>
-            <Space>
-              <Button icon={<EyeOutlined />} onClick={() => {
-                // 模拟获取采购订单数据
-                const mockReceivedOrders = [
-                  { 
-                    key: 'R1', 
-                    orderNumber: 'PO-20260110-001', 
-                    supplierName: '医疗用品供应商A', 
-                    supplierCode: 'SUP-A001',
-                    totalAmount: 15000.00, 
-                    department: '采购部',
-                    buyer: '张三',
-                    contactPerson: '李四',
-                    contactPhone: '13800138000',
-                    orderDate: '2026-01-10',
-                    expectedDeliveryDate: '2026-01-15',
-                    status: '待验收',
-                    items: [
-                      { key: 'R1-1', productCode: 'PROD011', productName: '医用手套', specification: '乳胶 100只/盒', model: 'GLOVE-100', manufacturer: '手套制造厂A', registrationNumber: 'REG-2024-011', unit: '盒', quantity: 500, price: 30.00, amount: 15000.00, status: '待验收' }
-                    ] 
-                  },
-                  { 
-                    key: 'R2', 
-                    orderNumber: 'PO-20260109-002', 
-                    supplierName: '医疗器械供应商B', 
-                    supplierCode: 'SUP-B002',
-                    totalAmount: 8000.00, 
-                    department: '采购部',
-                    buyer: '李四',
-                    contactPerson: '王五',
-                    contactPhone: '13900139000',
-                    orderDate: '2026-01-09',
-                    expectedDeliveryDate: '2026-01-14',
-                    status: '待验收',
-                    items: [
-                      { key: 'R2-1', productCode: 'PROD012', productName: '血压计', specification: '电子血压计', model: 'BP-001', manufacturer: '血压计制造厂B', registrationNumber: 'REG-2024-012', unit: '台', quantity: 10, price: 800.00, amount: 8000.00, status: '待验收' }
-                    ] 
-                  },
-                  { 
-                    key: 'R3', 
-                    orderNumber: 'PO-20260108-003', 
-                    supplierName: '消毒用品供应商C', 
-                    supplierCode: 'SUP-C003',
-                    totalAmount: 6000.00, 
-                    department: '采购部',
-                    buyer: '王五',
-                    contactPerson: '赵六',
-                    contactPhone: '13700137000',
-                    orderDate: '2026-01-08',
-                    expectedDeliveryDate: '2026-01-13',
-                    status: '待验收',
-                    items: [
-                      { key: 'R3-1', productCode: 'PROD013', productName: '消毒湿巾', specification: '100片/包', model: 'WIPE-100', manufacturer: '湿巾制造厂C', registrationNumber: 'REG-2024-013', unit: '包', quantity: 200, price: 30.00, amount: 6000.00, status: '待验收' }
-                    ] 
-                  },
-                ];
-                setReceivedOrders(mockReceivedOrders);
-                setSelectedReceivedOrder(null);
-                setReceivedOrdersModalVisible(true);
-              }}>
-                查单据
-              </Button>
-              <Button icon={<DownloadOutlined />}>导出数据</Button>
-              <Button icon={<ReloadOutlined />} onClick={loadData}>
-                刷新
-              </Button>
-            </Space>
-          </Row>
+
           
-          <Row gutter={16}>
-            <Col span={6}>
-              <Form.Item name="orderNumber" label="采购单号">
-                <Input placeholder="请输入采购单号" />
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>物资编码</label>
+              <Form.Item name="productCode" noStyle>
+                <Input placeholder="请输入物资编码" style={{ width: 180 }} />
               </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="supplierName" label="供应商名称">
-                <Input placeholder="请输入供应商名称" />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>物资名称</label>
+              <Form.Item name="productName" noStyle>
+                <Input placeholder="请输入物资名称" style={{ width: 180 }} />
               </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="status" label="订单状态" initialValue="all">
-                <Select>
-                  <Option value="all">全部状态</Option>
-                  <Option value="待验收">待验收</Option>
-                  <Option value="部分验收">部分验收</Option>
-                  <Option value="已验收">已验收</Option>
-                  <Option value="已拒收">已拒收</Option>
-                  <Option value="超时未验收">超时未验收</Option>
-                  <Option value="已终止">已终止</Option>
-                </Select>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>生产厂家</label>
+              <Form.Item name="manufacturer" noStyle>
+                <Input placeholder="请输入生产厂家" style={{ width: 180 }} />
               </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item name="dateRange" label="订单日期">
-                <RangePicker style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row justify="end">
-            <Space>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Button type="primary" icon={<SearchOutlined />} htmlType="submit">
+                查询
+              </Button>
               <Button icon={<ReloadOutlined />} onClick={handleReset}>
                 重置
               </Button>
-              <Button type="primary" icon={<SearchOutlined />} htmlType="submit">
-                搜索
-              </Button>
-            </Space>
-          </Row>
+            </div>
+          </div>
         </Form>
       </Card>
       
@@ -1376,7 +842,7 @@ const PurchaseOrderAcceptance = () => {
           dataSource={filteredData}
           rowSelection={rowSelection}
           loading={loading}
-          scroll={{ x: 2500 }}
+          scroll={{ x: 1200 }}
           pagination={{
             ...pagination,
             showSizeChanger: true,
@@ -1398,32 +864,15 @@ const PurchaseOrderAcceptance = () => {
           }}
         />
         
-        {/* 底部按键栏 */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'flex-end',
-          alignItems: 'center',
-          marginTop: '16px',
-          paddingTop: '16px',
-          borderTop: '1px solid #f0f0f0'
-        }}>
-          <Space>
-            <Button type="default" danger onClick={handleDelete}>
-              删除
-            </Button>
-            <Button type="primary" onClick={handleSubmit}>
-              提交单据
-            </Button>
-          </Space>
-        </div>
+
       </Card>
       
       {/* 订单详情模态框 */}
       <Modal
-        title="采购订单详情"
+        title="入库详情"
         open={isModalVisible}
         onCancel={() => setIsModalVisible(false)}
-        width={1000}
+        width={1200}
         footer={[
           <Button key="close" onClick={() => setIsModalVisible(false)}>
             关闭
@@ -1442,9 +891,9 @@ const PurchaseOrderAcceptance = () => {
               <Col span={8}>
                 <div><strong>订单状态：</strong>
                   <Tag color={
-                    selectedOrder.status === '待验收' ? 'orange' :
-                    selectedOrder.status === '部分验收' ? 'blue' :
-                    selectedOrder.status === '已验收' ? 'green' : 'red'
+                    selectedOrder.status === '待入库' ? 'orange' :
+                    selectedOrder.status === '部分入库' ? 'blue' :
+                    selectedOrder.status === '已入库' ? 'green' : 'red'
                   }>
                     {selectedOrder.status}
                   </Tag>
@@ -1454,10 +903,7 @@ const PurchaseOrderAcceptance = () => {
             
             <Row gutter={16} style={{ marginBottom: 16 }}>
               <Col span={8}>
-                <div><strong>订单日期：</strong>{selectedOrder.orderDate}</div>
-              </Col>
-              <Col span={8}>
-                <div><strong>预计到货：</strong>{selectedOrder.expectedDeliveryDate}</div>
+                <div><strong>验收日期：</strong>{selectedOrder.orderDate}</div>
               </Col>
               <Col span={8}>
                 <div><strong>总金额：</strong>¥{selectedOrder.totalAmount.toFixed(2)}</div>
@@ -1466,13 +912,10 @@ const PurchaseOrderAcceptance = () => {
             
             <Row gutter={16} style={{ marginBottom: 16 }}>
               <Col span={8}>
-                <div><strong>采购部门：</strong>{selectedOrder.department}</div>
+                <div><strong>采购分院：</strong>{selectedOrder.department}</div>
               </Col>
               <Col span={8}>
-                <div><strong>采购员：</strong>{selectedOrder.buyer}</div>
-              </Col>
-              <Col span={8}>
-                <div><strong>联系人：</strong>{selectedOrder.contactPerson} ({selectedOrder.contactPhone})</div>
+                <div><strong>验收人：</strong>{selectedOrder.buyer}</div>
               </Col>
             </Row>
             
@@ -1482,7 +925,7 @@ const PurchaseOrderAcceptance = () => {
               dataSource={selectedOrder.items}
               pagination={false}
               rowKey="key"
-              scroll={{ x: 1500 }}
+              scroll={{ x: 1800 }}
             />
           </div>
         )}
@@ -1584,7 +1027,7 @@ const PurchaseOrderAcceptance = () => {
                     remark: '',
                     orderDate: selectedReceivedOrder.orderDate,
                     expectedDeliveryDate: selectedReceivedOrder.expectedDeliveryDate,
-                    status: '待验收',
+                    status: '待入库',
                     totalAmount: item.amount,
                     items: [item]
                   };

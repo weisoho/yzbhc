@@ -256,39 +256,43 @@ const OperationLog = () => {
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.12)',
           border: '1px solid #e8e8e8',
           marginBottom: 24,
-          backgroundColor: '#ffffff'
+          backgroundColor: '#ffffff',
+          padding: '16px'
         }}
       >
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={8} lg={8}>
+        <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '180px' }}>搜索操作内容/操作人员/IP：</span>
             <Search
-              placeholder="搜索操作内容/操作人员/IP"
+              placeholder="请输入搜索内容"
               allowClear
-              enterButton={<SearchOutlined />}
               size="middle"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              onSearch={handleSearch}
-              style={{ width: '100%' }}
+              style={{ width: '300px' }}
             />
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={6}>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>操作日期：</span>
             <RangePicker
               size="middle"
               value={dateRange}
               onChange={(dates) => setDateRange(dates)}
-              style={{ width: '100%' }}
               placeholder={['开始日期', '结束日期']}
+              style={{ width: '300px' }}
             />
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={5}>
+          </div>
+        </div>
+        <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>操作类型：</span>
             <Select
-              placeholder="选择操作类型"
+              placeholder="请选择操作类型"
               allowClear
               size="middle"
               value={selectedType}
               onChange={(value) => setSelectedType(value)}
-              style={{ width: '100%' }}
+              style={{ width: '200px' }}
             >
               {operationTypes.map(type => (
                 <Option key={type} value={type}>
@@ -296,41 +300,40 @@ const OperationLog = () => {
                 </Option>
               ))}
             </Select>
-          </Col>
-          <Col xs={24} sm={12} md={8} lg={5}>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>操作状态：</span>
             <Select
-              placeholder="选择操作状态"
+              placeholder="请选择操作状态"
               allowClear
               size="middle"
               value={selectedStatus}
               onChange={(value) => setSelectedStatus(value)}
-              style={{ width: '100%' }}
+              style={{ width: '200px' }}
             >
               <Option value="success">成功</Option>
               <Option value="warning">警告</Option>
               <Option value="error">失败</Option>
             </Select>
-          </Col>
-          <Col xs={24} sm={12} md={16} lg={10} style={{ display: 'flex', gap: 12 }}>
-            <Button
-              type="primary"
-              size="middle"
-              icon={<FilterOutlined />}
-              onClick={handleSearch}
-              style={{ flex: 1, borderRadius: 8 }}
-            >
-              筛选
-            </Button>
-            <Button
-              size="middle"
-              icon={<ClearOutlined />}
-              onClick={handleReset}
-              style={{ flex: 1, borderRadius: 8 }}
-            >
-              重置
-            </Button>
-          </Col>
-        </Row>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <Button
+            type="primary"
+            size="middle"
+            icon={<FilterOutlined />}
+            onClick={handleSearch}
+          >
+            筛选
+          </Button>
+          <Button
+            size="middle"
+            icon={<ClearOutlined />}
+            onClick={handleReset}
+          >
+            重置
+          </Button>
+        </div>
       </Card>
 
       {/* 操作日志表格 */}
