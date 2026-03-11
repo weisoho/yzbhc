@@ -10,7 +10,7 @@ import javax.annotation.Resource;
 import java.util.List;
 
 /**
- * 供应商及管理
+ * 供应商管理
  */
 @RestController
 @RequestMapping("/supplier")

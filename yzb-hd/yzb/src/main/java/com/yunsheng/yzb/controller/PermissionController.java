@@ -13,7 +13,7 @@ import javax.annotation.Resource;
 import java.util.List;
 
 /**
- * 权限管理控
+ * 权限管理
  */
 @RestController
 @RequestMapping("/api/permission")
