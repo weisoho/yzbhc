@@ -11,7 +11,7 @@ import javax.annotation.Resource;
 import java.util.List;
 
 /**
- * 角色管理控制器
+ * 角色管理
  */
 @RestController
 @RequestMapping("/api/role")
@@ -25,7 +25,7 @@ public class RoleController {
      */
     @GetMapping("/list")
     @RequiresPermission("system:role:query")
-    public AjaxResult getAllRoles() {
+    public AjaxResult<List<SysRole>> getAllRoles() {
         List<SysRole> roles = roleService.getAllRoles();
         return AjaxResult.successInstance(roles);
     }
@@ -35,12 +35,12 @@ public class RoleController {
      */
     @GetMapping("/{id}")
     @RequiresPermission("system:role:query")
-    public AjaxResult getRoleById(@PathVariable Long id) {
+    public AjaxResult<SysRole> getRoleById(@PathVariable Long id) {
         SysRole role = roleService.getRoleById(id);
         if (role != null) {
             return AjaxResult.successInstance(role);
         }
-        return AjaxResult.errorInstance("角色不存在");
+        return AjaxResult.res(0, "角色不存在", null);
     }
 
     /**
@@ -48,7 +48,7 @@ public class RoleController {
      */
     @GetMapping("/user/{userId}")
     @RequiresPermission("system:role:query")
-    public AjaxResult getRolesByUserId(@PathVariable Integer userId) {
+    public AjaxResult<List<SysRole>> getRolesByUserId(@PathVariable Integer userId) {
         List<SysRole> roles = roleService.getRolesByUserId(userId);
         return AjaxResult.successInstance(roles);
     }
@@ -58,7 +58,7 @@ public class RoleController {
      */
     @PostMapping
     @RequiresPermission("system:role:add")
-    public AjaxResult createRole(@RequestBody SysRole role) {
+    public AjaxResult<String> createRole(@RequestBody SysRole role) {
         role.setCreateBy(LoginCacheUtil.getCurrentUserId());
         int result = roleService.createRole(role);
         if (result > 0) {
@@ -74,7 +74,7 @@ public class RoleController {
      */
     @PutMapping("/{id}")
     @RequiresPermission("system:role:edit")
-    public AjaxResult updateRole(@PathVariable Long id, @RequestBody SysRole role) {
+    public AjaxResult<String> updateRole(@PathVariable Long id, @RequestBody SysRole role) {
         role.setId(id);
         role.setUpdateBy(LoginCacheUtil.getCurrentUserId());
         int result = roleService.updateRole(role);
@@ -90,7 +90,7 @@ public class RoleController {
      */
     @DeleteMapping("/{id}")
     @RequiresPermission("system:role:delete")
-    public AjaxResult deleteRole(@PathVariable Long id) {
+    public AjaxResult<String> deleteRole(@PathVariable Long id) {
         int result = roleService.deleteRole(id);
         if (result > 0) {
             return AjaxResult.successInstance("删除成功");
@@ -105,7 +105,7 @@ public class RoleController {
      */
     @PostMapping("/{roleId}/permissions")
     @RequiresPermission("system:role:assign")
-    public AjaxResult assignPermissions(@PathVariable Long roleId, @RequestBody List<Long> permissionIds) {
+    public AjaxResult<String> assignPermissions(@PathVariable Long roleId, @RequestBody List<Long> permissionIds) {
         Integer operatorId = LoginCacheUtil.getCurrentUserId();
         int result = roleService.assignPermissions(roleId, permissionIds, operatorId);
         if (result >= 0) {
@@ -121,7 +121,7 @@ public class RoleController {
      */
     @PostMapping("/user/{userId}/roles")
     @RequiresPermission("system:user:assign")
-    public AjaxResult assignRolesToUser(@PathVariable Integer userId, @RequestBody List<Long> roleIds) {
+    public AjaxResult<String> assignRolesToUser(@PathVariable Integer userId, @RequestBody List<Long> roleIds) {
         Integer operatorId = LoginCacheUtil.getCurrentUserId();
         int result = roleService.assignRolesToUser(userId, roleIds, operatorId);
         if (result >= 0) {

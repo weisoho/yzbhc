@@ -1,9 +1,5 @@
 package com.yunsheng.yzb.controller;
 
-import com.lk.api.annotation.LKAMethod;
-import com.lk.api.annotation.LKAParam;
-import com.lk.api.annotation.LKARespose;
-import com.lk.api.annotation.LKAType;
 import com.yunsheng.yzb.mapper.UserTokenMapper;
 import com.yunsheng.yzb.mapper.YsUserMapper;
 import com.yunsheng.yzb.model.UserToken;
@@ -13,10 +9,8 @@ import com.yunsheng.yzb.utils.AjaxResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -25,6 +19,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * 用户管理
+ */
 @RestController
 @RequestMapping("/public")
 public class LoginController {
@@ -41,7 +38,7 @@ public class LoginController {
      * @return
      */
     @GetMapping("/login")
-    public AjaxResult login(String userName ,String password){
+    public AjaxResult<YsUser> login(String userName ,String password){
         YsUserExample ysUserExample = new YsUserExample();
         ysUserExample.createCriteria().andUserNameEqualTo(userName).andPasswordEqualTo(password);
         List<YsUser> ysUserList = ysUserMapper.selectByExample(ysUserExample);

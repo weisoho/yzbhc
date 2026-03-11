@@ -10,8 +10,7 @@ import javax.annotation.Resource;
 import java.util.List;
 
 /**
- * 供应商及资质管理控制器
- * 提供供应商的增删改查及相关资质的管理接口
+ * 供应商及管理
  */
 @RestController
 @RequestMapping("/supplier")
@@ -31,7 +30,7 @@ public class SupplierController {
      * @return 供应商列表
      */
     @GetMapping("/list")
-    public AjaxResult list(@RequestParam(required = false) String name,
+    public AjaxResult<List<Supplier>> list(@RequestParam(required = false) String name,
                         @RequestParam(required = false) String contactPerson,
                         @RequestParam(required = false) String contactPhone) {
         List<Supplier> list = supplierService.getSuppliersByCondition(name, contactPerson, contactPhone);
@@ -44,7 +43,7 @@ public class SupplierController {
      * @return 供应商详情对象
      */
     @GetMapping("/{id}")
-    public AjaxResult getInfo(@PathVariable Integer id) {
+    public AjaxResult<Supplier> getInfo(@PathVariable Integer id) {
         return AjaxResult.success(supplierService.getSupplierById(id));
     }
 
@@ -63,7 +62,7 @@ public class SupplierController {
      * @return 成功返回1
      */
     @PostMapping("/add")
-    public AjaxResult add(@RequestBody Supplier supplier) {
+    public AjaxResult<Integer> add(@RequestBody Supplier supplier) {
         return AjaxResult.success(supplierService.addSupplier(supplier));
     }
 
@@ -73,7 +72,7 @@ public class SupplierController {
      * @return 成功返回1
      */
     @PutMapping("/edit")
-    public AjaxResult edit(@RequestBody Supplier supplier) {
+    public AjaxResult<Integer> edit(@RequestBody Supplier supplier) {
         return AjaxResult.success(supplierService.updateSupplier(supplier));
     }
 
@@ -83,7 +82,7 @@ public class SupplierController {
      * @return 成功返回1
      */
     @DeleteMapping("/{id}")
-    public AjaxResult remove(@PathVariable Integer id) {
+    public AjaxResult<Integer> remove(@PathVariable Integer id) {
         return AjaxResult.success(supplierService.deleteSupplier(id));
     }
 
@@ -96,7 +95,7 @@ public class SupplierController {
      * @return 资质列表
      */
     @GetMapping("/qualification/list")
-    public AjaxResult qualificationList(@RequestParam(required = false) Integer supplierId, @RequestParam String type) {
+    public AjaxResult<List<SupplierQualification>> qualificationList(@RequestParam(required = false) Integer supplierId, @RequestParam String type) {
         List<SupplierQualification> list = supplierService.getQualifications(supplierId, type);
         return AjaxResult.success(list);
     }
@@ -107,7 +106,7 @@ public class SupplierController {
      * @return 资质详情对象
      */
     @GetMapping("/qualification/{id}")
-    public AjaxResult getQualificationInfo(@PathVariable Integer id) {
+    public AjaxResult<SupplierQualification> getQualificationInfo(@PathVariable Integer id) {
         return AjaxResult.success(supplierService.getQualificationById(id));
     }
 
@@ -117,7 +116,7 @@ public class SupplierController {
      * @return 成功返回1
      */
     @PostMapping("/qualification/add")
-    public AjaxResult addQualification(@RequestBody SupplierQualification qualification) {
+    public AjaxResult<Integer> addQualification(@RequestBody SupplierQualification qualification) {
         return AjaxResult.success(supplierService.addQualification(qualification));
     }
 
@@ -127,7 +126,7 @@ public class SupplierController {
      * @return 成功返回1
      */
     @PutMapping("/qualification/edit")
-    public AjaxResult editQualification(@RequestBody SupplierQualification qualification) {
+    public AjaxResult<Integer> editQualification(@RequestBody SupplierQualification qualification) {
         return AjaxResult.success(supplierService.updateQualification(qualification));
     }
 
@@ -137,7 +136,7 @@ public class SupplierController {
      * @return 成功返回1
      */
     @DeleteMapping("/qualification/{id}")
-    public AjaxResult removeQualification(@PathVariable Integer id) {
+    public AjaxResult<Integer> removeQualification(@PathVariable Integer id) {
         return AjaxResult.success(supplierService.deleteQualification(id));
     }
 }

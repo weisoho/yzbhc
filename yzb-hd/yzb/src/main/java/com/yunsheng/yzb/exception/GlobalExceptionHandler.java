@@ -15,14 +15,14 @@ public class GlobalExceptionHandler {
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(UnauthorizedException.class)
-    public AjaxResult handleUnauthorizedException(UnauthorizedException e, HttpServletResponse response) {
+    public AjaxResult<Void> handleUnauthorizedException(UnauthorizedException e, HttpServletResponse response) {
         logger.error("未授权访问 - {}", e.getMessage());
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         return AjaxResult.res(e.getCode(), e.getMessage(), null);
     }
 
     @ExceptionHandler(PermissionDeniedException.class)
-    public AjaxResult handlePermissionDeniedException(PermissionDeniedException e, HttpServletResponse response) {
+    public AjaxResult<Void> handlePermissionDeniedException(PermissionDeniedException e, HttpServletResponse response) {
         StringBuilder sb = new StringBuilder();
         sb.append("权限不足 - 用户ID: ").append(e.getUserId());
         sb.append(", 请求URL: ").append(e.getRequestUrl());
@@ -43,14 +43,14 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public AjaxResult handleRuntimeException(RuntimeException e, HttpServletResponse response) {
+    public AjaxResult<Void> handleRuntimeException(RuntimeException e, HttpServletResponse response) {
         logger.error("运行时异常: ", e);
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         return AjaxResult.res(400, e.getMessage(), null);
     }
 
     @ExceptionHandler(Exception.class)
-    public AjaxResult handleException(Exception e, HttpServletResponse response) {
+    public AjaxResult<Void> handleException(Exception e, HttpServletResponse response) {
         logger.error("系统异常: ", e);
         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         return AjaxResult.res(500, "系统异常，请联系管理员", null);
