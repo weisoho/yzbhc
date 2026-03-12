@@ -1,0 +1,13 @@
+DROP TABLE IF EXISTS scm_exception_order;
+DROP TABLE IF EXISTS scm_operation_log;
+DROP TABLE IF EXISTS scm_stock_out_item;
+DROP TABLE IF EXISTS scm_stock_out_order;
+DROP TABLE IF EXISTS scm_inventory_transaction;
+DROP TABLE IF EXISTS scm_inventory;
+DROP TABLE IF EXISTS scm_stock_in_item;
+DROP TABLE IF EXISTS scm_stock_in_order;
+DROP TABLE IF EXISTS scm_purchase_receive_item;
+DROP TABLE IF EXISTS scm_purchase_receive;
+DROP TABLE IF EXISTS scm_purchase_order_item;
+DROP TABLE IF EXISTS scm_purchase_order;
+DROP TABLE IF EXISTS scm_material;

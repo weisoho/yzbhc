@@ -1,8 +1,11 @@
 package com.yunsheng.yzb.exception;
 
+import com.yunsheng.yzb.modules.scm.common.ScmBusinessException;
 import com.yunsheng.yzb.utils.AjaxResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.validation.BindException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -47,6 +50,34 @@ public class GlobalExceptionHandler {
         logger.error("运行时异常: ", e);
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         return AjaxResult.res(400, e.getMessage(), null);
+    }
+
+    @ExceptionHandler(ScmBusinessException.class)
+    public AjaxResult<Void> handleScmBusinessException(ScmBusinessException e, HttpServletResponse response) {
+        logger.warn("供应链业务异常: {}", e.getMessage());
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        return AjaxResult.res(400, e.getMessage(), null);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public AjaxResult<Void> handleMethodArgumentNotValidException(MethodArgumentNotValidException e,
+                                                                  HttpServletResponse response) {
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .orElse("请求参数不合法");
+        return AjaxResult.res(400, message, null);
+    }
+
+    @ExceptionHandler(BindException.class)
+    public AjaxResult<Void> handleBindException(BindException e, HttpServletResponse response) {
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .orElse("请求参数不合法");
+        return AjaxResult.res(400, message, null);
     }
 
     @ExceptionHandler(Exception.class)
