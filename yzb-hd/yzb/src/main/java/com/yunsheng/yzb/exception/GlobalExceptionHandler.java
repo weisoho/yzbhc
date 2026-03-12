@@ -1,6 +1,6 @@
 package com.yunsheng.yzb.exception;
 
-import com.yunsheng.yzb.modules.scm.common.ScmBusinessException;
+import com.yunsheng.yzb.common.ScmBusinessException;
 import com.yunsheng.yzb.utils.AjaxResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +19,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnauthorizedException.class)
     public AjaxResult<Void> handleUnauthorizedException(UnauthorizedException e, HttpServletResponse response) {
-        logger.error("未授权访问 - {}", e.getMessage());
+        logger.error("未授权访问: {}", e.getMessage());
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         return AjaxResult.res(e.getCode(), e.getMessage(), null);
     }
@@ -47,7 +47,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public AjaxResult<Void> handleRuntimeException(RuntimeException e, HttpServletResponse response) {
-        logger.error("运行时异常: ", e);
+        logger.error("运行时异常", e);
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         return AjaxResult.res(400, e.getMessage(), null);
     }
@@ -82,8 +82,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public AjaxResult<Void> handleException(Exception e, HttpServletResponse response) {
-        logger.error("系统异常: ", e);
+        logger.error("系统异常", e);
         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         return AjaxResult.res(500, "系统异常，请联系管理员", null);
     }
 }
+

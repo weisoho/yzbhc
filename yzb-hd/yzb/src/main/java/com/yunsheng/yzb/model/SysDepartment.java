@@ -6,19 +6,19 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * 部门实体类
+ * 部门实体类。
  */
 @Data
 public class SysDepartment implements Serializable {
     private static final long serialVersionUID = 1L;
 
     /**
-     * 部门ID
+     * 部门 ID
      */
     private Integer id;
 
     /**
-     * 父部门ID
+     * 父部门 ID
      */
     private Integer parentId;
 
@@ -28,9 +28,19 @@ public class SysDepartment implements Serializable {
     private String deptName;
 
     /**
+     * 组织类型：CAMPUS-院区，DEPARTMENT-科室
+     */
+    private String orgType;
+
+    /**
      * 部门编码
      */
     private String deptCode;
+
+    /**
+     * 地址
+     */
+    private String address;
 
     /**
      * 负责人
@@ -48,7 +58,12 @@ public class SysDepartment implements Serializable {
     private String email;
 
     /**
-     * 状态：0-禁用 1-启用
+     * 备注
+     */
+    private String remark;
+
+    /**
+     * 状态：0-禁用，1-启用
      */
     private Integer status;
 
@@ -78,12 +93,13 @@ public class SysDepartment implements Serializable {
     private Date updateTime;
 
     /**
-     * 删除标记：0-未删除 1-已删除
+     * 删除标记：0-未删除，1-已删除
      */
     private Integer isDeleted;
 
     /**
-     * 子部门列表（用于树形结构）
+     * 子部门列表，用于树形结构展示
      */
     private List<SysDepartment> children;
 }
+
