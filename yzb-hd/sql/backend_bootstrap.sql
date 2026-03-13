@@ -1,7 +1,5 @@
--- 后端完整初始化脚本（新库直接执行）
--- 这是给新环境使用的唯一初始化入口文件。
+-- 后端完整初始化脚本
 -- 执行后会创建/重建 yzb 数据库、导入基础结构、初始化数据，并补齐后端扩展表结构。
--- 示例：mysql -h127.0.0.1 -P3306 -uroot -proot --default-character-set=utf8mb4 < backend_bootstrap.sql
 
 /*
  Navicat Premium Data Transfer
