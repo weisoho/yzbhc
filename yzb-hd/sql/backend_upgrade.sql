@@ -1,4 +1,4 @@
-﻿-- 后端增量升级脚本（现有 yzb 库直接执行）
+-- 后端增量升级脚本（现有 yzb 库直接执行）
 -- 用途：合并 system_extension_schema.sql 与 scm_schema.sql
 CREATE DATABASE IF NOT EXISTS yzb DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 USE yzb;
@@ -9,7 +9,7 @@ SET NAMES utf8mb4;
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_department' AND column_name = 'org_type'),
     'SELECT 1',
-    'ALTER TABLE sys_department ADD COLUMN org_type varchar(20) NOT NULL DEFAULT ''DEPARTMENT'' COMMENT ''缁勭粐绫诲瀷锛欳AMPUS/DEPARTMENT'' AFTER dept_name'
+    'ALTER TABLE sys_department ADD COLUMN org_type varchar(20) NOT NULL DEFAULT ''DEPARTMENT'' COMMENT ''组织类型：CAMPUS/DEPARTMENT'' AFTER dept_name'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -18,7 +18,7 @@ DEALLOCATE PREPARE stmt;
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_department' AND column_name = 'address'),
     'SELECT 1',
-    'ALTER TABLE sys_department ADD COLUMN address varchar(255) DEFAULT NULL COMMENT ''鍦板潃'' AFTER dept_code'
+    'ALTER TABLE sys_department ADD COLUMN address varchar(255) DEFAULT NULL COMMENT ''地址'' AFTER dept_code'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -27,7 +27,7 @@ DEALLOCATE PREPARE stmt;
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_department' AND column_name = 'remark'),
     'SELECT 1',
-    'ALTER TABLE sys_department ADD COLUMN remark varchar(500) DEFAULT NULL COMMENT ''澶囨敞'' AFTER email'
+    'ALTER TABLE sys_department ADD COLUMN remark varchar(500) DEFAULT NULL COMMENT ''备注'' AFTER email'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -36,7 +36,7 @@ DEALLOCATE PREPARE stmt;
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'ys_user' AND column_name = 'real_name'),
     'SELECT 1',
-    'ALTER TABLE ys_user ADD COLUMN real_name varchar(50) DEFAULT NULL COMMENT ''濮撳悕'' AFTER password'
+    'ALTER TABLE ys_user ADD COLUMN real_name varchar(50) DEFAULT NULL COMMENT ''姓名'' AFTER password'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -45,7 +45,7 @@ DEALLOCATE PREPARE stmt;
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'ys_user' AND column_name = 'phone'),
     'SELECT 1',
-    'ALTER TABLE ys_user ADD COLUMN phone varchar(20) DEFAULT NULL COMMENT ''鑱旂郴鐢佃瘽'' AFTER dep_id'
+    'ALTER TABLE ys_user ADD COLUMN phone varchar(20) DEFAULT NULL COMMENT ''联系电话'' AFTER dep_id'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -54,7 +54,7 @@ DEALLOCATE PREPARE stmt;
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'ys_user' AND column_name = 'email'),
     'SELECT 1',
-    'ALTER TABLE ys_user ADD COLUMN email varchar(50) DEFAULT NULL COMMENT ''閭'' AFTER phone'
+    'ALTER TABLE ys_user ADD COLUMN email varchar(50) DEFAULT NULL COMMENT ''邮箱'' AFTER phone'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -63,7 +63,7 @@ DEALLOCATE PREPARE stmt;
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'ys_user' AND column_name = 'account_type'),
     'SELECT 1',
-    'ALTER TABLE ys_user ADD COLUMN account_type varchar(30) DEFAULT ''鎿嶄綔鍛?' COMMENT ''璐﹀彿灞炴€?' AFTER email'
+    'ALTER TABLE ys_user ADD COLUMN account_type varchar(30) DEFAULT ''操作员'' COMMENT ''账号属性'' AFTER email'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -72,7 +72,7 @@ DEALLOCATE PREPARE stmt;
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'ys_user' AND column_name = 'warehouse_scope'),
     'SELECT 1',
-    'ALTER TABLE ys_user ADD COLUMN warehouse_scope varchar(100) DEFAULT NULL COMMENT ''浠撳簱鏉冮檺鑼冨洿'' AFTER account_type'
+    'ALTER TABLE ys_user ADD COLUMN warehouse_scope varchar(100) DEFAULT NULL COMMENT ''仓库权限范围'' AFTER account_type'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -83,7 +83,7 @@ UPDATE sys_department SET org_type = 'DEPARTMENT' WHERE parent_id <> 0 AND (org_
 
 UPDATE ys_user
 SET real_name = COALESCE(real_name, user_name),
-    account_type = COALESCE(account_type, '鎿嶄綔鍛?),
+    account_type = COALESCE(account_type, '操作员'),
     status = COALESCE(status, 1);
 
 -- ===== SCM 业务表与供应商扩展 =====
@@ -92,7 +92,7 @@ SET NAMES utf8mb4;
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'supplier' AND column_name = 'legal_representative'),
     'SELECT 1',
-    'ALTER TABLE supplier ADD COLUMN legal_representative varchar(100) DEFAULT NULL COMMENT ''娉曞畾浠ｈ〃浜?' AFTER credit_code'
+    'ALTER TABLE supplier ADD COLUMN legal_representative varchar(100) DEFAULT NULL COMMENT ''法定代表人'' AFTER credit_code'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -101,7 +101,7 @@ DEALLOCATE PREPARE stmt;
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'supplier' AND column_name = 'registered_capital'),
     'SELECT 1',
-    'ALTER TABLE supplier ADD COLUMN registered_capital varchar(100) DEFAULT NULL COMMENT ''娉ㄥ唽璧勬湰'' AFTER legal_representative'
+    'ALTER TABLE supplier ADD COLUMN registered_capital varchar(100) DEFAULT NULL COMMENT ''注册资本'' AFTER legal_representative'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -110,7 +110,7 @@ DEALLOCATE PREPARE stmt;
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'supplier' AND column_name = 'registration_date'),
     'SELECT 1',
-    'ALTER TABLE supplier ADD COLUMN registration_date date DEFAULT NULL COMMENT ''娉ㄥ唽鏃ユ湡'' AFTER registered_capital'
+    'ALTER TABLE supplier ADD COLUMN registration_date date DEFAULT NULL COMMENT ''注册日期'' AFTER registered_capital'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -119,14 +119,14 @@ DEALLOCATE PREPARE stmt;
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'supplier' AND column_name = 'certificate_count'),
     'SELECT 1',
-    'ALTER TABLE supplier ADD COLUMN certificate_count int DEFAULT 0 COMMENT ''璧勮川鏁伴噺'' AFTER status'
+    'ALTER TABLE supplier ADD COLUMN certificate_count int DEFAULT 0 COMMENT ''资质数量'' AFTER status'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 ALTER TABLE supplier
-    MODIFY COLUMN name varchar(255) NOT NULL COMMENT '渚涘簲鍟嗗悕绉?;
+    MODIFY COLUMN name varchar(255) NOT NULL COMMENT '供应商名称';
 
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'supplier' AND index_name = 'uk_supplier_name'),
@@ -149,7 +149,7 @@ DEALLOCATE PREPARE stmt;
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'supplier_qualification' AND column_name = 'certificate_name'),
     'SELECT 1',
-    'ALTER TABLE supplier_qualification ADD COLUMN certificate_name varchar(255) DEFAULT NULL COMMENT ''璧勮川鍚嶇О'' AFTER type'
+    'ALTER TABLE supplier_qualification ADD COLUMN certificate_name varchar(255) DEFAULT NULL COMMENT ''资质名称'' AFTER type'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -158,7 +158,7 @@ DEALLOCATE PREPARE stmt;
 SET @sql = IF (
     EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'supplier_qualification' AND column_name = 'attachment_name'),
     'SELECT 1',
-    'ALTER TABLE supplier_qualification ADD COLUMN attachment_name varchar(255) DEFAULT NULL COMMENT ''闄勪欢鍚嶇О'' AFTER issuing_authority'
+    'ALTER TABLE supplier_qualification ADD COLUMN attachment_name varchar(255) DEFAULT NULL COMMENT ''附件名称'' AFTER issuing_authority'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -166,21 +166,21 @@ DEALLOCATE PREPARE stmt;
 
 CREATE TABLE IF NOT EXISTS scm_material (
     id bigint NOT NULL AUTO_INCREMENT,
-    material_code varchar(50) NOT NULL COMMENT '鐗╄祫缂栫爜',
-    name varchar(200) NOT NULL COMMENT '鐗╄祫鍚嶇О',
-    material_type varchar(50) NOT NULL COMMENT '鐗╄祫绫诲瀷',
-    specification varchar(200) NOT NULL COMMENT '瑙勬牸',
-    model varchar(200) NOT NULL COMMENT '鍨嬪彿',
-    min_package varchar(100) NOT NULL COMMENT '鏈€灏忓寘瑁?,
-    unit varchar(50) NOT NULL COMMENT '鍗曚綅',
-    purchase_price decimal(12,2) NOT NULL COMMENT '閲囪喘浠锋牸',
-    supplier_id bigint NOT NULL COMMENT '渚涘簲鍟咺D',
-    supplier_name varchar(255) NOT NULL COMMENT '渚涘簲鍟嗗悕绉?,
-    qualification_id bigint NOT NULL COMMENT '娉ㄥ唽璇両D',
-    registration_number varchar(100) NOT NULL COMMENT '娉ㄥ唽璇佸彿',
-    manufacturer varchar(255) NOT NULL COMMENT '鐢熶骇鍘傚',
-    storage_condition varchar(100) NOT NULL COMMENT '鍌ㄥ瓨鏉′欢',
-    status varchar(20) NOT NULL DEFAULT 'active' COMMENT '鐘舵€?,
+    material_code varchar(50) NOT NULL COMMENT '物资编码',
+    name varchar(200) NOT NULL COMMENT '物资名称',
+    material_type varchar(50) NOT NULL COMMENT '物资类型',
+    specification varchar(200) NOT NULL COMMENT '规格',
+    model varchar(200) NOT NULL COMMENT '型号',
+    min_package varchar(100) NOT NULL COMMENT '最小包装',
+    unit varchar(50) NOT NULL COMMENT '单位',
+    purchase_price decimal(12,2) NOT NULL COMMENT '采购价格',
+    supplier_id bigint NOT NULL COMMENT '供应商ID',
+    supplier_name varchar(255) NOT NULL COMMENT '供应商名称',
+    qualification_id bigint NOT NULL COMMENT '注册证ID',
+    registration_number varchar(100) NOT NULL COMMENT '注册证号',
+    manufacturer varchar(255) NOT NULL COMMENT '生产厂家',
+    storage_condition varchar(100) NOT NULL COMMENT '储存条件',
+    status varchar(20) NOT NULL DEFAULT 'active' COMMENT '状态',
     create_time datetime DEFAULT CURRENT_TIMESTAMP,
     update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -188,7 +188,7 @@ CREATE TABLE IF NOT EXISTS scm_material (
     UNIQUE KEY uk_scm_material_unique (supplier_id, qualification_id, name, specification, model),
     KEY idx_scm_material_supplier (supplier_id),
     KEY idx_scm_material_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='鐗╄祫瀛楀吀';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物资字典';
 
 CREATE TABLE IF NOT EXISTS scm_purchase_order (
     id bigint NOT NULL AUTO_INCREMENT,
@@ -212,7 +212,7 @@ CREATE TABLE IF NOT EXISTS scm_purchase_order (
     UNIQUE KEY uk_scm_purchase_order_number (order_number),
     KEY idx_scm_purchase_order_status (status),
     KEY idx_scm_purchase_order_supplier (supplier_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='閲囪喘鍗曚富琛?;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购单主表';
 
 CREATE TABLE IF NOT EXISTS scm_purchase_order_item (
     id bigint NOT NULL AUTO_INCREMENT,
@@ -237,7 +237,7 @@ CREATE TABLE IF NOT EXISTS scm_purchase_order_item (
     PRIMARY KEY (id),
     KEY idx_scm_purchase_order_item_order (purchase_order_id),
     KEY idx_scm_purchase_order_item_material (material_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='閲囪喘鍗曟槑缁?;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购单明细';
 
 CREATE TABLE IF NOT EXISTS scm_purchase_receive (
     id bigint NOT NULL AUTO_INCREMENT,
@@ -265,7 +265,7 @@ CREATE TABLE IF NOT EXISTS scm_purchase_receive (
     UNIQUE KEY uk_scm_purchase_receive_number (receive_number),
     KEY idx_scm_purchase_receive_order (purchase_order_id),
     KEY idx_scm_purchase_receive_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='閲囪喘鏀惰揣鍗?;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购收货单';
 
 CREATE TABLE IF NOT EXISTS scm_purchase_receive_item (
     id bigint NOT NULL AUTO_INCREMENT,
@@ -292,7 +292,7 @@ CREATE TABLE IF NOT EXISTS scm_purchase_receive_item (
     PRIMARY KEY (id),
     KEY idx_scm_purchase_receive_item_receive (receive_id),
     KEY idx_scm_purchase_receive_item_order_item (purchase_order_item_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='閲囪喘鏀惰揣鏄庣粏';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购收货明细';
 
 CREATE TABLE IF NOT EXISTS scm_stock_in_order (
     id bigint NOT NULL AUTO_INCREMENT,
@@ -315,7 +315,7 @@ CREATE TABLE IF NOT EXISTS scm_stock_in_order (
     PRIMARY KEY (id),
     UNIQUE KEY uk_scm_stock_in_number (stock_in_number),
     KEY idx_scm_stock_in_order_receive (receive_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='鍏ュ簱鍗曚富琛?;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='入库单主表';
 
 CREATE TABLE IF NOT EXISTS scm_stock_in_item (
     id bigint NOT NULL AUTO_INCREMENT,
@@ -346,7 +346,7 @@ CREATE TABLE IF NOT EXISTS scm_stock_in_item (
     PRIMARY KEY (id),
     KEY idx_scm_stock_in_item_order (stock_in_order_id),
     KEY idx_scm_stock_in_item_material (material_code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='鍏ュ簱鍗曟槑缁?;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='入库单明细';
 
 CREATE TABLE IF NOT EXISTS scm_inventory (
     id bigint NOT NULL AUTO_INCREMENT,
@@ -380,7 +380,7 @@ CREATE TABLE IF NOT EXISTS scm_inventory (
     UNIQUE KEY uk_scm_inventory_batch (material_code, warehouse, batch_number),
     KEY idx_scm_inventory_status (stock_status),
     KEY idx_scm_inventory_expiry (expiry_date)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='搴撳瓨琛?;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='库存表';
 
 CREATE TABLE IF NOT EXISTS scm_inventory_transaction (
     id bigint NOT NULL AUTO_INCREMENT,
@@ -400,7 +400,7 @@ CREATE TABLE IF NOT EXISTS scm_inventory_transaction (
     KEY idx_scm_inventory_transaction_inventory (inventory_id),
     KEY idx_scm_inventory_transaction_material (material_code),
     KEY idx_scm_inventory_transaction_time (operation_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='搴撳瓨娴佹按';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='库存流水';
 
 CREATE TABLE IF NOT EXISTS scm_stock_out_order (
     id bigint NOT NULL AUTO_INCREMENT,
@@ -417,7 +417,7 @@ CREATE TABLE IF NOT EXISTS scm_stock_out_order (
     PRIMARY KEY (id),
     UNIQUE KEY uk_scm_stock_out_number (stock_out_number),
     KEY idx_scm_stock_out_date (outbound_date)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='鍑哄簱鍗曚富琛?;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='出库单主表';
 
 CREATE TABLE IF NOT EXISTS scm_stock_out_item (
     id bigint NOT NULL AUTO_INCREMENT,
@@ -448,7 +448,7 @@ CREATE TABLE IF NOT EXISTS scm_stock_out_item (
     KEY idx_scm_stock_out_item_order (stock_out_order_id),
     KEY idx_scm_stock_out_item_material (material_code),
     KEY idx_scm_stock_out_item_undo (undo_status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='鍑哄簱鍗曟槑缁?;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='出库单明细';
 
 CREATE TABLE IF NOT EXISTS scm_operation_log (
     id bigint NOT NULL AUTO_INCREMENT,
@@ -465,7 +465,7 @@ CREATE TABLE IF NOT EXISTS scm_operation_log (
     KEY idx_scm_operation_log_time (operation_time),
     KEY idx_scm_operation_log_type (operation_type),
     KEY idx_scm_operation_log_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='鎿嶄綔鏃ュ織';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作日志';
 
 CREATE TABLE IF NOT EXISTS scm_exception_order (
     id bigint NOT NULL AUTO_INCREMENT,
@@ -489,4 +489,4 @@ CREATE TABLE IF NOT EXISTS scm_exception_order (
     PRIMARY KEY (id),
     KEY idx_scm_exception_order_no (order_no),
     KEY idx_scm_exception_order_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='寮傚父璁㈠崟';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='异常订单';
