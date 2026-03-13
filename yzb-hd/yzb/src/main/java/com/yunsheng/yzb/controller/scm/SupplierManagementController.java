@@ -75,12 +75,12 @@ public class SupplierManagementController {
      * 更新供应商基础信息。
      *
      * @param supplierId 供应商主键
-     * @param request 供应商保存请求体，JSON 格式
+     * @param request    供应商保存请求体，JSON 格式
      * @return 更新后的供应商信息
      */
     @PutMapping("/{supplierId}")
     public AjaxResult<SupplierEntity> update(@PathVariable Long supplierId,
-                                             @Valid @RequestBody ScmRequest.SupplierSave request) {
+            @Valid @RequestBody ScmRequest.SupplierSave request) {
         return AjaxResult.success(supplierManagementService.updateSupplier(supplierId, request));
     }
 
@@ -100,12 +100,12 @@ public class SupplierManagementController {
      * 查询供应商资质列表。
      *
      * @param supplierId 供应商主键
-     * @param type 资质类型，可为空
+     * @param type       资质类型，可为空
      * @return 供应商资质列表
      */
     @GetMapping("/{supplierId}/qualifications")
     public AjaxResult<List<SupplierQualificationEntity>> qualifications(@PathVariable Long supplierId,
-                                                                        @RequestParam(required = false) String type) {
+            @RequestParam(required = false) String type) {
         return AjaxResult.success(supplierManagementService.listQualifications(supplierId, type));
     }
 
@@ -113,12 +113,12 @@ public class SupplierManagementController {
      * 为供应商新增资质记录。
      *
      * @param supplierId 供应商主键
-     * @param request 资质保存请求体，JSON 格式
+     * @param request    资质保存请求体，JSON 格式
      * @return 新增后的资质信息
      */
     @PostMapping("/{supplierId}/qualifications")
     public AjaxResult<SupplierQualificationEntity> createQualification(@PathVariable Long supplierId,
-                                                                       @Valid @RequestBody ScmRequest.QualificationSave request) {
+            @Valid @RequestBody ScmRequest.QualificationSave request) {
         return AjaxResult.success(supplierManagementService.createQualification(supplierId, request));
     }
 
@@ -126,12 +126,12 @@ public class SupplierManagementController {
      * 更新供应商资质。
      *
      * @param qualificationId 资质主键
-     * @param request 资质保存请求体，JSON 格式
+     * @param request         资质保存请求体，JSON 格式
      * @return 更新后的资质信息
      */
     @PutMapping("/qualifications/{qualificationId}")
     public AjaxResult<SupplierQualificationEntity> updateQualification(@PathVariable Long qualificationId,
-                                                                       @Valid @RequestBody ScmRequest.QualificationSave request) {
+            @Valid @RequestBody ScmRequest.QualificationSave request) {
         return AjaxResult.success(supplierManagementService.updateQualification(qualificationId, request));
     }
 
