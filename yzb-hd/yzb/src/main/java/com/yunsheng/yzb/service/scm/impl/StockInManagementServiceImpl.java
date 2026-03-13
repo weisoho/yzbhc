@@ -89,7 +89,7 @@ public class StockInManagementServiceImpl implements StockInManagementService {
                 .like(StringUtils.hasText(query.getSupplier()), StockInOrderEntity::getSupplierName, query.getSupplier())
                 .eq(StringUtils.hasText(query.getStatus()), StockInOrderEntity::getStatus, query.getStatus())
                 .orderByDesc(StockInOrderEntity::getCreateTime);
-        Page<StockInOrderEntity> page = stockInOrderMapper.selectPage(new Page<>(query.getCurrent(), query.getSize()), wrapper);
+        Page<StockInOrderEntity> page = stockInOrderMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         return ScmPageHelper.of(page);
     }
 
@@ -193,7 +193,7 @@ public class StockInManagementServiceImpl implements StockInManagementService {
                 .orderByDesc(PurchaseReceiveEntity::getCreateTime));
         List<Long> receiveIds = receipts.stream().map(PurchaseReceiveEntity::getId).collect(Collectors.toList());
         if (receiveIds.isEmpty()) {
-            return new PageResult<>(query.getCurrent(), query.getSize(), 0, java.util.Collections.emptyList());
+            return new PageResult<>(query.getPageNum(), query.getPageSize(), 0, java.util.Collections.emptyList());
         }
         Map<Long, PurchaseReceiveEntity> receiptMap = receipts.stream().collect(Collectors.toMap(PurchaseReceiveEntity::getId, item -> item));
         List<PurchaseReceiveItemEntity> items = purchaseReceiveItemMapper.selectList(new LambdaQueryWrapper<PurchaseReceiveItemEntity>()
@@ -207,11 +207,11 @@ public class StockInManagementServiceImpl implements StockInManagementService {
                 .filter(item -> !StringUtils.hasText(query.getSupplier()) || item.getSupplierName().contains(query.getSupplier()))
                 .sorted(Comparator.comparing(ScmView.PendingStockInItem::getReceiveId).reversed())
                 .collect(Collectors.toList());
-        long startIndex = Math.max(0, (query.getCurrent() - 1) * query.getSize());
-        long endIndex = Math.min(records.size(), startIndex + query.getSize());
+        long startIndex = Math.max(0, (query.getPageNum() - 1) * query.getPageSize());
+        long endIndex = Math.min(records.size(), startIndex + query.getPageSize());
         List<ScmView.PendingStockInItem> pageRecords = startIndex >= records.size()
                 ? java.util.Collections.emptyList() : records.subList((int) startIndex, (int) endIndex);
-        return new PageResult<>(query.getCurrent(), query.getSize(), records.size(), pageRecords);
+        return new PageResult<>(query.getPageNum(), query.getPageSize(), records.size(), pageRecords);
     }
 
     private int alreadyStockedQuantity(Long receiveItemId) {

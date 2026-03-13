@@ -56,7 +56,7 @@ public class OperationLogServiceImpl implements OperationLogService {
                 .ge(query.getStartDate() != null, OperationLogEntity::getOperationTime, query.getStartDate() == null ? null : query.getStartDate().atStartOfDay())
                 .le(query.getEndDate() != null, OperationLogEntity::getOperationTime, query.getEndDate() == null ? null : LocalDateTime.of(query.getEndDate(), LocalTime.MAX))
                 .orderByDesc(OperationLogEntity::getOperationTime);
-        Page<OperationLogEntity> page = operationLogMapper.selectPage(new Page<>(query.getCurrent(), query.getSize()), wrapper);
+        Page<OperationLogEntity> page = operationLogMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         return ScmPageHelper.of(page);
     }
 

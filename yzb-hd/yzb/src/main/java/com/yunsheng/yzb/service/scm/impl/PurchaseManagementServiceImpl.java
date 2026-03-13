@@ -77,7 +77,7 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
                 .like(StringUtils.hasText(query.getSupplierName()), PurchaseOrderEntity::getSupplierName, query.getSupplierName())
                 .eq(StringUtils.hasText(query.getStatus()), PurchaseOrderEntity::getStatus, query.getStatus())
                 .orderByDesc(PurchaseOrderEntity::getCreateTime);
-        Page<PurchaseOrderEntity> page = purchaseOrderMapper.selectPage(new Page<>(query.getCurrent(), query.getSize()), wrapper);
+        Page<PurchaseOrderEntity> page = purchaseOrderMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         return ScmPageHelper.of(page);
     }
 
@@ -298,7 +298,7 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
                 .like(StringUtils.hasText(query.getSupplierName()), PurchaseReceiveEntity::getSupplierName, query.getSupplierName())
                 .eq(StringUtils.hasText(query.getStatus()), PurchaseReceiveEntity::getStatus, query.getStatus())
                 .orderByDesc(PurchaseReceiveEntity::getCreateTime);
-        Page<PurchaseReceiveEntity> page = purchaseReceiveMapper.selectPage(new Page<>(query.getCurrent(), query.getSize()), wrapper);
+        Page<PurchaseReceiveEntity> page = purchaseReceiveMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         return ScmPageHelper.of(page);
     }
 
@@ -324,7 +324,7 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
                 .like(StringUtils.hasText(query.getSupplierName()), ExceptionOrderEntity::getSupplierName, query.getSupplierName())
                 .eq(StringUtils.hasText(query.getStatus()), ExceptionOrderEntity::getStatus, query.getStatus())
                 .orderByDesc(ExceptionOrderEntity::getCreatedAt);
-        Page<ExceptionOrderEntity> page = exceptionOrderMapper.selectPage(new Page<>(query.getCurrent(), query.getSize()), wrapper);
+        Page<ExceptionOrderEntity> page = exceptionOrderMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         return ScmPageHelper.of(page);
     }
 

@@ -52,7 +52,7 @@ public class MaterialDictionaryServiceImpl implements MaterialDictionaryService 
                 .like(StringUtils.hasText(query.getManufacturer()), MaterialEntity::getManufacturer, query.getManufacturer())
                 .eq(StringUtils.hasText(query.getStatus()), MaterialEntity::getStatus, query.getStatus())
                 .orderByDesc(MaterialEntity::getUpdateTime, MaterialEntity::getCreateTime);
-        Page<MaterialEntity> page = materialMapper.selectPage(new Page<>(query.getCurrent(), query.getSize()), wrapper);
+        Page<MaterialEntity> page = materialMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         return ScmPageHelper.of(page);
     }
 

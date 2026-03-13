@@ -48,7 +48,7 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
                 .eq(StringUtils.hasText(query.getEnterpriseType()), SupplierEntity::getEnterpriseType, query.getEnterpriseType())
                 .eq(StringUtils.hasText(query.getStatus()), SupplierEntity::getStatus, query.getStatus())
                 .orderByDesc(SupplierEntity::getUpdateTime, SupplierEntity::getCreateTime);
-        Page<SupplierEntity> page = supplierMapper.selectPage(new Page<>(query.getCurrent(), query.getSize()), wrapper);
+        Page<SupplierEntity> page = supplierMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         return ScmPageHelper.of(page);
     }
 

@@ -51,10 +51,10 @@ public class InventoryManagementServiceImpl implements InventoryManagementServic
                 .like(StringUtils.hasText(query.getBatchNumber()), InventoryEntity::getBatchNumber, query.getBatchNumber())
                 .eq(StringUtils.hasText(query.getStockStatus()), InventoryEntity::getStockStatus, query.getStockStatus())
                 .orderByDesc(InventoryEntity::getUpdateTime);
-        Page<InventoryEntity> page = inventoryMapper.selectPage(new Page<>(query.getCurrent(), query.getSize()), wrapper);
+        Page<InventoryEntity> page = inventoryMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         PageResult<InventoryEntity> rawResult = ScmPageHelper.of(page);
         List<ScmView.InventoryDetail> records = rawResult.getRecords().stream().map(this::toInventoryDetail).collect(Collectors.toList());
-        return new PageResult<>(rawResult.getCurrent(), rawResult.getSize(), rawResult.getTotal(), records);
+        return new PageResult<>(rawResult.getPageNum(), rawResult.getPageSize(), rawResult.getTotal(), records);
     }
 
     @Override
@@ -106,7 +106,7 @@ public class InventoryManagementServiceImpl implements InventoryManagementServic
         wrapper.like(StringUtils.hasText(query.getMaterialCode()), InventoryTransactionEntity::getMaterialCode, query.getMaterialCode())
                 .like(StringUtils.hasText(query.getMaterialName()), InventoryTransactionEntity::getMaterialName, query.getMaterialName())
                 .orderByDesc(InventoryTransactionEntity::getOperationTime);
-        Page<InventoryTransactionEntity> page = inventoryTransactionMapper.selectPage(new Page<>(query.getCurrent(), query.getSize()), wrapper);
+        Page<InventoryTransactionEntity> page = inventoryTransactionMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         return ScmPageHelper.of(page);
     }
 

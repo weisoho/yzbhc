@@ -27,7 +27,6 @@ import javax.annotation.Resource;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * 出库管理服务实现。
@@ -135,7 +134,7 @@ public class StockOutManagementServiceImpl implements StockOutManagementService 
                 .like(StringUtils.hasText(query.getManufacturer()), StockOutItemEntity::getManufacturer, query.getManufacturer())
                 .eq(StringUtils.hasText(query.getUndoStatus()), StockOutItemEntity::getUndoStatus, query.getUndoStatus())
                 .orderByDesc(StockOutItemEntity::getCreateTime);
-        Page<StockOutItemEntity> page = stockOutItemMapper.selectPage(new Page<>(query.getCurrent(), query.getSize()), wrapper);
+        Page<StockOutItemEntity> page = stockOutItemMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         return ScmPageHelper.of(page);
     }
 

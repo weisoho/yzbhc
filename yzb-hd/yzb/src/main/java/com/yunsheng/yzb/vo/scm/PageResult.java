@@ -15,12 +15,12 @@ public class PageResult<T> {
     /**
      * 当前页码。
      */
-    private long current;
+    private long pageNum;
 
     /**
      * 每页记录数。
      */
-    private long size;
+    private long pageSize;
 
     /**
      * 总记录数。

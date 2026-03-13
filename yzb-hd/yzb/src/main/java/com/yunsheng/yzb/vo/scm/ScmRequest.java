@@ -1,6 +1,7 @@
 package com.yunsheng.yzb.vo.scm;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import javax.validation.Valid;
 import javax.validation.constraints.Min;
@@ -120,6 +121,7 @@ public final class ScmRequest {
     /**
      * 物资分页查询参数。
      */
+    @EqualsAndHashCode(callSuper = true)
     @Data
     public static class MaterialQuery extends PageQuery {
         /** 物资编码。 */
