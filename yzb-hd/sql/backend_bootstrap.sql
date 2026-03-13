@@ -1,11 +1,964 @@
--- 后端完整初始化脚本入口
--- 适用场景：空库或新环境初始化
--- 执行方式：在 mysql 客户端进入当前目录后执行本文件
--- 示例：mysql -h127.0.0.1 -P3306 -uroot -proot < backend_bootstrap.sql
+-- 后端完整初始化脚本（新库直接执行）
+-- 这是给新环境使用的唯一初始化入口文件。
+-- 执行后会创建/重建 yzb 数据库、导入基础结构、初始化数据，并补齐后端扩展表结构。
+-- 示例：mysql -h127.0.0.1 -P3306 -uroot -proot --default-character-set=utf8mb4 < backend_bootstrap.sql
 
+/*
+ Navicat Premium Data Transfer
+ Source Server         : root
+ Source Server Type    : MySQL
+ Source Server Version : 50519
+ Source Host           : localhost:3306
+ Source Schema         : yzb
+ Target Server Type    : MySQL
+ Target Server Version : 50519
+ File Encoding         : 65001
+ Date: 25/02/2026 21:08:59
+*/
+
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for asset
+-- ----------------------------
+DROP TABLE IF EXISTS `asset`;
+CREATE TABLE `asset`  (
+                          `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
+                          `asset_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '资产编码',
+                          `asset_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '资产名字',
+                          `asset_typeid` int(11) NOT NULL COMMENT '资产类型id',
+                          `asset_typename` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '资产类型名称',
+                          `spe_model` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '规格型号',
+                          `manufacturer` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '生产厂商',
+                          `purchase_date` datetime NOT NULL COMMENT '购置日期',
+                          `orig_value` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '原值',
+                          `service_life` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '年限',
+                          `dep_id` int(11) NOT NULL COMMENT '使用部门id',
+                          `dep_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '使用部门名称',
+                          `sto_location` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '存放地点',
+                          `resp_person` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '责任人',
+                          `asset_state` tinyint(1) NOT NULL DEFAULT 1 COMMENT '资产状态1在用2闲置3维修4待报废',
+                          `depr_method` tinyint(1) NOT NULL DEFAULT 1 COMMENT '折旧方法1直线法2双倍余额递减法3年数总和法',
+                          `serial_num` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '序列号',
+                          `asset_desc` text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '资产描述',
+                          `attachment` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '附件',
+                          `cdate` datetime NOT NULL COMMENT '创建时间',
+                          `udate` datetime NOT NULL COMMENT '更新时间',
+                          PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '资产表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of asset
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for asset_type
+-- ----------------------------
+DROP TABLE IF EXISTS `asset_type`;
+CREATE TABLE `asset_type`  (
+                               `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
+                               `asset_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '资产类型编码',
+                               `asset_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '资产类型名称',
+                               `asset_desc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '资产类型描述',
+                               `cdate` datetime NOT NULL COMMENT '创建时间',
+                               `asset_state` tinyint(1) NOT NULL DEFAULT 1 COMMENT '1启用0停用',
+                               PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '资产类型' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of asset_type
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for sys_department
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_department`;
+CREATE TABLE `sys_department`  (
+                                   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '部门ID',
+                                   `parent_id` bigint(20) NULL DEFAULT 0 COMMENT '父部门ID，0表示顶级',
+                                   `dept_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '部门名称',
+                                   `dept_code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '部门编码',
+                                   `leader` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '负责人',
+                                   `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '联系电话',
+                                   `email` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '邮箱',
+                                   `status` tinyint(4) NULL DEFAULT 1 COMMENT '状态：0-禁用 1-启用',
+                                   `sort_order` int(11) NULL DEFAULT 0 COMMENT '排序',
+                                   `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
+                                   `create_time` datetime NOT NULL COMMENT '创建时间',
+                                   `update_by` bigint(20) NULL DEFAULT NULL COMMENT '更新人',
+                                   `update_time` datetime NOT NULL COMMENT '更新时间',
+                                   `is_deleted` tinyint(4) NULL DEFAULT 0 COMMENT '删除标记：0-未删除 1-已删除',
+                                   PRIMARY KEY (`id`) USING BTREE,
+                                   UNIQUE INDEX `uk_dept_code`(`dept_code`) USING BTREE,
+                                   INDEX `idx_parent_id`(`parent_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '部门表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of sys_department
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for sys_permission
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_permission`;
+CREATE TABLE `sys_permission`  (
+                                   `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '权限ID',
+                                   `parent_id` bigint(20) NULL DEFAULT 0 COMMENT '父权限ID，0表示顶级',
+                                   `permission_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '权限名称',
+                                   `permission_code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '权限编码',
+                                   `permission_type` tinyint(4) NOT NULL COMMENT '权限类型：1-菜单 2-按钮 3-接口',
+                                   `path` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '路由路径',
+                                   `component` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '组件路径',
+                                   `icon` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '图标',
+                                   `method` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'HTTP方法：GET/POST/PUT/DELETE',
+                                   `api_pattern` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT 'API路径匹配模式',
+                                   `status` tinyint(4) NULL DEFAULT 1 COMMENT '状态：0-禁用 1-启用',
+                                   `sort_order` int(11) NULL DEFAULT 0 COMMENT '排序',
+                                   `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
+                                   `create_time` datetime NOT NULL COMMENT '创建时间',
+                                   `update_by` bigint(20) NULL DEFAULT NULL COMMENT '更新人',
+                                   `update_time` datetime NOT NULL COMMENT '更新时间',
+                                   `is_deleted` tinyint(4) NULL DEFAULT 0 COMMENT '删除标记：0-未删除 1-已删除',
+                                   PRIMARY KEY (`id`) USING BTREE,
+                                   UNIQUE INDEX `uk_permission_code`(`permission_code`) USING BTREE,
+                                   INDEX `idx_parent_id`(`parent_id`) USING BTREE,
+                                   INDEX `idx_type_status`(`permission_type`, `status`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '权限表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of sys_permission
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for sys_role
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_role`;
+CREATE TABLE `sys_role`  (
+                             `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '角色ID',
+                             `role_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '角色名称',
+                             `role_code` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '角色编码',
+                             `role_desc` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '角色描述',
+                             `data_scope` tinyint(4) NULL DEFAULT 1 COMMENT '数据权限范围：1-全部 2-本部门及以下 3-本部门 4-仅本人 5-自定义',
+                             `status` tinyint(4) NULL DEFAULT 1 COMMENT '状态：0-禁用 1-启用',
+                             `sort_order` int(11) NULL DEFAULT 0 COMMENT '排序',
+                             `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
+                             `create_time` datetime NOT NULL COMMENT '创建时间',
+                             `update_by` bigint(20) NULL DEFAULT NULL COMMENT '更新人',
+                             `update_time` datetime NOT NULL COMMENT '更新时间',
+                             `is_deleted` tinyint(4) NULL DEFAULT 0 COMMENT '删除标记：0-未删除 1-已删除',
+                             PRIMARY KEY (`id`) USING BTREE,
+                             UNIQUE INDEX `uk_role_code`(`role_code`) USING BTREE,
+                             INDEX `idx_status`(`status`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '角色表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of sys_role
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for sys_role_dept
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_role_dept`;
+CREATE TABLE `sys_role_dept`  (
+                                  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                                  `role_id` bigint(20) NOT NULL COMMENT '角色ID',
+                                  `dept_id` bigint(20) NOT NULL COMMENT '部门ID',
+                                  `create_time` datetime NOT NULL COMMENT '创建时间',
+                                  PRIMARY KEY (`id`) USING BTREE,
+                                  UNIQUE INDEX `uk_role_dept`(`role_id`, `dept_id`) USING BTREE,
+                                  INDEX `idx_role_id`(`role_id`) USING BTREE,
+                                  INDEX `idx_dept_id`(`dept_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '角色数据权限关联表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of sys_role_dept
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for sys_role_permission
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_role_permission`;
+CREATE TABLE `sys_role_permission`  (
+                                        `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                                        `role_id` bigint(20) NOT NULL COMMENT '角色ID',
+                                        `permission_id` bigint(20) NOT NULL COMMENT '权限ID',
+                                        `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
+                                        `create_time` datetime NOT NULL COMMENT '创建时间',
+                                        PRIMARY KEY (`id`) USING BTREE,
+                                        UNIQUE INDEX `uk_role_permission`(`role_id`, `permission_id`) USING BTREE,
+                                        INDEX `idx_role_id`(`role_id`) USING BTREE,
+                                        INDEX `idx_permission_id`(`permission_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '角色权限关联表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of sys_role_permission
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for sys_user_role
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_user_role`;
+CREATE TABLE `sys_user_role`  (
+                                  `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                                  `user_id` bigint(20) NOT NULL COMMENT '用户ID',
+                                  `role_id` bigint(20) NOT NULL COMMENT '角色ID',
+                                  `create_by` bigint(20) NULL DEFAULT NULL COMMENT '创建人',
+                                  `create_time` datetime NOT NULL COMMENT '创建时间',
+                                  PRIMARY KEY (`id`) USING BTREE,
+                                  UNIQUE INDEX `uk_user_role`(`user_id`, `role_id`) USING BTREE,
+                                  INDEX `idx_user_id`(`user_id`) USING BTREE,
+                                  INDEX `idx_role_id`(`role_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户角色关联表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of sys_user_role
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for transfer
+-- ----------------------------
+DROP TABLE IF EXISTS `transfer`;
+CREATE TABLE `transfer`  (
+                             `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
+                             `asset_id` int(11) NOT NULL COMMENT '资产id',
+                             `dep_id` int(11) NOT NULL COMMENT '调拨来源部门id',
+                             `cdate` datetime NOT NULL COMMENT '创建时间',
+                             `udate` datetime NOT NULL COMMENT '更新时间',
+                             `transfer_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '调拨单号',
+                             `asset_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '资产编码',
+                             `asset_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '资产名称',
+                             `asset_typeid` int(11) NOT NULL COMMENT '资产类型id',
+                             `asset_typename` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '资产类型名称',
+                             `spe_model` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '规格型号',
+                             `orig_value` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '原值',
+                             `bedep_id` int(11) NOT NULL COMMENT '接受部门id',
+                             PRIMARY KEY (`id`) USING BTREE,
+                             INDEX `idx_asset_id`(`asset_id`) USING BTREE -- 新增索引
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '调拨' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of transfer
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for user_token
+-- ----------------------------
+DROP TABLE IF EXISTS `user_token`;
+CREATE TABLE `user_token`  (
+                               `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
+                               `user_token` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT 'token',
+                               `cdate` datetime NOT NULL COMMENT '登录时间',
+                               `expiratedtime` datetime NOT NULL COMMENT '过期时间',
+                               `user_id` int(11) NOT NULL COMMENT '用户id',
+                               `is_valid` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否有效：1有效 0失效',
+                               PRIMARY KEY (`id`) USING BTREE,
+                               UNIQUE INDEX `uk_token`(`user_token`) USING BTREE, -- 新增唯一索引
+                               INDEX `idx_user_id`(`user_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of user_token
+-- ----------------------------
+INSERT INTO `user_token` VALUES (1, 'd83e20b6-6657-4edc-ac81-d4c6aa33f11d', '2026-02-23 18:01:43', '2026-03-23 18:01:43', 1, 1);
+
+-- ----------------------------
+-- Table structure for warehouse
+-- ----------------------------
+DROP TABLE IF EXISTS `warehouse`;
+CREATE TABLE `warehouse`  (
+                              `id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'id',
+                              `ware_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '仓库名称',
+                              `position` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '位置',
+                              `charge_person` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '负责人',
+                              `capacity` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '容量',
+                              `cdate` datetime NOT NULL COMMENT '创建时间',
+                              `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态：1启用 0停用',
+                              PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '仓库' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of warehouse
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for ys_user
+-- ----------------------------
+DROP TABLE IF EXISTS `ys_user`;
+CREATE TABLE `ys_user`  (
+                            `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '用户ID',
+                            `user_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户名',
+                            `password` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '密码（加密后）',
+                            `user_dep` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL COMMENT '用户部门',
+                            `dep_id` bigint(20) NOT NULL COMMENT '部门id',
+                            `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+                            `update_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+                            `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态：1启用 0禁用',
+                            PRIMARY KEY (`id`) USING BTREE,
+                            UNIQUE INDEX `uk_user_name`(`user_name`) USING BTREE -- 用户名唯一
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = DYNAMIC;
+
+
+-- ----------------------------
+-- Table structure for supplier
+-- ----------------------------
+DROP TABLE IF EXISTS `supplier`;
+CREATE TABLE `supplier` (
+                            `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '供应商ID',
+                            `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '供应商名称',
+                            `contact_person` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '联系人',
+                            `contact_phone` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '联系电话',
+                            `address` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '地址',
+                            `registration_number` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '注册证号',
+                            `enterprise_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '企业类型',
+                            `status` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT '1' COMMENT '状态',
+                            `credit_code` varchar(50) DEFAULT NULL COMMENT '企业信用代码' ,
+                            `tax_number` varchar(50) DEFAULT NULL COMMENT '企业税号' ,
+                            `supplier_code` varchar(50) DEFAULT NULL COMMENT '院内供应商编码',
+                            `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+                            `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+                            PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=1 CHARACTER SET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='供应商表' ROW_FORMAT=DYNAMIC;
+
+-- ----------------------------
+-- Table structure for supplier_qualification
+-- ----------------------------
+DROP TABLE IF EXISTS `supplier_qualification`;
+CREATE TABLE `supplier_qualification` (
+                                          `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '资质ID',
+                                          `supplier_id` int(11) DEFAULT NULL COMMENT '供应商ID',
+                                          `type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '资质类型',
+                                          `license_number` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '编号',
+                                          `license_type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '具体类别',
+                                          `issue_date` date DEFAULT NULL COMMENT '发证日期',
+                                          `expiry_date` date DEFAULT NULL COMMENT '有效期至',
+                                          `issuing_authority` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '发证机关',
+                                          `license_file` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '文件路径',
+                                          `status` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT '1' COMMENT '状态',
+                                          `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+                                          `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+                                          PRIMARY KEY (`id`) USING BTREE,
+                                          INDEX `idx_supplier_id`(`supplier_id`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=1 CHARACTER SET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='供应商资质信息表' ROW_FORMAT=DYNAMIC;
+
+
+-- ===== 初始化基础数据 =====
+
+-- ----------------------------
+-- Records of ys_user
+-- ----------------------------
+-- 插入用户
+INSERT INTO `ys_user` VALUES (1, 'admin', '123456', '领导部门', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1);
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- =============================================
+-- 初始化基础数据
+-- =============================================
+
+-- 插入超级管理员角色
+INSERT INTO `sys_role` (`id`, `role_name`, `role_code`, `role_desc`, `data_scope`, `status`, `sort_order`, `create_time`, `update_time`)
+VALUES (1, '超级管理员', 'SUPER_ADMIN', '拥有系统所有权限', 1, 1, 1, NOW(), NOW());
+
+-- 插入普通管理员角色
+INSERT INTO `sys_role` (`id`, `role_name`, `role_code`, `role_desc`, `data_scope`, `status`, `sort_order`, `create_time`, `update_time`)
+VALUES (2, '部门管理员', 'DEPT_ADMIN', '管理本部门及下级部门数据', 2, 1, 2, NOW(), NOW());
+
+-- 插入普通用户角色
+INSERT INTO `sys_role` (`id`, `role_name`, `role_code`, `role_desc`, `data_scope`, `status`, `sort_order`, `create_time`, `update_time`)
+VALUES (3, '普通用户', 'USER', '查看和操作个人数据', 4, 1, 3, NOW(), NOW());
+
+-- 插入顶级部门
+INSERT INTO `sys_department` (`id`, `parent_id`, `dept_name`, `dept_code`, `status`, `sort_order`, `create_time`, `update_time`)
+VALUES (1, 0, '总公司', 'ROOT', 1, 1, NOW(), NOW());
+
+-- 插入权限示例（菜单）
+INSERT INTO `sys_permission` (`id`, `parent_id`, `permission_name`, `permission_code`, `permission_type`, `path`, `icon`, `status`, `sort_order`, `create_time`, `update_time`)
+VALUES
+    (1, 0, '系统管理', 'system', 1, '/system', 'setting', 1, 1, NOW(), NOW()),
+    (2, 1, '用户管理', 'system:user', 1, '/system/user', 'user', 1, 1, NOW(), NOW()),
+    (3, 1, '角色管理', 'system:role', 1, '/system/role', 'team', 1, 2, NOW(), NOW()),
+    (4, 1, '权限管理', 'system:permission', 1, '/system/permission', 'lock', 1, 3, NOW(), NOW()),
+    (5, 1, '部门管理', 'system:dept', 1, '/system/dept', 'apartment', 1, 4, NOW(), NOW());
+
+-- 插入权限示例（按钮）
+INSERT INTO `sys_permission` (`id`, `parent_id`, `permission_name`, `permission_code`, `permission_type`, `status`, `sort_order`, `create_time`, `update_time`)
+VALUES
+    (101, 2, '新增用户', 'system:user:add', 2, 1, 1, NOW(), NOW()),
+    (102, 2, '编辑用户', 'system:user:edit', 2, 1, 2, NOW(), NOW()),
+    (103, 2, '删除用户', 'system:user:delete', 2, 1, 3, NOW(), NOW()),
+    (104, 2, '查询用户', 'system:user:query', 2, 1, 4, NOW(), NOW()),
+    (105, 2, '分配用户角色', 'system:user:assign', 2, 1, 5, NOW(), NOW()),
+    -- 角色管理按钮权限
+    (106, 3, '新增角色', 'system:role:add', 2, 1, 1, NOW(), NOW()),
+    (107, 3, '编辑角色', 'system:role:edit', 2, 1, 2, NOW(), NOW()),
+    (108, 3, '删除角色', 'system:role:delete', 2, 1, 3, NOW(), NOW()),
+    (109, 3, '查询角色', 'system:role:query', 2, 1, 4, NOW(), NOW()),
+    (110, 3, '分配角色权限', 'system:role:assign', 2, 1, 5, NOW(), NOW()),
+    -- 权限管理按钮权限
+    (111, 4, '新增权限', 'system:permission:add', 2, 1, 1, NOW(), NOW()),
+    (112, 4, '编辑权限', 'system:permission:edit', 2, 1, 2, NOW(), NOW()),
+    (113, 4, '删除权限', 'system:permission:delete', 2, 1, 3, NOW(), NOW()),
+    (114, 4, '查询权限', 'system:permission:query', 2, 1, 4, NOW(), NOW());
+
+-- 插入权限示例（接口）
+INSERT INTO `sys_permission` (`id`, `parent_id`, `permission_name`, `permission_code`, `permission_type`, `method`, `api_pattern`, `status`, `sort_order`, `create_time`, `update_time`)
+VALUES
+    (201, 2, '用户列表接口', 'api:user:list', 3, 'GET', '/api/user/list', 1, 1, NOW(), NOW()),
+    (202, 2, '用户详情接口', 'api:user:detail', 3, 'GET', '/api/user/{id}', 1, 2, NOW(), NOW()),
+    (203, 2, '创建用户接口', 'api:user:create', 3, 'POST', '/api/user', 1, 3, NOW(), NOW()),
+    (204, 2, '更新用户接口', 'api:user:update', 3, 'PUT', '/api/user/{id}', 1, 4, NOW(), NOW()),
+    (205, 2, '删除用户接口', 'api:user:delete', 3, 'DELETE', '/api/user/{id}', 1, 5, NOW(), NOW()),
+    -- 登录接口
+    (206, 0, '登录接口', 'api:login', 3, 'GET', '/public/login', 1, 6, NOW(), NOW()),
+    -- 资产相关接口
+    (207, 0, '新增资产接口', 'api:asset:add', 3, 'POST', '/yzb/addAsset', 1, 7, NOW(), NOW()),
+    (208, 0, '编辑资产接口', 'api:asset:update', 3, 'POST', '/yzb/updateAsset', 1, 8, NOW(), NOW()),
+    (209, 0, '资产查询接口', 'api:asset:select', 3, 'POST', '/yzb/selectAsset', 1, 9, NOW(), NOW()),
+    -- 资产类型相关接口
+    (210, 0, '新增资产类型接口', 'api:asset:type:add', 3, 'POST', '/yzb/addAssetType', 1, 10, NOW(), NOW()),
+    (211, 0, '编辑资产类型接口', 'api:asset:type:update', 3, 'POST', '/yzb/updateAssetType', 1, 11, NOW(), NOW()),
+    (212, 0, '资产类型查询接口', 'api:asset:type:select', 3, 'POST', '/yzb/selectAssetType', 1, 12, NOW(), NOW()),
+    -- 维修相关接口
+    (213, 0, '新增维修接口', 'api:repair:add', 3, 'POST', '/yzb/addRepair', 1, 13, NOW(), NOW()),
+    (214, 0, '编辑维修接口', 'api:repair:update', 3, 'POST', '/yzb/updateRepair', 1, 14, NOW(), NOW()),
+    (215, 0, '维修查询接口', 'api:repair:select', 3, 'POST', '/yzb/selectRepairList', 1, 15, NOW(), NOW()),
+    -- 仓库相关接口
+    (216, 0, '新增仓库接口', 'api:warehouse:add', 3, 'POST', '/yzb/addWarehouse', 1, 16, NOW(), NOW()),
+    (217, 0, '删除仓库接口', 'api:warehouse:delete', 3, 'POST', '/yzb/delWarehouse', 1, 17, NOW(), NOW()),
+    (218, 0, '编辑仓库接口', 'api:warehouse:update', 3, 'POST', '/yzb/updateWarehouse', 1, 18, NOW(), NOW()),
+    (219, 0, '仓库查询接口', 'api:warehouse:select', 3, 'POST', '/yzb/selectWarehouse', 1, 19, NOW(), NOW()),
+    (220, 0, '测试接口', 'api:test', 3, 'GET', '/yzb/test', 1, 20, NOW(), NOW()),
+    -- 权限相关接口
+    (221, 0, '获取当前用户权限接口', 'api:permission:current', 3, 'GET', '/api/permission/current', 1, 21, NOW(), NOW()),
+    (222, 0, '获取用户菜单树接口', 'api:permission:menu:tree', 3, 'GET', '/api/permission/menu/tree', 1, 22, NOW(), NOW()),
+    (223, 0, '获取所有权限树接口', 'api:permission:tree', 3, 'GET', '/api/permission/tree', 1, 23, NOW(), NOW()),
+    (224, 0, '根据角色获取权限接口', 'api:permission:role', 3, 'GET', '/api/permission/role/{roleId}', 1, 24, NOW(), NOW()),
+    (225, 0, '创建权限接口', 'api:permission:create', 3, 'POST', '/api/permission', 1, 25, NOW(), NOW()),
+    (226, 0, '更新权限接口', 'api:permission:update', 3, 'PUT', '/api/permission/{id}', 1, 26, NOW(), NOW()),
+    (227, 0, '删除权限接口', 'api:permission:delete', 3, 'DELETE', '/api/permission/{id}', 1, 27, NOW(), NOW()),
+    (228, 0, '批量删除权限接口', 'api:permission:batch:delete', 3, 'DELETE', '/api/permission/batch', 1, 28, NOW(), NOW()),
+    -- 角色相关接口
+    (229, 0, '查询所有角色接口', 'api:role:list', 3, 'GET', '/api/role/list', 1, 29, NOW(), NOW()),
+    (230, 0, '根据ID查询角色接口', 'api:role:get', 3, 'GET', '/api/role/{id}', 1, 30, NOW(), NOW()),
+    (231, 0, '根据用户ID查询角色接口', 'api:role:user', 3, 'GET', '/api/role/user/{userId}', 1, 31, NOW(), NOW()),
+    (232, 0, '创建角色接口', 'api:role:create', 3, 'POST', '/api/role', 1, 32, NOW(), NOW()),
+    (233, 0, '更新角色接口', 'api:role:update', 3, 'PUT', '/api/role/{id}', 1, 33, NOW(), NOW()),
+    (234, 0, '删除角色接口', 'api:role:delete', 3, 'DELETE', '/api/role/{id}', 1, 34, NOW(), NOW()),
+    (235, 0, '为角色分配权限接口', 'api:role:assign:permission', 3, 'POST', '/api/role/{roleId}/permissions', 1, 35, NOW(), NOW()),
+    (236, 0, '为用户分配角色接口', 'api:role:assign:user', 3, 'POST', '/api/role/user/{userId}/roles', 1, 36, NOW(), NOW());
+
+-- 为超级管理员分配所有权限
+INSERT INTO `sys_role_permission` (`role_id`, `permission_id`, `create_time`)
+SELECT 1, id, NOW() FROM `sys_permission` WHERE `is_deleted` = 0;
+
+-- 为admin用户分配超级管理员角色
+INSERT INTO `sys_user_role` (`user_id`, `role_id`, `create_time`)
+VALUES (1, 1, NOW());
+
+
+-- 插入供应商示例数据
+INSERT INTO `supplier` (`id`, `name`, `contact_person`, `contact_phone`, `address`, `registration_number`, `enterprise_type`, `status`, `create_time`, `update_time`) VALUES
+                                                                                                                                                                          (1, '上海医疗器械有限公司', '张经理', '13800138000', '上海市浦东新区张江高科园区', 'SH20230001', '生产企业', '1', NOW(), NOW()),
+                                                                                                                                                                          (2, '北京康健医药有限公司', '李经理', '13900139000', '北京市朝阳区CBD', 'BJ20230002', '经营企业', '1', NOW(), NOW());
+
+-- 插入供应商资质示例数据
+INSERT INTO `supplier_qualification` (`id`, `supplier_id`, `type`, `license_number`, `license_type`, `issue_date`, `expiry_date`, `issuing_authority`, `license_file`, `status`, `create_time`, `update_time`) VALUES
+                                                                                                                                                                                                                   (1, 1, 'BUSINESS_LICENSE', '91310000XXXXXXXXXX', '营业执照', '2020-01-01', '2030-01-01', '上海市市场监督管理局', NULL, '1', NOW(), NOW()),
+                                                                                                                                                                                                                   (2, 1, 'BUSINESS_CERTIFICATE', '沪食药监械生产许20200001号', '医疗器械生产许可证', '2020-06-01', '2025-06-01', '上海市药品监督管理局', NULL, '1', NOW(), NOW()),
+                                                                                                                                                                                                                   (3, 2, 'INSPECTION_REPORT', 'JC20230001', '产品检验报告', '2023-01-15', '2024-01-15', '北京市医疗器械检验所', NULL, '1', NOW(), NOW());
+
+
+-- ===== 后端扩展结构 =====
+-- 后端增量升级脚本（现有 yzb 库直接执行）
+-- 用途：合并 system_extension_schema.sql 与 scm_schema.sql
 CREATE DATABASE IF NOT EXISTS yzb DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 USE yzb;
 
-SOURCE yzb.sql;
-SOURCE init_data.sql;
-SOURCE backend_upgrade.sql;
+-- ===== 系统基础表扩展 =====
+SET NAMES utf8mb4;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_department' AND column_name = 'org_type'),
+    'SELECT 1',
+    'ALTER TABLE sys_department ADD COLUMN org_type varchar(20) NOT NULL DEFAULT ''DEPARTMENT'' COMMENT ''组织类型：CAMPUS/DEPARTMENT'' AFTER dept_name'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_department' AND column_name = 'address'),
+    'SELECT 1',
+    'ALTER TABLE sys_department ADD COLUMN address varchar(255) DEFAULT NULL COMMENT ''地址'' AFTER dept_code'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sys_department' AND column_name = 'remark'),
+    'SELECT 1',
+    'ALTER TABLE sys_department ADD COLUMN remark varchar(500) DEFAULT NULL COMMENT ''备注'' AFTER email'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'ys_user' AND column_name = 'real_name'),
+    'SELECT 1',
+    'ALTER TABLE ys_user ADD COLUMN real_name varchar(50) DEFAULT NULL COMMENT ''姓名'' AFTER password'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'ys_user' AND column_name = 'phone'),
+    'SELECT 1',
+    'ALTER TABLE ys_user ADD COLUMN phone varchar(20) DEFAULT NULL COMMENT ''联系电话'' AFTER dep_id'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'ys_user' AND column_name = 'email'),
+    'SELECT 1',
+    'ALTER TABLE ys_user ADD COLUMN email varchar(50) DEFAULT NULL COMMENT ''邮箱'' AFTER phone'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'ys_user' AND column_name = 'account_type'),
+    'SELECT 1',
+    'ALTER TABLE ys_user ADD COLUMN account_type varchar(30) DEFAULT ''操作员'' COMMENT ''账号属性'' AFTER email'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'ys_user' AND column_name = 'warehouse_scope'),
+    'SELECT 1',
+    'ALTER TABLE ys_user ADD COLUMN warehouse_scope varchar(100) DEFAULT NULL COMMENT ''仓库权限范围'' AFTER account_type'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+UPDATE sys_department SET org_type = 'CAMPUS' WHERE parent_id = 0 AND (org_type IS NULL OR org_type = '' OR org_type = 'DEPARTMENT');
+UPDATE sys_department SET org_type = 'DEPARTMENT' WHERE parent_id <> 0 AND (org_type IS NULL OR org_type = '');
+
+UPDATE ys_user
+SET real_name = COALESCE(real_name, user_name),
+    account_type = COALESCE(account_type, '操作员'),
+    status = COALESCE(status, 1);
+
+-- ===== SCM 业务表与供应商扩展 =====
+SET NAMES utf8mb4;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'supplier' AND column_name = 'legal_representative'),
+    'SELECT 1',
+    'ALTER TABLE supplier ADD COLUMN legal_representative varchar(100) DEFAULT NULL COMMENT ''法定代表人'' AFTER credit_code'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'supplier' AND column_name = 'registered_capital'),
+    'SELECT 1',
+    'ALTER TABLE supplier ADD COLUMN registered_capital varchar(100) DEFAULT NULL COMMENT ''注册资本'' AFTER legal_representative'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'supplier' AND column_name = 'registration_date'),
+    'SELECT 1',
+    'ALTER TABLE supplier ADD COLUMN registration_date date DEFAULT NULL COMMENT ''注册日期'' AFTER registered_capital'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'supplier' AND column_name = 'certificate_count'),
+    'SELECT 1',
+    'ALTER TABLE supplier ADD COLUMN certificate_count int DEFAULT 0 COMMENT ''资质数量'' AFTER status'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+ALTER TABLE supplier
+    MODIFY COLUMN name varchar(255) NOT NULL COMMENT '供应商名称';
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'supplier' AND index_name = 'uk_supplier_name'),
+    'SELECT 1',
+    'ALTER TABLE supplier ADD UNIQUE KEY uk_supplier_name (name)'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'supplier' AND index_name = 'uk_supplier_code'),
+    'SELECT 1',
+    'ALTER TABLE supplier ADD UNIQUE KEY uk_supplier_code (supplier_code)'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'supplier_qualification' AND column_name = 'certificate_name'),
+    'SELECT 1',
+    'ALTER TABLE supplier_qualification ADD COLUMN certificate_name varchar(255) DEFAULT NULL COMMENT ''资质名称'' AFTER type'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF (
+    EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'supplier_qualification' AND column_name = 'attachment_name'),
+    'SELECT 1',
+    'ALTER TABLE supplier_qualification ADD COLUMN attachment_name varchar(255) DEFAULT NULL COMMENT ''附件名称'' AFTER issuing_authority'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+CREATE TABLE IF NOT EXISTS scm_material (
+    id bigint NOT NULL AUTO_INCREMENT,
+    material_code varchar(50) NOT NULL COMMENT '物资编码',
+    name varchar(200) NOT NULL COMMENT '物资名称',
+    material_type varchar(50) NOT NULL COMMENT '物资类型',
+    specification varchar(200) NOT NULL COMMENT '规格',
+    model varchar(200) NOT NULL COMMENT '型号',
+    min_package varchar(100) NOT NULL COMMENT '最小包装',
+    unit varchar(50) NOT NULL COMMENT '单位',
+    purchase_price decimal(12,2) NOT NULL COMMENT '采购价格',
+    supplier_id bigint NOT NULL COMMENT '供应商ID',
+    supplier_name varchar(255) NOT NULL COMMENT '供应商名称',
+    qualification_id bigint NOT NULL COMMENT '注册证ID',
+    registration_number varchar(100) NOT NULL COMMENT '注册证号',
+    manufacturer varchar(255) NOT NULL COMMENT '生产厂家',
+    storage_condition varchar(100) NOT NULL COMMENT '储存条件',
+    status varchar(20) NOT NULL DEFAULT 'active' COMMENT '状态',
+    create_time datetime DEFAULT CURRENT_TIMESTAMP,
+    update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_scm_material_code (material_code),
+    UNIQUE KEY uk_scm_material_unique (supplier_id, qualification_id, name, specification, model),
+    KEY idx_scm_material_supplier (supplier_id),
+    KEY idx_scm_material_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物资字典';
+
+CREATE TABLE IF NOT EXISTS scm_purchase_order (
+    id bigint NOT NULL AUTO_INCREMENT,
+    order_number varchar(50) NOT NULL,
+    department_id bigint NOT NULL,
+    department_name varchar(100) NOT NULL,
+    supplier_id bigint NOT NULL,
+    supplier_name varchar(255) NOT NULL,
+    operator_name varchar(100) NOT NULL,
+    plan_type varchar(50) NOT NULL,
+    status varchar(20) NOT NULL,
+    remark varchar(500) DEFAULT NULL,
+    reject_reason varchar(500) DEFAULT NULL,
+    total_amount decimal(12,2) NOT NULL DEFAULT 0,
+    item_count int NOT NULL DEFAULT 0,
+    submit_time datetime DEFAULT NULL,
+    audit_time datetime DEFAULT NULL,
+    create_time datetime DEFAULT CURRENT_TIMESTAMP,
+    update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_scm_purchase_order_number (order_number),
+    KEY idx_scm_purchase_order_status (status),
+    KEY idx_scm_purchase_order_supplier (supplier_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购单主表';
+
+CREATE TABLE IF NOT EXISTS scm_purchase_order_item (
+    id bigint NOT NULL AUTO_INCREMENT,
+    purchase_order_id bigint NOT NULL,
+    material_id bigint NOT NULL,
+    material_code varchar(50) NOT NULL,
+    material_name varchar(200) NOT NULL,
+    specification varchar(200) NOT NULL,
+    model varchar(200) NOT NULL,
+    unit varchar(50) NOT NULL,
+    manufacturer varchar(255) NOT NULL,
+    supplier_name varchar(255) NOT NULL,
+    registration_number varchar(100) NOT NULL,
+    unit_price decimal(12,2) NOT NULL,
+    quantity int NOT NULL,
+    received_quantity int NOT NULL DEFAULT 0,
+    stocked_quantity int NOT NULL DEFAULT 0,
+    amount decimal(12,2) NOT NULL,
+    status varchar(20) NOT NULL,
+    create_time datetime DEFAULT CURRENT_TIMESTAMP,
+    update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_scm_purchase_order_item_order (purchase_order_id),
+    KEY idx_scm_purchase_order_item_material (material_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购单明细';
+
+CREATE TABLE IF NOT EXISTS scm_purchase_receive (
+    id bigint NOT NULL AUTO_INCREMENT,
+    receive_number varchar(50) NOT NULL,
+    purchase_order_id bigint NOT NULL,
+    order_number varchar(50) NOT NULL,
+    supplier_id bigint NOT NULL,
+    supplier_name varchar(255) NOT NULL,
+    supplier_code varchar(50) DEFAULT NULL,
+    department_name varchar(100) NOT NULL,
+    buyer varchar(100) NOT NULL,
+    contact_person varchar(100) NOT NULL,
+    contact_phone varchar(50) NOT NULL,
+    order_date date DEFAULT NULL,
+    expected_delivery_date date DEFAULT NULL,
+    actual_delivery_date date DEFAULT NULL,
+    receiver varchar(100) NOT NULL,
+    status varchar(20) NOT NULL,
+    total_amount decimal(12,2) NOT NULL DEFAULT 0,
+    item_count int NOT NULL DEFAULT 0,
+    remark varchar(500) DEFAULT NULL,
+    create_time datetime DEFAULT CURRENT_TIMESTAMP,
+    update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_scm_purchase_receive_number (receive_number),
+    KEY idx_scm_purchase_receive_order (purchase_order_id),
+    KEY idx_scm_purchase_receive_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购收货单';
+
+CREATE TABLE IF NOT EXISTS scm_purchase_receive_item (
+    id bigint NOT NULL AUTO_INCREMENT,
+    receive_id bigint NOT NULL,
+    purchase_order_item_id bigint NOT NULL,
+    product_code varchar(50) NOT NULL,
+    product_name varchar(200) NOT NULL,
+    specification varchar(200) NOT NULL,
+    model varchar(200) NOT NULL,
+    manufacturer varchar(255) NOT NULL,
+    registration_number varchar(100) NOT NULL,
+    unit varchar(50) NOT NULL,
+    price decimal(12,2) NOT NULL,
+    quantity int NOT NULL,
+    actual_received_quantity int NOT NULL,
+    amount decimal(12,2) NOT NULL,
+    batch_number varchar(100) DEFAULT NULL,
+    production_date date DEFAULT NULL,
+    expiry_date date DEFAULT NULL,
+    status varchar(20) NOT NULL,
+    shortage_reason varchar(500) DEFAULT NULL,
+    create_time datetime DEFAULT CURRENT_TIMESTAMP,
+    update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_scm_purchase_receive_item_receive (receive_id),
+    KEY idx_scm_purchase_receive_item_order_item (purchase_order_item_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='采购收货明细';
+
+CREATE TABLE IF NOT EXISTS scm_stock_in_order (
+    id bigint NOT NULL AUTO_INCREMENT,
+    stock_in_number varchar(50) NOT NULL,
+    receive_id bigint DEFAULT NULL,
+    receive_number varchar(50) DEFAULT NULL,
+    purchase_order_id bigint DEFAULT NULL,
+    order_number varchar(50) DEFAULT NULL,
+    stock_in_type varchar(50) NOT NULL,
+    department_name varchar(100) NOT NULL,
+    operator_name varchar(100) NOT NULL,
+    supplier_name varchar(255) NOT NULL,
+    stock_in_date date NOT NULL,
+    status varchar(20) NOT NULL,
+    material_count int NOT NULL DEFAULT 0,
+    total_amount decimal(12,2) NOT NULL DEFAULT 0,
+    remark varchar(500) DEFAULT NULL,
+    create_time datetime DEFAULT CURRENT_TIMESTAMP,
+    update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_scm_stock_in_number (stock_in_number),
+    KEY idx_scm_stock_in_order_receive (receive_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='入库单主表';
+
+CREATE TABLE IF NOT EXISTS scm_stock_in_item (
+    id bigint NOT NULL AUTO_INCREMENT,
+    stock_in_order_id bigint NOT NULL,
+    receive_item_id bigint DEFAULT NULL,
+    material_id bigint DEFAULT NULL,
+    material_code varchar(50) NOT NULL,
+    material_name varchar(200) NOT NULL,
+    material_type varchar(50) DEFAULT NULL,
+    specification varchar(200) NOT NULL,
+    model varchar(200) NOT NULL,
+    min_package varchar(100) NOT NULL,
+    unit varchar(50) NOT NULL,
+    purchase_price decimal(12,2) NOT NULL,
+    order_quantity int NOT NULL,
+    stock_in_quantity int NOT NULL,
+    purchase_amount decimal(12,2) NOT NULL,
+    supplier_name varchar(255) NOT NULL,
+    manufacturer varchar(255) NOT NULL,
+    registration_number varchar(100) NOT NULL,
+    batch_number varchar(100) NOT NULL,
+    production_date date NOT NULL,
+    expiry_date date NOT NULL,
+    status varchar(20) NOT NULL,
+    remark varchar(500) DEFAULT NULL,
+    create_time datetime DEFAULT CURRENT_TIMESTAMP,
+    update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_scm_stock_in_item_order (stock_in_order_id),
+    KEY idx_scm_stock_in_item_material (material_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='入库单明细';
+
+CREATE TABLE IF NOT EXISTS scm_inventory (
+    id bigint NOT NULL AUTO_INCREMENT,
+    material_id bigint DEFAULT NULL,
+    material_code varchar(50) NOT NULL,
+    material_name varchar(200) NOT NULL,
+    category varchar(50) DEFAULT NULL,
+    specification varchar(200) NOT NULL,
+    model varchar(200) NOT NULL,
+    warehouse varchar(100) NOT NULL,
+    shelf varchar(100) DEFAULT NULL,
+    batch_number varchar(100) NOT NULL,
+    production_date date DEFAULT NULL,
+    expiry_date date DEFAULT NULL,
+    min_package varchar(100) DEFAULT NULL,
+    unit varchar(50) DEFAULT NULL,
+    purchase_price decimal(12,2) DEFAULT NULL,
+    current_stock int NOT NULL DEFAULT 0,
+    min_stock int NOT NULL DEFAULT 0,
+    max_stock int NOT NULL DEFAULT 0,
+    expiry_warning_days int NOT NULL DEFAULT 90,
+    registration_number varchar(100) DEFAULT NULL,
+    supplier varchar(255) DEFAULT NULL,
+    manufacturer varchar(255) DEFAULT NULL,
+    stock_status varchar(20) DEFAULT NULL,
+    warning varchar(20) DEFAULT NULL,
+    last_inbound date DEFAULT NULL,
+    create_time datetime DEFAULT CURRENT_TIMESTAMP,
+    update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_scm_inventory_batch (material_code, warehouse, batch_number),
+    KEY idx_scm_inventory_status (stock_status),
+    KEY idx_scm_inventory_expiry (expiry_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='库存表';
+
+CREATE TABLE IF NOT EXISTS scm_inventory_transaction (
+    id bigint NOT NULL AUTO_INCREMENT,
+    inventory_id bigint NOT NULL,
+    material_id bigint DEFAULT NULL,
+    material_code varchar(50) NOT NULL,
+    material_name varchar(200) NOT NULL,
+    batch_number varchar(100) DEFAULT NULL,
+    operation_type varchar(50) NOT NULL,
+    quantity int NOT NULL,
+    balance_quantity int NOT NULL,
+    reference_no varchar(50) DEFAULT NULL,
+    operator_name varchar(100) DEFAULT NULL,
+    remark varchar(500) DEFAULT NULL,
+    operation_time datetime DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_scm_inventory_transaction_inventory (inventory_id),
+    KEY idx_scm_inventory_transaction_material (material_code),
+    KEY idx_scm_inventory_transaction_time (operation_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='库存流水';
+
+CREATE TABLE IF NOT EXISTS scm_stock_out_order (
+    id bigint NOT NULL AUTO_INCREMENT,
+    stock_out_number varchar(50) NOT NULL,
+    stock_out_type varchar(50) NOT NULL,
+    department_name varchar(100) NOT NULL,
+    operator_name varchar(100) NOT NULL,
+    status varchar(20) NOT NULL,
+    reason varchar(500) NOT NULL,
+    remark varchar(500) DEFAULT NULL,
+    outbound_date date NOT NULL,
+    create_time datetime DEFAULT CURRENT_TIMESTAMP,
+    update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_scm_stock_out_number (stock_out_number),
+    KEY idx_scm_stock_out_date (outbound_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='出库单主表';
+
+CREATE TABLE IF NOT EXISTS scm_stock_out_item (
+    id bigint NOT NULL AUTO_INCREMENT,
+    stock_out_order_id bigint NOT NULL,
+    inventory_id bigint NOT NULL,
+    material_id bigint DEFAULT NULL,
+    material_code varchar(50) NOT NULL,
+    material_name varchar(200) NOT NULL,
+    material_type varchar(50) DEFAULT NULL,
+    specification varchar(200) DEFAULT NULL,
+    model varchar(200) DEFAULT NULL,
+    unit varchar(50) DEFAULT NULL,
+    supplier varchar(255) DEFAULT NULL,
+    manufacturer varchar(255) DEFAULT NULL,
+    registration_number varchar(100) DEFAULT NULL,
+    batch_number varchar(100) DEFAULT NULL,
+    production_date date DEFAULT NULL,
+    expiry_date date DEFAULT NULL,
+    unit_price decimal(12,2) DEFAULT NULL,
+    outbound_quantity int NOT NULL,
+    outbound_date date NOT NULL,
+    status varchar(20) NOT NULL,
+    undo_status varchar(20) NOT NULL,
+    reason varchar(500) DEFAULT NULL,
+    create_time datetime DEFAULT CURRENT_TIMESTAMP,
+    update_time datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_scm_stock_out_item_order (stock_out_order_id),
+    KEY idx_scm_stock_out_item_material (material_code),
+    KEY idx_scm_stock_out_item_undo (undo_status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='出库单明细';
+
+CREATE TABLE IF NOT EXISTS scm_operation_log (
+    id bigint NOT NULL AUTO_INCREMENT,
+    operation_time datetime NOT NULL,
+    user_name varchar(100) DEFAULT NULL,
+    operation_type varchar(50) DEFAULT NULL,
+    content varchar(1000) DEFAULT NULL,
+    status varchar(20) DEFAULT NULL,
+    ip varchar(64) DEFAULT NULL,
+    module_name varchar(100) DEFAULT NULL,
+    reference_no varchar(50) DEFAULT NULL,
+    create_time datetime DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_scm_operation_log_time (operation_time),
+    KEY idx_scm_operation_log_type (operation_type),
+    KEY idx_scm_operation_log_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作日志';
+
+CREATE TABLE IF NOT EXISTS scm_exception_order (
+    id bigint NOT NULL AUTO_INCREMENT,
+    order_no varchar(50) NOT NULL,
+    purchase_order_id bigint DEFAULT NULL,
+    supplier_name varchar(255) DEFAULT NULL,
+    supplier_code varchar(50) DEFAULT NULL,
+    department varchar(100) DEFAULT NULL,
+    buyer varchar(100) DEFAULT NULL,
+    contact_person varchar(100) DEFAULT NULL,
+    contact_phone varchar(50) DEFAULT NULL,
+    order_date date DEFAULT NULL,
+    expected_delivery_date date DEFAULT NULL,
+    actual_delivery_date date DEFAULT NULL,
+    status varchar(20) DEFAULT NULL,
+    reject_reason varchar(500) DEFAULT NULL,
+    timeout_reason varchar(500) DEFAULT NULL,
+    total_amount decimal(12,2) DEFAULT NULL,
+    created_at datetime DEFAULT CURRENT_TIMESTAMP,
+    resubmitted_at datetime DEFAULT NULL,
+    PRIMARY KEY (id),
+    KEY idx_scm_exception_order_no (order_no),
+    KEY idx_scm_exception_order_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='异常订单';
