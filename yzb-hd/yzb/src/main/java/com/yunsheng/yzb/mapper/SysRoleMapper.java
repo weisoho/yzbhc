@@ -1,14 +1,12 @@
 package com.yunsheng.yzb.mapper;
 
 import com.yunsheng.yzb.model.SysRole;
-import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
  * 角色Mapper接口
  */
-@Mapper
 public interface SysRoleMapper {
 
     /**

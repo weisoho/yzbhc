@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Button, Table, Input, Space, Popconfirm, Select, Modal, Form, InputNumber, message } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
+import api from '../utils/api';
 
 const { Option } = Select;
 
@@ -10,13 +11,38 @@ const FixedAssetsDictionary = () => {
   const [form] = Form.useForm();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [assetTypes, setAssetTypes] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const assetTypes = [
-    { key: '1', code: 'FA001', name: '医疗设备', description: '各类医疗诊断治疗设备', status: '启用' },
-    { key: '2', code: 'FA002', name: '办公设备', description: '电脑、打印机等办公设备', status: '启用' },
-    { key: '3', code: 'FA003', name: '家具', description: '办公桌椅、文件柜等', status: '启用' },
-    { key: '4', code: 'FA004', name: '车辆', description: '公务用车、运输车辆', status: '停用' },
-  ];
+  // 加载资产类型列表
+  useEffect(() => {
+    loadAssetTypes();
+  }, []);
+
+  const loadAssetTypes = async () => {
+    try {
+      setLoading(true);
+      const response = await api.post('/yzb/selectAssetType', {
+        pageNum: currentPage,
+        pageSize: pageSize
+      });
+      if (response.code === 1 && response.data) {
+        const types = response.data.list.map(type => ({
+          key: type.id,
+          id: type.id,
+          code: type.assetCode,
+          name: type.assetName,
+          description: type.assetDesc,
+          status: type.assetState === 1 ? '启用' : '停用'
+        }));
+        setAssetTypes(types);
+      }
+    } catch (error) {
+      message.error('加载资产类型列表失败');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const columns = [
     { title: '资产类型编码', dataIndex: 'code', key: 'code', width: 120 },
@@ -63,23 +89,82 @@ const FixedAssetsDictionary = () => {
 
   const handleEdit = (record) => {
     setEditingAsset(record);
-    form.setFieldsValue(record);
+    form.setFieldsValue({
+      code: record.code,
+      name: record.name,
+      description: record.description,
+      status: record.status
+    });
     setVisible(true);
   };
 
-  const handleToggleStatus = (record) => {
-    const newStatus = record.status === '启用' ? '停用' : '启用';
-    message.success(`已${newStatus}资产类型：${record.name}`);
+  const handleToggleStatus = async (record) => {
+    try {
+      setLoading(true);
+      const newStatus = record.status === '启用' ? 0 : 1;
+      const response = await api.post('/yzb/updateAssetType', {
+        id: record.id,
+        assetCode: record.code,
+        assetName: record.name,
+        assetDesc: record.description,
+        assetState: newStatus
+      });
+      if (response.code === 1) {
+        const newStatusText = newStatus === 1 ? '启用' : '停用';
+        message.success(`已${newStatusText}资产类型：${record.name}`);
+        loadAssetTypes();
+      } else {
+        message.error('状态更新失败');
+      }
+    } catch (error) {
+      message.error('状态更新失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = () => {
-    form.validateFields().then(values => {
-      message.success(editingAsset ? '修改成功' : '新增成功');
+  const handleSubmit = async () => {
+    try {
+      setLoading(true);
+      const values = await form.validateFields();
+      
+      if (editingAsset) {
+        // 编辑资产类型
+        const response = await api.post('/yzb/updateAssetType', {
+          id: editingAsset.id,
+          assetCode: values.code,
+          assetName: values.name,
+          assetDesc: values.description,
+          assetState: values.status === '启用' ? 1 : 0
+        });
+        if (response.code === 1) {
+          message.success('修改成功');
+        } else {
+          message.error('修改失败');
+        }
+      } else {
+        // 新增资产类型
+        const response = await api.post('/yzb/addAssetType', {
+          assetCode: values.code,
+          assetName: values.name,
+          assetDesc: values.description,
+          assetState: values.status === '启用' ? 1 : 0
+        });
+        if (response.code === 1) {
+          message.success('新增成功');
+        } else {
+          message.error('新增失败');
+        }
+      }
+      
       setVisible(false);
       form.resetFields();
-    }).catch(error => {
+      loadAssetTypes();
+    } catch (error) {
       console.error('表单验证失败:', error);
-    });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -108,22 +193,29 @@ const FixedAssetsDictionary = () => {
       </Card>
       
       <div style={{ overflowX: 'auto' }}>
-        <Table columns={columns} dataSource={assetTypes} pagination={{ 
-          pageSize: pageSize,
-          current: currentPage,
-          onChange: (page, size) => {
-            setCurrentPage(page);
-            setPageSize(size);
-          },
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 条记录`,
-          style: {
-            display: 'flex',
-            justifyContent: 'center',
-            marginTop: '16px'
-          }
-        }} size="small" />
+        <Table 
+          columns={columns} 
+          dataSource={assetTypes} 
+          loading={loading}
+          pagination={{ 
+            pageSize: pageSize,
+            current: currentPage,
+            onChange: (page, size) => {
+              setCurrentPage(page);
+              setPageSize(size);
+              loadAssetTypes();
+            },
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total) => `共 ${total} 条记录`,
+            style: {
+              display: 'flex',
+              justifyContent: 'center',
+              marginTop: '16px'
+            }
+          }} 
+          size="small" 
+        />
       </div>
 
       <Modal
@@ -132,6 +224,7 @@ const FixedAssetsDictionary = () => {
         onOk={handleSubmit}
         onCancel={handleCancel}
         width={600}
+        confirmLoading={loading}
       >
         <Form form={form} layout="vertical">
           <Form.Item

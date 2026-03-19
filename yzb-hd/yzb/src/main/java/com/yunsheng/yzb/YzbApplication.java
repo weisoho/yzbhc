@@ -9,7 +9,7 @@ import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
 @ComponentScan("com.yunsheng")
-@MapperScan(value = "com.yunsheng.yzb.mapper")
+@MapperScan(basePackages = "com.yunsheng.yzb.mapper")
 @ServletComponentScan
 public class YzbApplication {
 
@@ -18,3 +18,4 @@ public class YzbApplication {
 	}
 
 }
+

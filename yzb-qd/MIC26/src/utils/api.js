@@ -1,7 +1,7 @@
 // API请求封装
 
 // 基础URL
-const BASE_URL = import.meta.env.VITE_REACT_APP_API_URL || 'http://localhost:3000';
+const BASE_URL = import.meta.env.VITE_REACT_APP_API_URL || '';
 
 // 请求超时时间
 const TIMEOUT = 30000;
@@ -14,7 +14,7 @@ class API {
   constructor() {
     this.baseURL = BASE_URL;
     this.timeout = TIMEOUT;
-    this.token = null;
+    this.token = localStorage.getItem('token');
     this.retryCount = RETRY_COUNT;
     this.requestInterceptors = [];
     this.responseInterceptors = [];
@@ -59,7 +59,7 @@ class API {
     // 添加认证token
     const token = this.getToken();
     if (token) {
-      defaultHeaders['Authorization'] = `Bearer ${token}`;
+      defaultHeaders['token'] = token;
     }
 
     return { ...defaultHeaders, ...headers };
@@ -293,6 +293,7 @@ api.addResponseInterceptor((response, error) => {
   if (error) {
     // 统一错误处理
     console.error('API请求错误:', error);
+    console.error('错误详情:', error.data);
     // 可以在这里添加错误提示逻辑
   }
   return response || error;

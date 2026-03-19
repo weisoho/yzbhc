@@ -1,57 +1,122 @@
-import { useState } from 'react';
-import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message } from 'antd';
+import { useState, useEffect } from 'react';
+import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message, Select } from 'antd';
+import { useParams } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import moment from 'moment';
+import api from '../utils/api';
 
 const SupplierInspectionReport = () => {
+  const { supplierId } = useParams();
   const [visible, setVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
+  const [fileList, setFileList] = useState([]);
+  const [editFileList, setEditFileList] = useState([]);
+  const [registrationCertificates, setRegistrationCertificates] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchParams, setSearchParams] = useState({
+    supplierName: '',
+    productName: '',
+    registrationNumber: ''
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [suppliers, setSuppliers] = useState([]);
 
-  const [registrationCertificates, setRegistrationCertificates] = useState([
-    { 
-      key: '1', 
-      registeredCompany: '供应商A', 
-      productName: '一次性输液器', 
-      registrationNumber: '2023001',
-      packagingSpec: '50支/盒',
-      storageCondition: '阴凉干燥处',
-      effectiveDate: '2024-01-15',
-      expiryDate: '2025-01-15',
-      attachment: '检验报告_供应商A_20240115.pdf',
-      status: '有效'
-    },
-    { 
-      key: '2', 
-      registeredCompany: '供应商B', 
-      productName: '医用纱布', 
-      registrationNumber: '2023002',
-      packagingSpec: '100片/包',
-      storageCondition: '常温',
-      effectiveDate: '2024-02-20',
-      expiryDate: '2025-02-20',
-      attachment: '检验报告_供应商B_20240220.pdf',
-      status: '有效'
-    },
-    { 
-      key: '3', 
-      registeredCompany: '供应商C', 
-      productName: '医用手套', 
-      registrationNumber: '2023003',
-      packagingSpec: '100双/盒',
-      storageCondition: '常温干燥处',
-      effectiveDate: '2023-12-10',
-      expiryDate: '2024-12-10',
-      attachment: '检验报告_供应商C_20231210.pdf',
-      status: '已过期'
-    },
-  ]);
+  // 加载供应商列表
+  const loadSuppliers = async () => {
+    try {
+      const response = await api.get('/api/scm/suppliers');
+      console.log('供应商列表响应:', response);
+      if (response.code === 1 && response.data) {
+        console.log('供应商列表数据:', response.data.records);
+        setSuppliers(response.data.records);
+      }
+    } catch (error) {
+      console.error('获取供应商列表失败:', error);
+    }
+  };
+
+  // 加载注册证列表
+  const loadRegistrationCertificates = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        certificateName: searchParams.supplierName || searchParams.productName,
+        licenseNumber: searchParams.registrationNumber,
+        pageNum: currentPage,
+        pageSize: pageSize,
+        type: 'INSPECTION_REPORT'  // 添加type参数，查询注册证类型
+      };
+      // 使用新的不带供应商ID的资质查询接口，查询所有供应商的资质记录
+      const response = await api.get('/api/scm/suppliers/qualifications', params);
+      if (response.code === 1 && response.data) {
+        console.log('资质数据:', response.data);
+        console.log('供应商列表:', suppliers);
+        const certificateList = response.data.map(certificate => {
+          // 计算状态
+          const status = certificate.expiryDate && new Date(certificate.expiryDate) < new Date() ? '已过期' : '有效';
+          // 根据supplierId从供应商列表中查找对应的供应商名称
+          console.log('当前资质的supplierId:', certificate.supplierId);
+          const supplier = suppliers.find(s => s.id === certificate.supplierId);
+          console.log('找到的供应商:', supplier);
+          const supplierName = supplier ? supplier.name : '未知供应商';
+          return {
+            key: certificate.id,
+            registeredCompany: supplierName,
+            productName: certificate.certificateName,
+            registrationNumber: certificate.licenseNumber,
+            packagingSpec: '标准包装',
+            storageCondition: '常温保存',
+            effectiveDate: certificate.issueDate,
+            expiryDate: certificate.expiryDate,
+            attachment: certificate.attachmentName,
+            status: status
+          };
+        });
+        setRegistrationCertificates(certificateList);
+      } else {
+        message.error('加载注册证列表失败');
+      }
+    } catch (error) {
+      message.error('加载注册证列表失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 组件加载时获取供应商列表
+  useEffect(() => {
+    loadSuppliers();
+  }, []);
+
+  // 当供应商列表加载完成后，加载注册证列表
+  useEffect(() => {
+    if (suppliers.length > 0) {
+      loadRegistrationCertificates();
+    }
+  }, [suppliers, currentPage, pageSize]);
+
+  // 处理搜索输入变化
+  const handleSearchChange = (field, value) => {
+    setSearchParams(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // 处理查询按钮点击
+  const handleSearch = () => {
+    setCurrentPage(1); // 重置为第一页
+    loadRegistrationCertificates();
+  };
 
   // 编辑处理函数
   const handleEdit = (record) => {
     setEditingRecord(record);
+    // 设置编辑表单数据
     editForm.setFieldsValue({
       productName: record.productName,
       registrationNumber: record.registrationNumber,
@@ -60,54 +125,80 @@ const SupplierInspectionReport = () => {
       effectiveDate: record.effectiveDate ? moment(record.effectiveDate) : null,
       expiryDate: record.expiryDate ? moment(record.expiryDate) : null
     });
+    // 重置编辑文件列表
+    setEditFileList([]);
     setEditVisible(true);
   };
 
   // 保存编辑
-  const handleEditSave = () => {
-    editForm.validateFields().then(values => {
-      const updatedCertificates = registrationCertificates.map(certificate => {
-        if (certificate.key === editingRecord.key) {
-          return {
-            ...certificate,
-            productName: values.productName,
-            registrationNumber: values.registrationNumber,
-            packagingSpec: values.packagingSpec,
-            storageCondition: values.storageCondition,
-            effectiveDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : '',
-            expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : ''
-          };
-        }
-        return certificate;
-      });
+  const handleEditSave = async () => {
+    try {
+      setLoading(true);
+      const values = await editForm.validateFields();
       
-      setRegistrationCertificates(updatedCertificates);
+      // 构建注册证数据
+      const certificateData = {
+        type: 'INSPECTION_REPORT',  // 资质类型
+        certificateName: values.productName,  // 资质名称
+        licenseNumber: values.registrationNumber,  // 证件编号
+        licenseType: '产品检验报告',  // 证件类别
+        issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,  // 发证日期
+        expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,  // 有效期
+        issuingAuthority: '检验机构',  // 发证机构
+        attachmentName: editFileList.length > 0 ? editFileList[editFileList.length - 1].name : editingRecord.attachment,  // 附件名称
+        licenseFile: ''  // 附件地址
+      };
+      
+      // 编辑注册证
+      const response = await api.put(`/api/scm/suppliers/qualifications/${editingRecord.key}`, certificateData);
+      if (response.code === 1) {
+        message.success('注册证更新成功');
+        await loadRegistrationCertificates();
+      } else {
+        message.error('注册证更新失败');
+      }
+      
       setEditVisible(false);
       setEditingRecord(null);
       editForm.resetFields();
-      message.success('注册证更新成功');
-    });
+      setEditFileList([]);
+    } catch (error) {
+      message.error('操作失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 删除处理函数
-  const handleDelete = (key) => {
+  const handleDelete = async (key) => {
     Modal.confirm({
       title: '确认删除',
       content: '确定要删除这条注册证吗？',
       okText: '确定',
       okType: 'danger',
       cancelText: '取消',
-      onOk() {
-        const updatedCertificates = registrationCertificates.filter(certificate => certificate.key !== key);
-        setRegistrationCertificates(updatedCertificates);
-        message.success('注册证删除成功');
+      onOk: async () => {
+        try {
+          setLoading(true);
+          const response = await api.delete(`/api/scm/suppliers/qualifications/${key}`);
+          if (response.code === 1) {
+            message.success('注册证删除成功');
+            await loadRegistrationCertificates();
+          } else {
+            message.error('注册证删除失败');
+          }
+        } catch (error) {
+          message.error('注册证删除失败');
+        } finally {
+          setLoading(false);
+        }
       }
     });
   };
 
   const columns = [
     { 
-      title: '注册企业名称', 
+      title: '供应商名称', 
       dataIndex: 'registeredCompany', 
       key: 'registeredCompany',
       width: 150,
@@ -317,7 +408,26 @@ const SupplierInspectionReport = () => {
     headers: {
       authorization: 'authorization-text',
     },
+    fileList: fileList,
     onChange(info) {
+      setFileList(info.fileList);
+      if (info.file.status === 'done') {
+        // 文件上传成功
+      } else if (info.file.status === 'error') {
+        // 文件上传失败
+      }
+    },
+  };
+
+  const editUploadProps = {
+    name: 'file',
+    action: '/api/upload',
+    headers: {
+      authorization: 'authorization-text',
+    },
+    fileList: editFileList,
+    onChange(info) {
+      setEditFileList(info.fileList);
       if (info.file.status === 'done') {
         // 文件上传成功
       } else if (info.file.status === 'error') {
@@ -334,21 +444,40 @@ const SupplierInspectionReport = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>注册企业名称：</span>
-              <Input placeholder="请输入注册企业名称" style={{ width: 200 }} />
+              <span>供应商名称：</span>
+              <Input 
+                placeholder="请输入供应商名称" 
+                style={{ width: 200 }} 
+                value={searchParams.supplierName}
+                onChange={(e) => handleSearchChange('supplierName', e.target.value)}
+              />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>产品名称：</span>
-              <Input placeholder="请输入产品名称" style={{ width: 200 }} />
+              <Input 
+                placeholder="请输入产品名称" 
+                style={{ width: 200 }} 
+                value={searchParams.productName}
+                onChange={(e) => handleSearchChange('productName', e.target.value)}
+              />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>注册证编号：</span>
-              <Input placeholder="请输入注册证编号" style={{ width: 200 }} />
+              <Input 
+                placeholder="请输入注册证编号" 
+                style={{ width: 200 }} 
+                value={searchParams.registrationNumber}
+                onChange={(e) => handleSearchChange('registrationNumber', e.target.value)}
+              />
             </div>
           </div>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setVisible(true)}>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+              setVisible(true);
+              form.resetFields();
+              setFileList([]);
+            }}>
               新增注册证
             </Button>
           </div>
@@ -359,8 +488,15 @@ const SupplierInspectionReport = () => {
         <Table 
           columns={columns} 
           dataSource={registrationCertificates} 
-          pagination={{
-            pageSize: 10,
+          loading={loading}
+          pagination={{ 
+            pageSize: pageSize,
+            current: currentPage,
+            onChange: async (page, size) => {
+              setCurrentPage(page);
+              setPageSize(size);
+              await loadRegistrationCertificates();
+            },
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条记录`,
@@ -369,7 +505,7 @@ const SupplierInspectionReport = () => {
               justifyContent: 'center',
               marginTop: '16px'
             }
-          }}
+          }} 
           scroll={{ x: 1600 }}
         />
       </div>
@@ -377,16 +513,46 @@ const SupplierInspectionReport = () => {
       <Modal
         title="新增注册证"
         open={visible}
-        onOk={() => {
-          form.validateFields().then(() => {
-            // 新增注册证处理
+        onOk={async () => {
+          try {
+            setLoading(true);
+            const values = await form.validateFields();
+            
+            // 构建注册证数据
+            const certificateData = {
+              type: 'INSPECTION_REPORT',  // 资质类型
+              certificateName: values.productName,  // 资质名称
+              licenseNumber: values.registrationNumber,  // 证件编号
+              licenseType: '产品检验报告',  // 证件类别
+              issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,  // 发证日期
+              expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,  // 有效期
+              issuingAuthority: '检验机构',  // 发证机构
+              attachmentName: fileList.length > 0 ? fileList[fileList.length - 1].name : '',  // 附件名称
+              licenseFile: ''  // 附件地址
+            };
+            
+            // 新增注册证
+            const response = await api.post(`/api/scm/suppliers/${values.supplierId}/qualifications`, certificateData);
+            if (response.code === 1) {
+              message.success('注册证新增成功');
+              await loadRegistrationCertificates();
+            } else {
+              message.error('注册证新增失败');
+            }
+            
             setVisible(false);
             form.resetFields();
-          });
+            setFileList([]);
+          } catch (error) {
+            message.error('操作失败');
+          } finally {
+            setLoading(false);
+          }
         }}
         onCancel={() => {
           setVisible(false);
           form.resetFields();
+          setFileList([]);
         }}
         okText="确定"
         cancelText="取消"
@@ -394,11 +560,17 @@ const SupplierInspectionReport = () => {
       >
         <Form form={form} layout="vertical">
           <Form.Item
-            name="registeredCompany"
-            label="注册企业名称"
-            rules={[{ required: true, message: '请输入注册企业名称' }]}
+            name="supplierId"
+            label="供应商名称"
+            rules={[{ required: true, message: '请选择供应商名称' }]}
           >
-            <Input placeholder="请输入注册企业名称" />
+            <Select placeholder="请选择供应商名称" style={{ width: '100%' }}>
+              {suppliers.map(supplier => (
+                <Select.Option key={supplier.id} value={supplier.id}>
+                  {supplier.name}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
           
           <Form.Item
@@ -450,10 +622,8 @@ const SupplierInspectionReport = () => {
           </Form.Item>
           
           <Form.Item
-            name="attachment"
             label="附件"
             rules={[{ required: true, message: '请上传附件' }]}
-            valuePropName="fileList"
           >
             <Upload {...uploadProps}>
               <Button icon={<UploadOutlined />}>上传附件</Button>
@@ -471,6 +641,7 @@ const SupplierInspectionReport = () => {
           setEditVisible(false);
           setEditingRecord(null);
           editForm.resetFields();
+          setEditFileList([]);
         }}
         okText="保存"
         cancelText="取消"
@@ -526,11 +697,9 @@ const SupplierInspectionReport = () => {
           </Form.Item>
           
           <Form.Item
-            name="attachment"
             label="附件"
-            valuePropName="fileList"
           >
-            <Upload {...uploadProps}>
+            <Upload {...editUploadProps}>
               <Button icon={<UploadOutlined />}>重新上传附件</Button>
             </Upload>
           </Form.Item>

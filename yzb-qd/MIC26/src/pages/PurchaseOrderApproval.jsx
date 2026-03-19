@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, Table, Button, Input, Select, Space, Tag, Modal, message, InputNumber } from 'antd';
 import { EyeOutlined, SearchOutlined } from '@ant-design/icons';
+import api from '../utils/api';
 
 
 
 const PurchaseOrderApproval = () => {
+  const [messageApi, contextHolder] = message.useMessage();
   const [detailVisible, setDetailVisible] = useState(false);
   const [currentOrder, setCurrentOrder] = useState(null);
   const [viewMode, setViewMode] = useState('summary'); // 'detail' 或 'summary'
@@ -19,299 +21,118 @@ const PurchaseOrderApproval = () => {
   const [editableQuantityHeader, setEditableQuantityHeader] = useState('采购数量'); // 可编辑的采购数量表头
   const [editableUnits, setEditableUnits] = useState({}); // 可编辑的单位数据
   const [editableQuantities, setEditableQuantities] = useState({}); // 可编辑的采购数量数据
+  const [loading, setLoading] = useState(false);
+  const [searchParams, setSearchParams] = useState({
+    orderNo: '',
+    department: undefined,
+    productCode: '',
+    productName: ''
+  });
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0
+  });
 
-  const departments = ['内科', '外科', '儿科', '妇产科', '急诊科'];
+  const [departments, setDepartments] = useState([]);
 
-  const orders = useMemo(() => [
-    // PO-20241227-001 内科采购单 - 3条明细
-    { 
-      key: '1-1', 
-      orderNo: 'PO-20241227-001', 
-      productCode: 'MED-001',
-      product: '医用口罩', 
-      specification: 'N95 医用防护口罩',
-      model: 'N95-2024',
-      quantity: 20, 
-      unit: '盒',
-      manufacturer: '医疗用品有限公司',
-      department: '内科', 
-      applicant: '张三', 
-      createTime: '2024-12-27 09:30',
-      status: '待审核',
-      price: 25.00,
-      totalAmount: 500.00,
-      reason: '日常消耗补充库存',
-      remark: '需加急采购'
-    },
-    { 
-      key: '1-2', 
-      orderNo: 'PO-20241227-001', 
-      productCode: 'MED-002',
-      product: '一次性手套', 
-      specification: '医用乳胶手套',
-      model: 'GL-2024',
-      quantity: 15, 
-      unit: '盒',
-      manufacturer: '医疗器械有限公司',
-      department: '内科', 
-      applicant: '张三', 
-      createTime: '2024-12-27 09:30',
-      status: '待审核',
-      price: 15.00,
-      totalAmount: 225.00,
-      reason: '日常消耗补充库存',
-      remark: '需加急采购'
-    },
-    { 
-      key: '1-3', 
-      orderNo: 'PO-20241227-001', 
-      productCode: 'MED-003',
-      product: '消毒酒精', 
-      specification: '75% 医用酒精',
-      model: 'AL-2024',
-      quantity: 15, 
-      unit: '瓶',
-      manufacturer: '消毒用品有限公司',
-      department: '内科', 
-      applicant: '张三', 
-      createTime: '2024-12-27 09:30',
-      status: '待审核',
-      price: 18.00,
-      totalAmount: 270.00,
-      reason: '日常消耗补充库存',
-      remark: '需加急采购'
-    },
-    
-    // PO-20241227-002 外科采购单 - 3条明细
-    { 
-      key: '2-1', 
-      orderNo: 'PO-20241227-002', 
-      productCode: 'MED-004',
-      product: '手术衣', 
-      specification: '一次性无菌手术衣',
-      model: 'SY-2024',
-      quantity: 30, 
-      unit: '件',
-      manufacturer: '手术用品有限公司',
-      department: '外科', 
-      applicant: '李四', 
-      createTime: '2024-12-27 10:15',
-      status: '待审核',
-      price: 35.00,
-      totalAmount: 1050.00,
-      reason: '手术室用品补充',
-      remark: '常规采购'
-    },
-    { 
-      key: '2-2', 
-      orderNo: 'PO-20241227-002', 
-      productCode: 'MED-005',
-      product: '手术帽', 
-      specification: '一次性无纺布手术帽',
-      model: 'SM-2024',
-      quantity: 40, 
-      unit: '包',
-      manufacturer: '手术用品有限公司',
-      department: '外科', 
-      applicant: '李四', 
-      createTime: '2024-12-27 10:15',
-      status: '待审核',
-      price: 8.00,
-      totalAmount: 320.00,
-      reason: '手术室用品补充',
-      remark: '常规采购'
-    },
-    { 
-      key: '2-3', 
-      orderNo: 'PO-20241227-002', 
-      productCode: 'MED-006',
-      product: '手术鞋套', 
-      specification: '一次性防滑鞋套',
-      model: 'SX-2024',
-      quantity: 30, 
-      unit: '双',
-      manufacturer: '手术用品有限公司',
-      department: '外科', 
-      applicant: '李四', 
-      createTime: '2024-12-27 10:15',
-      status: '待审核',
-      price: 4.33,
-      totalAmount: 130.00,
-      reason: '手术室用品补充',
-      remark: '常规采购'
-    },
-    
-    // PO-20241226-003 儿科采购单 - 2条明细
-    { 
-      key: '3-1', 
-      orderNo: 'PO-20241226-003', 
-      productCode: 'MED-007',
-      product: '儿童退烧贴', 
-      specification: '儿童专用退烧贴',
-      model: 'ET-2024',
-      quantity: 10, 
-      unit: '盒',
-      manufacturer: '儿童医疗用品有限公司',
-      department: '儿科', 
-      applicant: '王五', 
-      createTime: '2024-12-26 14:20',
-      status: '待审核',
-      price: 12.00,
-      totalAmount: 120.00,
-      reason: '常规消毒用品',
-      remark: '每月常规采购'
-    },
-    { 
-      key: '3-2', 
-      orderNo: 'PO-20241226-003', 
-      productCode: 'MED-008',
-      product: '儿童体温计', 
-      specification: '电子体温计',
-      model: 'TT-2024',
-      quantity: 10, 
-      unit: '个',
-      manufacturer: '儿童医疗用品有限公司',
-      department: '儿科', 
-      applicant: '王五', 
-      createTime: '2024-12-26 14:20',
-      status: '待审核',
-      price: 24.00,
-      totalAmount: 240.00,
-      reason: '常规消毒用品',
-      remark: '每月常规采购'
-    },
-    
-    // PO-20241226-004 急诊科采购单 - 4条明细
-    { 
-      key: '4-1', 
-      orderNo: 'PO-20241226-004', 
-      productCode: 'MED-009',
-      product: '急救包', 
-      specification: '标准急救包',
-      model: 'JB-2024',
-      quantity: 25, 
-      unit: '个',
-      manufacturer: '急救用品有限公司',
-      department: '急诊科', 
-      applicant: '赵六', 
-      createTime: '2024-12-26 16:30',
-      status: '待审核',
-      price: 45.00,
-      totalAmount: 1125.00,
-      reason: '急诊室消耗',
-      remark: '紧急采购，请优先处理'
-    },
-    { 
-      key: '4-2', 
-      orderNo: 'PO-20241226-004', 
-      productCode: 'MED-010',
-      product: '止血带', 
-      specification: '医用止血带',
-      model: 'ZT-2024',
-      quantity: 25, 
-      unit: '个',
-      manufacturer: '急救用品有限公司',
-      department: '急诊科', 
-      applicant: '赵六', 
-      createTime: '2024-12-26 16:30',
-      status: '待审核',
-      price: 15.00,
-      totalAmount: 375.00,
-      reason: '急诊室消耗',
-      remark: '紧急采购，请优先处理'
-    },
-    { 
-      key: '4-3', 
-      orderNo: 'PO-20241226-004', 
-      productCode: 'MED-011',
-      product: '氧气面罩', 
-      specification: '成人氧气面罩',
-      model: 'YM-2024',
-      quantity: 25, 
-      unit: '个',
-      manufacturer: '急救用品有限公司',
-      department: '急诊科', 
-      applicant: '赵六', 
-      createTime: '2024-12-26 16:30',
-      status: '待审核',
-      price: 25.00,
-      totalAmount: 625.00,
-      reason: '急诊室消耗',
-      remark: '紧急采购，请优先处理'
-    },
-    { 
-      key: '4-4', 
-      orderNo: 'PO-20241226-004', 
-      productCode: 'MED-012',
-      product: '急救担架', 
-      specification: '折叠式急救担架',
-      model: 'DJ-2024',
-      quantity: 25, 
-      unit: '个',
-      manufacturer: '急救用品有限公司',
-      department: '急诊科', 
-      applicant: '赵六', 
-      createTime: '2024-12-26 16:30',
-      status: '待审核',
-      price: 15.00,
-      totalAmount: 375.00,
-      reason: '急诊室消耗',
-      remark: '紧急采购，请优先处理'
-    },
-  ], []);
+  // 加载部门列表
+  const loadDepartments = async () => {
+    try {
+      const response = await api.get('/api/department/list', {
+        pageNum: 1,
+        pageSize: 1000 // 获取全量部门
+      });
+      if (response.code === 1 && response.data) {
+        setDepartments(response.data.records || []);
+      }
+    } catch (error) {
+      console.error('加载部门列表失败:', error);
+    }
+  };
 
-  // 计算采购单汇总数据
-  const calculateSummaryOrders = useCallback(() => {
-    const summaryMap = {};
-    
-    orders.forEach(order => {
-      const orderNo = order.orderNo;
-      
-      if (!summaryMap[orderNo]) {
-        summaryMap[orderNo] = {
-          key: orderNo,
-          orderNo: orderNo,
-          department: order.department,
+  // 加载采购订单数据
+  const loadPurchaseOrders = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        pageNum: pagination.current,
+        pageSize: pagination.pageSize,
+        status: '待审核', // 兼容后端可能的不同状态名
+        orderNumber: searchParams.orderNo,
+        departmentName: searchParams.department,
+        materialCode: searchParams.productCode,
+        materialName: searchParams.productName
+      };
+      const response = await api.get('/api/scm/purchases/orders', params);
+      if (response.code === 1 && response.data) {
+        const orderList = response.data.records.map(order => ({
+          key: order.id,
+          orderNo: order.orderNumber,
+          department: order.departmentName,
           createTime: order.createTime,
           status: order.status,
-          totalQuantity: 0,
-          totalAmount: 0,
-          items: [],
-          applicant: order.applicant,
-          approver: order.approver,
+          totalQuantity: order.itemCount,
+          totalAmount: order.totalAmount,
+          items: (order.details || order.items || []).map(item => ({
+            ...item,
+            productCode: item.materialCode || item.productCode,
+            product: item.materialName || item.productName,
+            price: item.unitPrice,
+            quantity: item.quantity,
+            amount: item.amount,
+            manufacturer: item.manufacturer,
+            specification: item.specification,
+            model: item.model,
+            unit: item.unit,
+            status: item.status
+          })),
+          applicant: order.operatorName,
+          approver: order.approverName,
           approveTime: order.approveTime,
-          reason: order.reason,
+          reason: order.remark,
           rejectReason: order.rejectReason,
           remark: order.remark
-        };
+        }));
+        setSummaryOrders(orderList);
+        setPagination(prev => ({
+          ...prev,
+          total: response.data.total
+        }));
+      } else {
+        messageApi.error(response.message || '加载采购订单失败');
       }
-      
-      // 累加数量和金额
-      summaryMap[orderNo].totalQuantity += order.quantity;
-      summaryMap[orderNo].totalAmount += order.totalAmount;
-      
-      // 添加明细项
-      summaryMap[orderNo].items.push({
-        productCode: order.productCode,
-        product: order.product,
-        specification: order.specification,
-        model: order.model,
-        quantity: order.quantity,
-        unit: order.unit,
-        price: order.price,
-        amount: order.totalAmount,
-        manufacturer: order.manufacturer
-      });
-    });
-    
-    return Object.values(summaryMap);
-  }, [orders]);
+    } catch (error) {
+      console.error('加载采购订单失败:', error);
+      messageApi.error('加载采购订单失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // 初始化汇总数据
+  // 处理搜索输入变化
+  const handleSearchChange = (field, value) => {
+    setSearchParams(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // 处理查询按钮点击
+  // 处理查询按钮点击
+  const handleSearch = () => {
+    setPagination(prev => ({ ...prev, current: 1 }));
+    loadPurchaseOrders();
+  };
+
+  // 组件加载时获取数据
   useEffect(() => {
-    const calculatedSummary = calculateSummaryOrders();
-    setSummaryOrders(calculatedSummary);
-  }, [calculateSummaryOrders]);
+    loadDepartments();
+  }, []);
+
+  useEffect(() => {
+    loadPurchaseOrders();
+  }, [pagination.current, pagination.pageSize]);
 
   const columns = [
     {
@@ -342,17 +163,26 @@ const PurchaseOrderApproval = () => {
     { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer' },
     { title: '申领科室', dataIndex: 'department', key: 'department' },
     { title: '创建时间', dataIndex: 'createTime', key: 'createTime' },
-    { 
-      title: '状态', 
-      dataIndex: 'status', 
+    {
+      title: '状态',
+      dataIndex: 'status',
       key: 'status',
       render: (status) => {
-        const colors = {
-          '待审核': 'orange',
-          '已审核': 'green',
-          '已驳回': 'red'
+        const statusMap = {
+          'DRAFT': { color: 'warning', text: '待提交' },
+          'WAIT_AUDIT': { color: 'blue', text: '待审核' },
+          'WAIT_RECEIVE': { color: 'orange', text: '待收货' },
+          'WAIT_STOCK_IN': { color: 'purple', text: '待入库' },
+          'COMPLETED': { color: 'success', text: '已完成' },
+          'REJECTED': { color: 'error', text: '已驳回' },
+          '待提交': { color: 'warning', text: '待提交' },
+          '待审核': { color: 'blue', text: '待审核' },
+          '待收货': { color: 'orange', text: '待收货' },
+          '已完成': { color: 'success', text: '已完成' },
+          '已驳回': { color: 'error', text: '已驳回' }
         };
-        return <Tag color={colors[status]}>{status}</Tag>;
+        const info = statusMap[status] || { color: 'default', text: status || '未知' };
+        return <Tag color={info.color}>{info.text}</Tag>;
       }
     },
     {
@@ -371,7 +201,36 @@ const PurchaseOrderApproval = () => {
             type="link" 
             size="small" 
             icon={<EyeOutlined />}
-            onClick={() => {
+            onClick={async () => {
+              // 如果没有详情数据，尝试从详情接口获取
+              if (!record.items || record.items.length === 0) {
+                try {
+                  setLoading(true);
+                  const response = await api.get(`/api/scm/purchases/orders/${record.key}`);
+                  if (response.code === 1 && response.data) {
+                    const orderData = response.data;
+                    record.items = (orderData.details || orderData.items || []).map(item => ({
+                      ...item,
+                      productCode: item.materialCode || item.productCode,
+                      product: item.materialName || item.productName,
+                      price: item.unitPrice,
+                      quantity: item.quantity,
+                      amount: item.amount,
+                      manufacturer: item.manufacturer,
+                      specification: item.specification,
+                      model: item.model,
+                      unit: item.unit
+                    }));
+                    // 更新其他可能的字段
+                    record.applicant = orderData.operatorName || record.applicant;
+                    record.reason = orderData.remark || record.reason;
+                  }
+                } catch (error) {
+                  console.error('获取订单详情失败:', error);
+                } finally {
+                  setLoading(false);
+                }
+              }
               setCurrentOrder(record);
               setItemApprovalSelections({}); // 重置选择状态
               setDetailVisible(true);
@@ -393,12 +252,12 @@ const PurchaseOrderApproval = () => {
       render: (_, record) => (
         <input 
           type="checkbox" 
-          checked={selectedSummaryRowKeys.includes(record.orderNo)}
+          checked={selectedSummaryRowKeys.includes(record.key)}
           onChange={(e) => {
             if (e.target.checked) {
-              setSelectedSummaryRowKeys([...selectedSummaryRowKeys, record.orderNo]);
+              setSelectedSummaryRowKeys([...selectedSummaryRowKeys, record.key]);
             } else {
-              setSelectedSummaryRowKeys(selectedSummaryRowKeys.filter(key => key !== record.orderNo));
+              setSelectedSummaryRowKeys(selectedSummaryRowKeys.filter(key => key !== record.key));
             }
           }}
         />
@@ -449,21 +308,60 @@ const PurchaseOrderApproval = () => {
     },
   ];
 
-  const handleApprove = (record) => {
-    message.success(`订单 ${record.orderNo} 已审核通过`);
+  const handleApprove = async (record) => {
+    try {
+      setLoading(true);
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const operatorName = userInfo.realName || userInfo.userName || '管理员';
+      
+      const response = await api.post(`/api/scm/purchases/orders/${record.key}/approve`, {
+        operatorName: operatorName,
+        remark: ''
+      });
+      if (response.code === 1) {
+        messageApi.success(`订单 ${record.orderNo} 已审核通过`);
+        loadPurchaseOrders();
+        setDetailVisible(false);
+      } else {
+        messageApi.error(response.message || '审核通过失败');
+      }
+    } catch (error) {
+      console.error('审核通过失败:', error);
+      messageApi.error('审核通过失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleReject = (record) => {
-    // 这里应该有实际的驳回逻辑，包括添加驳回原因
-    // 为了演示，我们假设已经添加了驳回原因
-    message.warning(`订单 ${record.orderNo} 已被驳回`);
-    setDetailVisible(false);
+  const handleReject = async (record) => {
+    try {
+      setLoading(true);
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const operatorName = userInfo.realName || userInfo.userName || '管理员';
+
+      const response = await api.post(`/api/scm/purchases/orders/${record.key}/reject`, {
+        operatorName: operatorName,
+        remark: '驳回原因'
+      });
+      if (response.code === 1) {
+        messageApi.warning(`订单 ${record.orderNo} 已被驳回`);
+        loadPurchaseOrders();
+        setDetailVisible(false);
+      } else {
+        messageApi.error(response.message || '驳回失败');
+      }
+    } catch (error) {
+      console.error('驳回失败:', error);
+      messageApi.error('驳回失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleBatchApprove = () => {
     const selectedKeys = viewMode === 'detail' ? selectedRowKeys : selectedSummaryRowKeys;
     if (selectedKeys.length === 0) {
-      message.warning('请先选择要审核的订单');
+      messageApi.warning('请先选择要审核的订单');
       return;
     }
     setApproveModalVisible(true);
@@ -472,26 +370,72 @@ const PurchaseOrderApproval = () => {
   const handleBatchReject = () => {
     const selectedKeys = viewMode === 'detail' ? selectedRowKeys : selectedSummaryRowKeys;
     if (selectedKeys.length === 0) {
-      message.warning('请先选择要驳回的订单');
+      messageApi.warning('请先选择要驳回的订单');
       return;
     }
     setRejectModalVisible(true);
   };
 
-  const confirmBatchApprove = () => {
+  const confirmBatchApprove = async () => {
     const selectedKeys = viewMode === 'detail' ? selectedRowKeys : selectedSummaryRowKeys;
-    message.success(`已成功审核通过 ${selectedKeys.length} 个订单`);
-    setApproveModalVisible(false);
-    setSelectedRowKeys([]);
-    setSelectedSummaryRowKeys([]);
+    try {
+      setLoading(true);
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const operatorName = userInfo.realName || userInfo.userName || '管理员';
+
+      // 批量审核通过
+      let successCount = 0;
+      for (const key of selectedKeys) {
+        const response = await api.post(`/api/scm/purchases/orders/${key}/approve`, {
+          operatorName: operatorName,
+          remark: ''
+        });
+        if (response.code === 1) {
+          successCount++;
+        }
+      }
+      messageApi.success(`已成功审核通过 ${successCount} 个订单`);
+      loadPurchaseOrders();
+      setApproveModalVisible(false);
+      setSelectedRowKeys([]);
+      setSelectedSummaryRowKeys([]);
+    } catch (error) {
+      console.error('批量审核通过失败:', error);
+      messageApi.error('批量审核通过失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const confirmBatchReject = () => {
+  const confirmBatchReject = async () => {
     const selectedKeys = viewMode === 'detail' ? selectedRowKeys : selectedSummaryRowKeys;
-    message.warning(`已成功驳回 ${selectedKeys.length} 个订单`);
-    setRejectModalVisible(false);
-    setSelectedRowKeys([]);
-    setSelectedSummaryRowKeys([]);
+    try {
+      setLoading(true);
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const operatorName = userInfo.realName || userInfo.userName || '管理员';
+
+      // 批量驳回
+      let successCount = 0;
+      for (const key of selectedKeys) {
+        const response = await api.post(`/api/scm/purchases/orders/${key}/reject`, {
+          operatorName: operatorName,
+          remark: '批量驳回'
+        });
+        if (response.code === 1) {
+          successCount++;
+        }
+      }
+      messageApi.warning(`已成功驳回 ${successCount} 个订单`);
+      loadPurchaseOrders();
+      setRejectModalVisible(false);
+      setSelectedRowKeys([]);
+      setSelectedSummaryRowKeys([]);
+    } catch (error) {
+      console.error('批量驳回失败:', error);
+      messageApi.error('批量驳回失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleItemApprovalChange = (orderNo, itemIndex, action) => {
@@ -563,46 +507,57 @@ const PurchaseOrderApproval = () => {
     };
   };
 
-  const handleSubmitApproval = () => {
+  const handleSubmitApproval = async () => {
     const selectedItems = Object.entries(itemApprovalSelections);
     
     if (selectedItems.length === 0) {
-      message.warning('请至少选择一项进行审核');
+      messageApi.warning('请至少选择一项进行审核');
       return;
     }
     
-    // 显示编辑后的数据
-    console.log('编辑后的单位数据:', editableUnits);
-    console.log('编辑后的采购数量数据:', editableQuantities);
-    
-    // 统计通过和驳回的数量
-    let approveCount = 0;
-    let rejectCount = 0;
-    
-    selectedItems.forEach(([key, action]) => {
-      if (action === 'approve') {
-        approveCount++;
-      } else if (action === 'reject') {
-        rejectCount++;
+    try {
+      setLoading(true);
+      
+      // 统计通过和驳回的数量
+      let approveCount = 0;
+      let rejectCount = 0;
+      
+      // 这里假设每个订单只能整体审核，不能按明细项分别审核
+      // 实际实现需要根据API设计调整
+      if (currentOrder) {
+        const action = selectedItems[0][1]; // 只取第一个选择的操作
+        if (action === 'approve') {
+          await handleApprove(currentOrder);
+          approveCount = 1;
+        } else if (action === 'reject') {
+          await handleReject(currentOrder);
+          rejectCount = 1;
+        }
       }
-    });
-    
-    // 显示汇总信息
-    if (approveCount > 0 && rejectCount > 0) {
-      message.success(`已提交审核：${approveCount} 项通过，${rejectCount} 项驳回`);
-    } else if (approveCount > 0) {
-      message.success(`已提交审核：${approveCount} 项全部通过`);
-    } else if (rejectCount > 0) {
-      message.warning(`已提交审核：${rejectCount} 项全部驳回`);
+      
+      // 显示汇总信息
+      if (approveCount > 0 && rejectCount > 0) {
+        messageApi.success(`已提交审核：${approveCount} 项通过，${rejectCount} 项驳回`);
+      } else if (approveCount > 0) {
+        messageApi.success(`已提交审核：${approveCount} 项全部通过`);
+      } else if (rejectCount > 0) {
+        messageApi.warning(`已提交审核：${rejectCount} 项全部驳回`);
+      }
+      
+      // 清空选择
+      setItemApprovalSelections({});
+      setDetailVisible(false);
+    } catch (error) {
+      console.error('提交审核失败:', error);
+      messageApi.error('提交审核失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
     }
-    
-    // 清空选择
-    setItemApprovalSelections({});
-    setDetailVisible(false);
   };
 
   return (
     <div style={{ padding: '0 16px' }}>
+      {contextHolder}
       <h1 style={{ marginBottom: 24 }}>采购审核</h1>
       
       <Card style={{ marginBottom: 16, padding: '16px' }}>
@@ -615,6 +570,8 @@ const PurchaseOrderApproval = () => {
                 allowClear
                 style={{ width: 180 }}
                 size="middle"
+                value={searchParams.orderNo}
+                onChange={(e) => handleSearchChange('orderNo', e.target.value)}
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -624,9 +581,11 @@ const PurchaseOrderApproval = () => {
                 allowClear
                 style={{ width: 180 }}
                 size="middle"
+                value={searchParams.department}
+                onChange={(value) => handleSearchChange('department', value)}
               >
-                {departments.map((dept, index) => (
-                  <Select.Option key={index} value={dept}>{dept}</Select.Option>
+                {departments.map((dept) => (
+                  <Select.Option key={dept.id} value={dept.deptName}>{dept.deptName}</Select.Option>
                 ))}
               </Select>
             </div>
@@ -637,6 +596,8 @@ const PurchaseOrderApproval = () => {
                 allowClear
                 style={{ width: 180 }}
                 size="middle"
+                value={searchParams.productCode}
+                onChange={(e) => handleSearchChange('productCode', e.target.value)}
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -646,6 +607,8 @@ const PurchaseOrderApproval = () => {
                 allowClear
                 style={{ width: 180 }}
                 size="middle"
+                value={searchParams.productName}
+                onChange={(e) => handleSearchChange('productName', e.target.value)}
               />
             </div>
           </div>
@@ -654,6 +617,7 @@ const PurchaseOrderApproval = () => {
               type="primary" 
               icon={<SearchOutlined />}
               style={{ minWidth: 90 }}
+              onClick={handleSearch}
             >
               查询
             </Button>
@@ -679,12 +643,21 @@ const PurchaseOrderApproval = () => {
       <Card>
         <Table 
           columns={viewMode === 'detail' ? columns : summaryColumns} 
-          dataSource={viewMode === 'detail' ? orders : summaryOrders} 
+          dataSource={viewMode === 'detail' ? [] : summaryOrders} 
           pagination={{ 
-            pageSize: 10,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
             showSizeChanger: true,
-            showQuickJumper: false,
+            showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条记录`,
+            onChange: (page, pageSize) => {
+              setPagination({
+                ...pagination,
+                current: page,
+                pageSize: pageSize
+              });
+            },
             style: {
               display: 'flex',
               justifyContent: 'center',
@@ -692,7 +665,7 @@ const PurchaseOrderApproval = () => {
             }
           }} 
           size="small"
-          loading={viewMode === 'summary' && summaryOrders.length === 0}
+          loading={loading}
         />
       </Card>
 
@@ -807,6 +780,7 @@ const PurchaseOrderApproval = () => {
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>采购价格</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>采购数量</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>合计金额</th>
+                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>状态</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>生产厂家</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>通过</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>驳回</th>
@@ -848,6 +822,16 @@ const PurchaseOrderApproval = () => {
                         </td>
                         <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
                           ¥{calculateItemTotal(currentOrder.orderNo, index, item.price, item.quantity)}
+                        </td>
+                        <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
+                          <Tag color={
+                            item.status === 'DRAFT' || item.status === '待提交' ? 'warning' :
+                            item.status === 'WAIT_AUDIT' || item.status === '待审核' ? 'blue' :
+                            item.status === 'REJECTED' || item.status === '已驳回' ? 'error' :
+                            'success'
+                          }>
+                            {item.status || '待处理'}
+                          </Tag>
                         </td>
                         <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.manufacturer}</td>
                         <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
@@ -907,6 +891,16 @@ const PurchaseOrderApproval = () => {
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
                           ¥{calculateItemTotal(currentOrder.orderNo, 0, currentOrder.price, currentOrder.quantity)}
                         </td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
+                        <Tag color={
+                          currentOrder.status === 'DRAFT' || currentOrder.status === '待提交' ? 'warning' :
+                          currentOrder.status === 'WAIT_AUDIT' || currentOrder.status === '待审核' ? 'blue' :
+                          currentOrder.status === 'REJECTED' || currentOrder.status === '已驳回' ? 'error' :
+                          'success'
+                        }>
+                          {currentOrder.status || '待处理'}
+                        </Tag>
+                      </td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{currentOrder.manufacturer}</td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
                         <input
@@ -940,7 +934,7 @@ const PurchaseOrderApproval = () => {
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', fontWeight: 'bold', color: '#52c41a' }}>
                         ¥{calculateTotals().totalAmount}
                       </td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', fontWeight: 'bold' }} colSpan="3">
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', fontWeight: 'bold' }} colSpan="4">
                         共 {currentOrder.items.length} 项商品
                       </td>
                     </tr>

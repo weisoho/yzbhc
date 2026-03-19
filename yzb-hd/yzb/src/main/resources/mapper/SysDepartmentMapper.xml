@@ -6,10 +6,13 @@
         <id column="id" property="id" jdbcType="BIGINT"/>
         <result column="parent_id" property="parentId" jdbcType="BIGINT"/>
         <result column="dept_name" property="deptName" jdbcType="VARCHAR"/>
+        <result column="org_type" property="orgType" jdbcType="VARCHAR"/>
         <result column="dept_code" property="deptCode" jdbcType="VARCHAR"/>
+        <result column="address" property="address" jdbcType="VARCHAR"/>
         <result column="leader" property="leader" jdbcType="VARCHAR"/>
         <result column="phone" property="phone" jdbcType="VARCHAR"/>
         <result column="email" property="email" jdbcType="VARCHAR"/>
+        <result column="remark" property="remark" jdbcType="VARCHAR"/>
         <result column="status" property="status" jdbcType="TINYINT"/>
         <result column="sort_order" property="sortOrder" jdbcType="INTEGER"/>
         <result column="create_by" property="createBy" jdbcType="BIGINT"/>
@@ -20,7 +23,7 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id, parent_id, dept_name, dept_code, leader, phone, email, status, sort_order,
+        id, parent_id, dept_name, org_type, dept_code, address, leader, phone, email, remark, status, sort_order,
         create_by, create_time, update_by, update_time, is_deleted
     </sql>
 
@@ -54,10 +57,10 @@
 
     <insert id="insert" parameterType="com.yunsheng.yzb.model.SysDepartment" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO sys_department (
-            parent_id, dept_name, dept_code, leader, phone, email, status, sort_order,
+            parent_id, dept_name, org_type, dept_code, address, leader, phone, email, remark, status, sort_order,
             create_by, create_time
         ) VALUES (
-            #{parentId}, #{deptName}, #{deptCode}, #{leader}, #{phone}, #{email}, #{status}, #{sortOrder},
+            #{parentId}, #{deptName}, #{orgType}, #{deptCode}, #{address}, #{leader}, #{phone}, #{email}, #{remark}, #{status}, #{sortOrder},
             #{createBy}, NOW()
         )
     </insert>
@@ -66,9 +69,13 @@
         UPDATE sys_department
         <set>
             <if test="deptName != null">dept_name = #{deptName},</if>
+            <if test="orgType != null">org_type = #{orgType},</if>
+            <if test="deptCode != null">dept_code = #{deptCode},</if>
+            <if test="address != null">address = #{address},</if>
             <if test="leader != null">leader = #{leader},</if>
             <if test="phone != null">phone = #{phone},</if>
             <if test="email != null">email = #{email},</if>
+            <if test="remark != null">remark = #{remark},</if>
             <if test="status != null">status = #{status},</if>
             <if test="sortOrder != null">sort_order = #{sortOrder},</if>
             <if test="updateBy != null">update_by = #{updateBy},</if>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Form, Input, Select, Button, Card, Radio, Space, message, Modal, Checkbox, Tag } from 'antd';
+import { Form, Input, Select, Button, Card, Radio, Space, message, Modal, Checkbox, Tag, Pagination } from 'antd';
 import { MinusCircleOutlined, PlusOutlined, BarcodeOutlined, EditOutlined, SearchOutlined, ExportOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import api from '../utils/api';
@@ -14,10 +14,11 @@ const StockOutConsumption = () => {
   // 物资选择弹窗相关状态
   const [materialSelectModalVisible, setMaterialSelectModalVisible] = useState(false);
   const [materialCatalog, setMaterialCatalog] = useState([]);
-  const [filteredMaterials, setFilteredMaterials] = useState([]);
+  const [selectedCatalogRows, setSelectedCatalogRows] = useState([]); // 存储选中的完整对象
   const [catalogSelectAll, setCatalogSelectAll] = useState(false);
   const [catalogCurrentPage, setCatalogCurrentPage] = useState(1);
   const [catalogPageSize, setCatalogPageSize] = useState(10);
+  const [catalogTotal, setCatalogTotal] = useState(0);
   const [searchForm] = Form.useForm();
   
   // 表格全选状态管理
@@ -29,6 +30,8 @@ const StockOutConsumption = () => {
   
   // 确认出库弹窗状态
   const [stockOutConfirmVisible, setStockOutConfirmVisible] = useState(false);
+  // 出库类型状态
+  const [currentOutType, setCurrentOutType] = useState('consumption');
   
   // 数量选择浮窗状态
   const [quantityPopupVisible, setQuantityPopupVisible] = useState(false);
@@ -36,446 +39,19 @@ const StockOutConsumption = () => {
   const [currentQuantityKey, setCurrentQuantityKey] = useState(null);
 
   // 扫码数据状态管理
-  const [scanMaterialsState, setScanMaterialsState] = useState([
-    {
-      key: '1',
-      materialCode: 'YZS-001',
-      materialName: '一次性注射器',
-      materialType: '低值耗材',
-      specification: '10ml',
-      model: 'YZS-10ML',
-      batchNumber: 'BATCH-202401001',
-      productionDate: '2024-01-15',
-      expiryDate: '2026-01-14',
-      unit: '支',
-      orderQuantity: 10,
-      supplier: '医疗用品供应商',
-      manufacturer: '医疗器械有限公司',
-      reason: '消耗出库',
-      outboundDate: '2026-03-07',
-      status: '待撤销',
-      createTime: '2026-03-07 10:00:00'
-    },
-    {
-      key: '2',
-      materialCode: 'YZS-002',
-      materialName: '输液器',
-      materialType: '高值耗材',
-      specification: '500ml',
-      model: 'SYQ-500ML',
-      batchNumber: 'BATCH-202402001',
-      productionDate: '2024-02-10',
-      expiryDate: '2026-02-09',
-      unit: '个',
-      orderQuantity: 5,
-      supplier: '医疗设备供应商',
-      manufacturer: '输液器制造厂',
-      reason: '质控出库',
-      outboundDate: '2026-03-06',
-      status: '已撤销',
-      createTime: '2026-03-06 14:30:00'
-    }
-  ]);
+  const [scanMaterialsState, setScanMaterialsState] = useState([]);
   
-  // 模拟有库存的耗材数据
-  const materialsWithStock = [
-    { 
-      code: 'YZS-001', 
-      name: '一次性注射器', 
-      specification: '10ml', 
-      unit: '支', 
-      stock: 200, 
-      warehouse: '仓库1',
-      model: 'YZS-10ML',
-      manufacturer: '医疗器械有限公司',
-      supplier: '医疗用品供应商',
-      registrationNumber: 'REG-YZS001',
-      batchNumber: 'BATCH-202401001',
-      productionDate: '2024-01-15',
-      expiryDate: '2026-01-14',
-      unitPrice: 2.50
-    },
-    { 
-      code: 'YZS-002', 
-      name: '输液器', 
-      specification: '500ml', 
-      unit: '个', 
-      stock: 150, 
-      warehouse: '仓库1',
-      model: 'SYQ-500ML',
-      manufacturer: '输液器制造厂',
-      supplier: '医疗设备供应商',
-      registrationNumber: 'REG-YZS002',
-      batchNumber: 'BATCH-202402001',
-      productionDate: '2024-02-10',
-      expiryDate: '2026-02-09',
-      unitPrice: 8.80
-    },
-    { 
-      code: 'YZS-003', 
-      name: '医用棉签', 
-      specification: '100支/包', 
-      unit: '包', 
-      stock: 100, 
-      warehouse: '仓库1',
-      model: 'MQ-100',
-      manufacturer: '卫生材料公司',
-      supplier: '医疗用品供应商',
-      registrationNumber: 'REG-YZS003',
-      batchNumber: 'BATCH-202403001',
-      productionDate: '2024-03-05',
-      expiryDate: '2026-03-04',
-      unitPrice: 5.20
-    },
-    { 
-      code: 'YZS-004', 
-      name: '酒精棉球', 
-      specification: '50g/瓶', 
-      unit: '瓶', 
-      stock: 80, 
-      warehouse: '仓库1',
-      model: 'JJMQ-50G',
-      manufacturer: '消毒用品厂',
-      supplier: '医疗用品供应商',
-      registrationNumber: 'REG-YZS004',
-      batchNumber: 'BATCH-202404001',
-      productionDate: '2024-04-20',
-      expiryDate: '2026-04-19',
-      unitPrice: 3.80
-    },
-    { 
-      code: 'YLQ-001', 
-      name: '碘伏消毒液', 
-      specification: '500ml', 
-      unit: '瓶', 
-      stock: 50, 
-      warehouse: '仓库1',
-      model: 'DF-500ML',
-      manufacturer: '消毒液制造公司',
-      supplier: '医疗用品供应商',
-      registrationNumber: 'REG-YLQ001',
-      batchNumber: 'BATCH-202405001',
-      productionDate: '2024-05-12',
-      expiryDate: '2026-05-11',
-      unitPrice: 12.50
-    },
-    { 
-      code: 'YZS-005', 
-      name: '一次性注射器', 
-      specification: '5ml', 
-      unit: '支', 
-      stock: 300, 
-      warehouse: '仓库2',
-      model: 'YZS-5ML',
-      manufacturer: '医疗器械有限公司',
-      supplier: '医疗用品供应商',
-      registrationNumber: 'REG-YZS005',
-      batchNumber: 'BATCH-202406001',
-      productionDate: '2024-06-08',
-      expiryDate: '2026-06-07',
-      unitPrice: 1.80
-    },
-    { 
-      code: 'YZS-006', 
-      name: '一次性注射器', 
-      specification: '20ml', 
-      unit: '支', 
-      stock: 120, 
-      warehouse: '仓库2',
-      model: 'YZS-20ML',
-      manufacturer: '医疗器械有限公司',
-      supplier: '医疗用品供应商',
-      registrationNumber: 'REG-YZS006',
-      batchNumber: 'BATCH-202407001',
-      productionDate: '2024-07-15',
-      expiryDate: '2026-07-14',
-      unitPrice: 3.20
-    },
-    { 
-      code: 'YLQ-002', 
-      name: '碘伏消毒液', 
-      specification: '100ml', 
-      unit: '瓶', 
-      stock: 200, 
-      warehouse: '仓库2',
-      model: 'DF-100ML',
-      manufacturer: '消毒液制造公司',
-      supplier: '医疗用品供应商',
-      registrationNumber: 'REG-YLQ002',
-      batchNumber: 'BATCH-202408001',
-      productionDate: '2024-08-22',
-      expiryDate: '2026-08-21',
-      unitPrice: 6.80
-    },
-  ];
+  // 模拟有库存的耗材数据 - 已删除，使用数据库数据
+  const materialsWithStock = [];
 
-  // 物资目录数据（用于选择弹窗）- 参考采购计划申请页面
-  const materialCatalogData = useMemo(() => [
-    {
-      key: '1',
-      materialCode: 'MAT001',
-      materialName: '医用口罩',
-      specification: 'N95',
-      model: 'N95-001',
-      manufacturer: '医疗用品有限公司',
-      supplier: '医疗用品供应商',
-      materialType: '低值耗材',
-      minPackage: '10只/盒',
-      minOrderQuantity: 1,
-      quantity: 1,
-      selected: false,
-      unit: '盒',
-      unitPrice: 25.00,
-      stock: 100,
-      outboundQuantity: '',
-      batchNumber: 'BATCH-202401001',
-      productionDate: '2024-01-15',
-      expiryDate: '2026-01-14',
-      registrationNumber: '国药准字H20240001'
-    },
-    {
-      key: '2',
-      materialCode: 'MAT002',
-      materialName: '医用防护服',
-      specification: 'L号',
-      model: 'PF-202',
-      manufacturer: '防护设备制造厂',
-      supplier: '防护用品供应商',
-      materialType: '高值耗材',
-      minPackage: '1件/袋',
-      minOrderQuantity: 1,
-      quantity: 1,
-      selected: false,
-      unit: '件',
-      unitPrice: 120.00,
-      stock: 50,
-      outboundQuantity: '',
-      batchNumber: 'BATCH-202402001',
-      productionDate: '2024-02-10',
-      expiryDate: '2026-02-09',
-      registrationNumber: '国药准字H20240002'
-    },
-    {
-      key: '3',
-      materialCode: 'MAT003',
-      materialName: '医用手套',
-      specification: '乳胶',
-      model: 'GL-303',
-      manufacturer: '手套制造公司',
-      supplier: '医疗用品供应商',
-      materialType: '低值耗材',
-      minPackage: '100双/箱',
-      minOrderQuantity: 1,
-      quantity: 1,
-      selected: false,
-      unit: '双',
-      unitPrice: 0.80,
-      stock: 500,
-      outboundQuantity: '',
-      batchNumber: 'BATCH-202403001',
-      productionDate: '2024-03-05',
-      expiryDate: '2026-03-04',
-      registrationNumber: '国药准字H20240003'
-    },
-    {
-      key: '4',
-      materialCode: 'MAT004',
-      materialName: '体温计',
-      specification: '电子',
-      model: 'TM-404',
-      manufacturer: '医疗器械公司',
-      supplier: '医疗设备供应商',
-      materialType: '高值耗材',
-      minPackage: '10支/盒',
-      minOrderQuantity: 1,
-      quantity: 1,
-      selected: false,
-      unit: '支',
-      unitPrice: 35.00,
-      stock: 80,
-      outboundQuantity: '',
-      batchNumber: 'BATCH-202404001',
-      productionDate: '2024-04-20',
-      expiryDate: '2026-04-19',
-      registrationNumber: '国药准字H20240004'
-    },
-    {
-      key: '5',
-      materialCode: 'MAT005',
-      materialName: '血压计',
-      specification: '电子',
-      model: 'BP-505',
-      manufacturer: '医疗设备制造厂',
-      supplier: '医疗设备供应商',
-      materialType: '高值耗材',
-      minPackage: '1台/盒',
-      minOrderQuantity: 1,
-      quantity: 1,
-      selected: false,
-      unit: '台',
-      unitPrice: 280.00,
-      stock: 30,
-      batchNumber: 'BATCH-202405001',
-      productionDate: '2024-05-12',
-      expiryDate: '2026-05-11',
-      registrationNumber: '国药准字H20240005'
-    },
-    {
-      key: '6',
-      materialCode: 'MAT006',
-      materialName: '注射器',
-      specification: '一次性',
-      model: 'SY-606',
-      manufacturer: '医疗用品公司',
-      supplier: '医疗耗材供应商',
-      materialType: '低值耗材',
-      minPackage: '100支/箱',
-      minOrderQuantity: 1,
-      quantity: 1,
-      selected: false,
-      unit: '支',
-      unitPrice: 1.20,
-      stock: 300,
-      outboundQuantity: '',
-      batchNumber: 'BATCH-202406001',
-      productionDate: '2024-06-18',
-      expiryDate: '2026-06-17',
-      registrationNumber: '国药准字H20240006'
-    },
-    {
-      key: '7',
-      materialCode: 'MAT007',
-      materialName: '输液器',
-      specification: '一次性',
-      model: 'IV-701',
-      manufacturer: '输液设备公司',
-      supplier: '医疗设备供应商',
-      materialType: '高值耗材',
-      minPackage: '50套/箱',
-      minOrderQuantity: 1,
-      quantity: 1,
-      selected: false,
-      unit: '套',
-      unitPrice: 4.80,
-      stock: 150,
-      outboundQuantity: '',
-      batchNumber: 'BATCH-202407001',
-      productionDate: '2024-07-22',
-      expiryDate: '2026-07-21',
-      registrationNumber: '国药准字H20240007'
-    },
-    {
-      key: '8',
-      materialCode: 'MAT008',
-      materialName: '纱布',
-      specification: '10cm×10cm',
-      model: 'GS-810',
-      manufacturer: '医用敷料厂',
-      supplier: '医疗耗材供应商',
-      materialType: '低值耗材',
-      minPackage: '100包/箱',
-      minOrderQuantity: 1,
-      quantity: 1,
-      selected: false,
-      unit: '包',
-      unitPrice: 8.50,
-      stock: 120,
-      outboundQuantity: '',
-      batchNumber: 'BATCH-202408001',
-      productionDate: '2024-08-05',
-      expiryDate: '2026-08-04',
-      registrationNumber: '国药准字H20240008'
-    },
-    {
-      key: '9',
-      materialCode: 'MAT009',
-      materialName: '棉签',
-      specification: '医用',
-      model: 'CS-920',
-      manufacturer: '卫生用品公司',
-      supplier: '清洁用品供应商',
-      materialType: '低值耗材',
-      minPackage: '200包/箱',
-      minOrderQuantity: 1,
-      quantity: 1,
-      selected: false,
-      unit: '包',
-      unitPrice: 2.50,
-      stock: 180,
-      outboundQuantity: '',
-      batchNumber: 'BATCH-202409001',
-      productionDate: '2024-09-14',
-      expiryDate: '2026-09-13',
-      registrationNumber: '国药准字H20240009'
-    },
-    {
-      key: '10',
-      materialCode: 'MAT010',
-      materialName: '酒精',
-      specification: '75%',
-      model: 'AL-1030',
-      manufacturer: '消毒用品公司',
-      supplier: '医疗耗材供应商',
-      materialType: '低值耗材',
-      minPackage: '500ml/瓶',
-      minOrderQuantity: 1,
-      quantity: 1,
-      selected: false,
-      unit: '瓶',
-      unitPrice: 12.00,
-      stock: 90,
-      outboundQuantity: '',
-      batchNumber: 'BATCH-202410001',
-      productionDate: '2024-10-30',
-      expiryDate: '2026-10-29',
-      registrationNumber: '国药准字H20240010'
-    }
-  ], []);
+  // 物资目录数据（用于选择弹窗）- 已删除，使用数据库数据
+  const materialCatalogData = [];
 
   // 表单初始值
   const initialValues = {
     outType: 'consumption',
     scanMaterials: [],
-    manualMaterials: [
-      {
-        key: '3',
-        materialCode: 'YZS-003',
-        materialName: '医用棉签',
-        materialType: '低值耗材',
-        specification: '100支/包',
-        model: 'MQ-100',
-        batchNumber: 'BATCH-202403001',
-        productionDate: '2024-03-05',
-        expiryDate: '2026-03-04',
-        unit: '包',
-        orderQuantity: 20,
-        supplier: '医疗用品供应商',
-        manufacturer: '卫生材料公司',
-        reason: '消耗出库',
-        outboundDate: '2026-03-07',
-        status: '待撤销',
-        createTime: '2026-03-07 11:00:00'
-      },
-      {
-        key: '4',
-        materialCode: 'YLQ-001',
-        materialName: '碘伏消毒液',
-        materialType: '低值耗材',
-        specification: '500ml',
-        model: 'DF-500ML',
-        batchNumber: 'BATCH-202405001',
-        productionDate: '2024-05-12',
-        expiryDate: '2026-05-11',
-        unit: '瓶',
-        orderQuantity: 8,
-        supplier: '医疗用品供应商',
-        manufacturer: '消毒液制造公司',
-        reason: '损耗出库',
-        outboundDate: '2026-03-05',
-        status: '已撤销',
-        createTime: '2026-03-05 09:30:00'
-      }
-    ]
+    manualMaterials: []
   };
 
   // 监听科室变化，实时更新表单
@@ -483,86 +59,19 @@ const StockOutConsumption = () => {
     // 这个useEffect现在为空，因为消耗科室和操作人表单项已被删除
   }, []);
 
-  const handleStockOut = () => {
-    // 记录操作日志
-    // 生产环境中可以使用专业的日志库
-    // console.log('出库操作日志:', {
-    //   operationTime: new Date().toLocaleString(),
-    //   mode: mode === 'scan' ? '扫码出库' : '手动出库',
-    // });
-    
-    setVisible(true);
-  };
-
-  const handleScanBarcode = (barcode) => {
-    // 模拟扫码操作
-    const material = materialsWithStock.find(item => item.code === barcode);
-    if (material) {
-      // 添加到扫码出库列表
-      const currentMaterials = form.getFieldValue('scanMaterials') || [];
-      const existingIndex = currentMaterials.findIndex(item => item.materialCode === material.code);
-      
-      let updatedMaterials;
-      if (existingIndex >= 0) {
-        // 如果已存在，数量加1
-        updatedMaterials = [...currentMaterials];
-        updatedMaterials[existingIndex] = {
-          ...updatedMaterials[existingIndex],
-          quantity: updatedMaterials[existingIndex].quantity + 1,
-          // 更新金额
-          purchaseAmount: (updatedMaterials[existingIndex].purchasePrice || material.unitPrice) * (updatedMaterials[existingIndex].quantity + 1)
-        };
-      } else {
-        // 如果不存在，添加新记录（包含完整商品信息）
-        const newMaterial = {
-          key: Date.now().toString(), // 添加唯一的 key
-          orderNumber: `SCAN-${Date.now().toString().slice(-6)}`, // 扫码订单号
-          materialCode: material.code,
-          materialName: material.name,
-          specification: material.specification,
-          model: material.model,
-          manufacturer: material.manufacturer,
-          supplier: material.supplier,
-          registrationNumber: material.registrationNumber,
-          orderQuantity: 1,
-          orderUnit: material.unit,
-          batchNumber: material.batchNumber,
-          productionDate: material.productionDate,
-          expiryDate: material.expiryDate,
-          purchasePrice: material.unitPrice,
-          purchaseAmount: material.unitPrice * 1,
-          createTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-          warehouse: material.warehouse,
-          reason: '扫码出库',
-          remark: ''
-        };
-        updatedMaterials = [...currentMaterials, newMaterial];
-      }
-      
-      // 同时更新表单值和状态
-      form.setFieldsValue({ scanMaterials: updatedMaterials });
-      setScanMaterialsState(updatedMaterials);
-      
-      message.success(`扫码成功: ${material.name}`);
-    } else {
-      message.error('未找到对应物资');
-    }
-  };
-
   // 初始化物资目录数据
   React.useEffect(() => {
-    setMaterialCatalog([...materialCatalogData]);
-    setFilteredMaterials([...materialCatalogData]);
-  }, [materialCatalogData]);
+    // 初始加载第一页数据
+    if (materialSelectModalVisible) {
+      loadInventoryData();
+    }
+  }, [materialSelectModalVisible]);
 
   // 物资选择弹窗相关方法
   const handleOpenMaterialSelect = () => {
-    // 重置物资目录数据
-    setMaterialCatalog([...materialCatalogData]);
-    setFilteredMaterials([...materialCatalogData]);
-    
     setMaterialSelectModalVisible(true);
     searchForm.resetFields();
+    setSelectedCatalogRows([]); // 每次打开弹窗清空临时选择
     setCatalogSelectAll(false);
     setCatalogCurrentPage(1);
   };
@@ -575,108 +84,68 @@ const StockOutConsumption = () => {
     const checked = e.target.checked;
     setCatalogSelectAll(checked);
     
-    const startIndex = (catalogCurrentPage - 1) * catalogPageSize;
-    const endIndex = catalogCurrentPage * catalogPageSize;
-    const currentPageMaterials = (filteredMaterials.length > 0 ? filteredMaterials : materialCatalog)
-      .slice(startIndex, endIndex);
+    let updatedSelectedRows = [...selectedCatalogRows];
     
-    const updatedCatalog = [...materialCatalog];
-    currentPageMaterials.forEach(item => {
-      const index = updatedCatalog.findIndex(m => m.key === item.key);
-      if (index >= 0) {
-        updatedCatalog[index] = { ...updatedCatalog[index], selected: checked };
+    materialCatalog.forEach(item => {
+      const exists = updatedSelectedRows.some(row => row.key === item.key);
+      if (checked) {
+        if (!exists) {
+          updatedSelectedRows.push({ ...item, selected: true });
+        }
       } else {
-        // 如果materialCatalog中没有这个item，添加它
-        updatedCatalog.push({ ...item, selected: checked });
+        updatedSelectedRows = updatedSelectedRows.filter(row => row.key !== item.key);
       }
     });
-    setMaterialCatalog(updatedCatalog);
+    
+    setSelectedCatalogRows(updatedSelectedRows);
   };
 
-  const handleMaterialSelect = (key, checked) => {
-    const updatedCatalog = [...materialCatalog];
-    const index = updatedCatalog.findIndex(item => item.key === key);
+  const handleMaterialSelect = (record, checked) => {
+    let updatedSelectedRows = [...selectedCatalogRows];
     
-    if (index >= 0) {
-      updatedCatalog[index] = { ...updatedCatalog[index], selected: checked };
-    } else {
-      // 如果materialCatalog中没有这个item，从materialCatalogData中获取完整的item信息
-      const sourceItem = materialCatalogData.find(item => item.key === key);
-      if (sourceItem) {
-        // 添加它
-        updatedCatalog.push({ ...sourceItem, selected: checked });
+    if (checked) {
+      if (!updatedSelectedRows.some(row => row.key === record.key)) {
+        updatedSelectedRows.push({ ...record, selected: true });
       }
+    } else {
+      updatedSelectedRows = updatedSelectedRows.filter(row => row.key !== record.key);
     }
     
-    setMaterialCatalog(updatedCatalog);
+    setSelectedCatalogRows(updatedSelectedRows);
     
     // 检查当前页是否全选
-    const startIndex = (catalogCurrentPage - 1) * catalogPageSize;
-    const endIndex = catalogCurrentPage * catalogPageSize;
-    const currentPageMaterials = (filteredMaterials.length > 0 ? filteredMaterials : materialCatalog)
-      .slice(startIndex, endIndex);
-    const allSelected = currentPageMaterials.every(item => {
-      const catalogItem = updatedCatalog.find(m => m.key === item.key);
-      return catalogItem ? catalogItem.selected : false;
-    });
-    setCatalogSelectAll(allSelected);
+    const allCurrentPageSelected = materialCatalog.every(item => 
+      updatedSelectedRows.some(row => row.key === item.key)
+    );
+    setCatalogSelectAll(allCurrentPageSelected);
   };
 
   const handleSearchMaterials = (values) => {
-    // 模拟搜索功能
-    let filtered = [...materialCatalog];
-    
-    if (values.materialCode) {
-      filtered = filtered.filter(item => 
-        item.materialCode.toLowerCase().includes(values.materialCode.toLowerCase())
-      );
-    }
-    
-    if (values.materialName) {
-      filtered = filtered.filter(item => 
-        item.materialName.toLowerCase().includes(values.materialName.toLowerCase())
-      );
-    }
-    
-    if (values.specification) {
-      filtered = filtered.filter(item => 
-        item.specification.toLowerCase().includes(values.specification.toLowerCase())
-      );
-    }
-    
-    if (values.manufacturer) {
-      filtered = filtered.filter(item => 
-        item.manufacturer.toLowerCase().includes(values.manufacturer.toLowerCase())
-      );
-    }
-    
-    if (values.supplier) {
-      filtered = filtered.filter(item => 
-        item.supplier.toLowerCase().includes(values.supplier.toLowerCase())
-      );
-    }
-    
-    if (values.materialType) {
-      filtered = filtered.filter(item => item.materialType === values.materialType);
-    }
-    
-    setFilteredMaterials(filtered);
     setCatalogCurrentPage(1);
-    setCatalogSelectAll(false);
+    loadInventoryData({ ...values, pageNum: 1 });
   };
 
+  const handleResetSearch = () => {
+    searchForm.resetFields();
+    setCatalogCurrentPage(1);
+    loadInventoryData({ pageNum: 1 });
+  };
 
+  const handleCatalogPageChange = (page, pageSize) => {
+    setCatalogCurrentPage(page);
+    if (pageSize) setCatalogPageSize(pageSize);
+    const values = searchForm.getFieldsValue();
+    loadInventoryData({ ...values, pageNum: page, pageSize: pageSize || catalogPageSize });
+  };
 
   const handleConfirmMaterialSelection = () => {
-    const selectedMaterials = materialCatalog.filter(item => item.selected);
-    
-    if (selectedMaterials.length === 0) {
+    if (selectedCatalogRows.length === 0) {
       message.warning('请至少选择一项物资');
       return;
     }
     
     // 验证出库数量
-    const invalidMaterials = selectedMaterials.filter(item => {
+    const invalidMaterials = selectedCatalogRows.filter(item => {
       const outboundQty = parseInt(item.outboundQuantity || 0);
       return outboundQty <= 0 || outboundQty > item.stock;
     });
@@ -686,36 +155,40 @@ const StockOutConsumption = () => {
       return;
     }
     
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+    const operatorName = userInfo.realName || userInfo.userName || '管理员';
+
     // 将选中的物资添加到出库列表
     const currentMaterials = form.getFieldValue('manualMaterials') || [];
-    const newMaterials = selectedMaterials.map(item => {
+    const newMaterials = selectedCatalogRows.map(item => {
       const outboundQty = parseInt(item.outboundQuantity || 1);
       return {
-        key: Date.now().toString() + item.key, // 生成唯一key
-        orderNumber: `OUT-${Date.now().toString().slice(-6)}`, // 模拟订单号
+        key: `manual-${Date.now()}-${item.key}`, // 生成唯一key
+        inventoryId: item.inventoryId,
         materialCode: item.materialCode,
         materialName: item.materialName,
         specification: item.specification,
         model: item.model,
+        materialType: item.materialType,
         manufacturer: item.manufacturer,
         supplier: item.supplier,
-        registrationNumber: `REG-${item.materialCode}`,
+        registrationNumber: item.registrationNumber,
         orderQuantity: outboundQty,
-        orderUnit: item.unit,
-        stockInQuantity: outboundQty,
-        packageUnit: item.minPackage,
-        batchNumber: item.batchNumber || `BATCH-${Date.now().toString().slice(-4)}`,
-        productionDate: item.productionDate || dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
-        expiryDate: item.expiryDate || dayjs().add(365, 'day').format('YYYY-MM-DD'),
+        unit: item.unit,
+        batchNumber: item.batchNumber,
+        productionDate: item.productionDate,
+        expiryDate: item.expiryDate,
         purchasePrice: item.unitPrice,
         purchaseAmount: item.unitPrice * outboundQty,
         createTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-        remark: ''
+        reason: '手动出库',
+        operatorName: operatorName,
+        status: '待提交'
       };
     });
     
     form.setFieldsValue({ manualMaterials: [...currentMaterials, ...newMaterials] });
-    message.success(`已添加 ${selectedMaterials.length} 项物资到出库列表`);
+    message.success(`已添加 ${selectedCatalogRows.length} 项物资到出库列表`);
     handleCloseMaterialSelect();
   };
 
@@ -830,14 +303,14 @@ const StockOutConsumption = () => {
     });
     setMaterialCatalog(updatedCatalog);
     
-    // 更新 filteredMaterials
-    const updatedFiltered = filteredMaterials.map(item => {
+    // 同时更新 selectedCatalogRows，确保确定的物资带上最新的数量
+    const updatedSelectedRows = selectedCatalogRows.map(item => {
       if (item.key === key) {
         return { ...item, outboundQuantity: value };
       }
       return item;
     });
-    setFilteredMaterials(updatedFiltered);
+    setSelectedCatalogRows(updatedSelectedRows);
   };
 
   // 处理数量输入框聚焦
@@ -916,42 +389,215 @@ const StockOutConsumption = () => {
     };
   }, [quantityPopupVisible]);
 
-  // 加载状态
   const [loading, setLoading] = useState(false);
+  const [stockOutLoading, setStockOutLoading] = useState(false);
+  const [undoLoading, setUndoLoading] = useState(false);
 
-  // 撤销出库处理函数
-  const handleUndoStockOut = async (item) => {
-    // 准备撤销数据
-    const undoData = {
-      materialCode: item.materialCode || item.code,
-      materialName: item.materialName || item.name,
-      materialType: item.materialType || '低值耗材',
-      specification: item.specification,
-      model: item.model,
-      batchNumber: item.batchNumber,
-      effectiveDate: item.productionDate,
-      expiryDate: item.expiryDate,
-      unit: item.unit || item.orderUnit,
-      outboundQuantity: item.orderQuantity || 1,
-      supplier: item.supplier,
-      manufacturer: item.manufacturer,
-      operator: '管理员',
-      outboundReason: item.reason || '扫码出库',
-      outboundDate: item.outboundDate || item.createTime || dayjs().format('YYYY-MM-DD'),
-      status: '待撤销'
-    };
-
+  // 从后端加载实时库存数据（用于手动出库选择）
+  const loadInventoryData = async (values = {}) => {
     try {
       setLoading(true);
-      // 调用API提交撤销申请
-      await api.post('/api/consumption/undo', undoData);
-      // 显示成功消息
-      message.success('已提交撤销申请');
+      const params = {
+        pageNum: values.pageNum || catalogCurrentPage,
+        pageSize: values.pageSize || catalogPageSize,
+        materialCode: values.materialCode,
+        materialName: values.materialName,
+        supplier: values.supplier,
+        manufacturer: values.manufacturer,
+        materialType: values.materialType
+      };
+      // 修复 API 路径，移除 /list，后端 InventoryManagementController 映射的是根路径
+      const response = await api.get('/api/scm/inventory', params);
+      if (response.code === 1 && response.data) {
+        const records = response.data.records || [];
+        const catalog = records.map(item => {
+          // 检查该项是否已在选中列表中
+          const selectedRow = selectedCatalogRows.find(row => row.key === String(item.id));
+          return {
+            key: String(item.id),
+            inventoryId: item.id,
+            materialCode: item.materialCode,
+            materialName: item.materialName,
+            materialType: item.category || '耗材', // 后端字段是 category
+            specification: item.specification,
+            model: item.model,
+            batchNumber: item.batchNumber,
+            productionDate: item.productionDate,
+            expiryDate: item.expiryDate,
+            unit: item.unit,
+            unitPrice: item.purchasePrice || 0,
+            stock: item.currentStock,
+            minPackage: item.minPackage || '-',
+            registrationNumber: item.registrationNumber,
+            supplier: item.supplier, // 后端字段是 supplier
+            manufacturer: item.manufacturer,
+            selected: !!selectedRow,
+            outboundQuantity: selectedRow ? selectedRow.outboundQuantity : ''
+          };
+        });
+        setMaterialCatalog(catalog);
+        setCatalogTotal(response.data.total || 0);
+        
+        // 更新全选状态
+        const allSelected = catalog.length > 0 && catalog.every(item => 
+          selectedCatalogRows.some(row => row.key === item.key)
+        );
+        setCatalogSelectAll(allSelected);
+      }
     } catch (error) {
-      // 显示错误消息
-      message.error(`提交撤销申请失败: ${error.message || '未知错误'}`);
+      console.error('加载库存数据失败:', error);
+      message.error('加载库存数据失败，请检查网络连接');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 扫码处理函数（对接后端接口）
+  const handleScanBarcode = async (barcode) => {
+    if (!barcode) return;
+    try {
+      setLoading(true);
+      // 后端没有专门的 barcode 接口，改用标准的库存查询接口，通过 materialCode 过滤
+      const response = await api.get('/api/scm/inventory', { materialCode: barcode, pageNum: 1, pageSize: 1 });
+      if (response.code === 1 && response.data && response.data.records && response.data.records.length > 0) {
+        const material = response.data.records[0];
+        const currentMaterials = form.getFieldValue('scanMaterials') || [];
+        const existingIndex = currentMaterials.findIndex(item => item.materialCode === material.materialCode && item.batchNumber === material.batchNumber);
+        
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        const operatorName = userInfo.realName || userInfo.userName || '管理员';
+
+        let updatedMaterials;
+        if (existingIndex >= 0) {
+          updatedMaterials = [...currentMaterials];
+          updatedMaterials[existingIndex] = {
+            ...updatedMaterials[existingIndex],
+            orderQuantity: (updatedMaterials[existingIndex].orderQuantity || 0) + 1
+          };
+        } else {
+          updatedMaterials = [...currentMaterials, {
+            ...material,
+            key: `scan-${Date.now()}-${material.id}`,
+            inventoryId: material.id,
+            orderQuantity: 1,
+            reason: '扫码出库',
+            operatorName: operatorName,
+            status: '待提交'
+          }];
+        }
+        form.setFieldsValue({ scanMaterials: updatedMaterials });
+        setScanMaterialsState(updatedMaterials);
+        message.success(`扫码成功: ${material.materialName}`);
+      } else {
+        message.warning('未找到对应物资或库存不足');
+      }
+    } catch (error) {
+      console.error('扫码查询失败:', error);
+      message.error('条码查询失败，请手动选择');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 确认出库处理函数（对接后端 /api/scm/stock-out）
+  const handleConfirmStockOut = async () => {
+    try {
+      setStockOutLoading(true);
+      const outType = form.getFieldValue('outType');
+      const materials = mode === 'scan' ? scanMaterialsState : (form.getFieldValue('manualMaterials') || []);
+      
+      if (materials.length === 0) {
+        message.warning('请先添加出库物资');
+        return;
+      }
+
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const operatorName = userInfo.realName || userInfo.userName || '管理员';
+      const departmentName = userInfo.departmentName || userInfo.department || '耗材科'; // 获取科室名称
+
+      const stockOutData = {
+        stockOutType: outType,
+        departmentName: departmentName, // 补充必填字段
+        operatorName: operatorName,
+        reason: outType === 'consumption' ? '常规消耗' : (outType === 'quality' ? '质控消耗' : '出库消耗'), // 补充必填字段
+        remark: form.getFieldValue('remark') || '',
+        outboundDate: dayjs().format('YYYY-MM-DD'),
+        items: materials.map(item => ({
+          inventoryId: item.inventoryId,
+          outboundQuantity: item.orderQuantity
+        }))
+      };
+
+      const response = await api.post('/api/scm/stock-out', stockOutData);
+      if (response.code === 1) {
+        // 显示成功提示
+        setVisible(true);
+        
+        // 清空当前列表
+        if (mode === 'scan') {
+          form.setFieldsValue({ scanMaterials: [] });
+          setScanMaterialsState([]);
+        } else {
+          form.setFieldsValue({ manualMaterials: [] });
+        }
+        setStockOutConfirmVisible(false);
+      } else {
+        message.error(response.message || '出库失败');
+      }
+    } catch (error) {
+      console.error('执行出库失败:', error);
+      message.error('出库失败，请联系管理员');
+    } finally {
+      setStockOutLoading(false);
+    }
+  };
+
+  // 撤销出库处理函数（对接后端 /api/scm/stock-out/undo）
+  const handleUndoStockOut = async (item) => {
+    try {
+      setUndoLoading(true);
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const operatorName = userInfo.realName || userInfo.userName || '管理员';
+
+      const undoData = {
+        operatorName: operatorName,
+        reason: '操作撤销'
+      };
+
+      // 假设撤销接口需要 materialCode 和 outboundDate 作为查询标识
+      const response = await api.post(`/api/scm/stock-out/undo?materialCode=${item.materialCode}&outboundDate=${item.outboundDate}`, undoData);
+      
+      if (response.code === 1) {
+        message.success('撤销出库成功');
+        // 更新本地列表状态
+        const updateList = (list) => list.map(m => m.key === item.key ? { ...m, status: '已撤销' } : m);
+        if (mode === 'scan') {
+          const newList = updateList(scanMaterialsState);
+          setScanMaterialsState(newList);
+          form.setFieldsValue({ scanMaterials: newList });
+        } else {
+          const newList = updateList(form.getFieldValue('manualMaterials') || []);
+          form.setFieldsValue({ manualMaterials: newList });
+        }
+      } else {
+        message.error(response.message || '撤销失败');
+      }
+    } catch (error) {
+      console.error('撤销操作失败:', error);
+      message.error('撤销失败，请重试');
+    } finally {
+      setUndoLoading(false);
+    }
+  };
+  
+  // 获取出库类型文本
+  const getOutTypeText = (outType) => {
+    switch (outType) {
+      case 'consumption': return '消耗出库';
+      case 'quality': return '质控出库';
+      case 'review': return '复查出库';
+      case 'loss': return '损耗出库';
+      default: return '未知类型';
     }
   };
 
@@ -960,10 +606,9 @@ const StockOutConsumption = () => {
       <h1 style={{ marginBottom: 24 }}>消耗出库</h1>
       
       <Card>
-        <Form
-          form={form}
+        <Form 
+          form={form} 
           layout="vertical"
-          onFinish={handleStockOut}
           initialValues={initialValues}
         >
           {/* 出库模式选择 */}
@@ -1130,7 +775,7 @@ const StockOutConsumption = () => {
                         <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.orderQuantity || 1}</td>
                         <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.supplier || '-'}</td>
                         <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.manufacturer || '-'}</td>
-                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>管理员</td>
+                        <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.operatorName || '管理员'}</td>
                         <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.reason || '扫码出库'}</td>
                         <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>{item.outboundDate || item.createTime || dayjs().format('YYYY-MM-DD')}</td>
                         <td className="ant-table-cell" style={{ padding: '12px 8px', textAlign: 'center' }}>
@@ -1214,10 +859,28 @@ const StockOutConsumption = () => {
                   <Button onClick={() => {
                     form.setFieldsValue({ manualMaterials: [] });
                   }}>重置</Button>
-                  <Button type="primary" onClick={() => setStockOutConfirmVisible(true)}>
+                  <Button 
+                    type="primary" 
+                    onClick={() => {
+                      setCurrentOutType(form.getFieldValue('outType'));
+                      setStockOutConfirmVisible(true);
+                    }}
+                  >
                     确认出库
                   </Button>
                 </>
+              )}
+              {mode === 'scan' && (
+                <Button 
+                  type="primary" 
+                  onClick={() => {
+                    setCurrentOutType(form.getFieldValue('outType'));
+                    setStockOutConfirmVisible(true);
+                  }}
+                  disabled={scanMaterialsState.length === 0}
+                >
+                  确认出库
+                </Button>
               )}
             </div>
           </Form.Item>
@@ -1241,6 +904,36 @@ const StockOutConsumption = () => {
           </div>
         </div>
       )}
+
+      {/* 出库确认弹窗 */}
+      <Modal
+        title="确认出库"
+        open={stockOutConfirmVisible}
+        onCancel={() => setStockOutConfirmVisible(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setStockOutConfirmVisible(false)} style={{ borderRadius: '6px', height: '36px', minWidth: '80px' }}>
+            取消
+          </Button>,
+          <Button 
+            key="confirm" 
+            type="primary" 
+            loading={stockOutLoading}
+            onClick={handleConfirmStockOut}
+            style={{ borderRadius: '6px', height: '36px', minWidth: '80px', backgroundColor: '#5c7cfa', borderColor: '#5c7cfa' }}
+          >
+            确认
+          </Button>
+        ]}
+        centered
+        width={450}
+      >
+        <div style={{ padding: '16px 0' }}>
+          <p style={{ fontSize: '16px', color: '#333', marginBottom: '20px' }}>是否确认执行出库操作?</p>
+          <p style={{ color: '#1890ff', fontSize: '14px', marginTop: '12px' }}>
+            {mode === 'scan' ? '扫码出库' : '手动出库'}操作将提交并不可撤销。
+          </p>
+        </div>
+      </Modal>
 
       {/* 物资选择弹窗 */}
       <Modal
@@ -1353,48 +1046,45 @@ const StockOutConsumption = () => {
               </tr>
             </thead>
             <tbody>
-              {(filteredMaterials.length > 0 ? filteredMaterials : materialCatalog)
-                .slice((catalogCurrentPage - 1) * catalogPageSize, catalogCurrentPage * catalogPageSize)
-                .map(item => {
-                  const catalogItem = materialCatalog.find(m => m.key === item.key);
-                  const isSelected = catalogItem ? catalogItem.selected : false;
-                  
-                  return (
-                    <tr key={item.key} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
-                        <Checkbox 
-                          checked={isSelected}
-                          onChange={(e) => handleMaterialSelect(item.key, e.target.checked)}
-                        />
-                      </td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialCode}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialName}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialType}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.specification}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.model}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.batchNumber || '-'}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.productionDate || '-'}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.expiryDate || '-'}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.minPackage}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.unit}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>¥{item.unitPrice.toFixed(2)}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.stock}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', position: 'relative' }}>
-                        <Input 
-                          size="small" 
-                          placeholder="请输入" 
-                          style={{ width: '80px' }}
-                          value={item.outboundQuantity || ''}
-                          onChange={(e) => handleOutboundQuantityChange(item.key, e.target.value)}
-                          onFocus={(e) => handleQuantityInputFocus(item.key, e)}
-                        />
-                      </td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.registrationNumber || '-'}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.supplier}</td>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.manufacturer}</td>
-                    </tr>
-                  );
-                })}
+              {materialCatalog.map(item => {
+                const isSelected = item.selected;
+                
+                return (
+                  <tr key={item.key} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
+                      <Checkbox 
+                        checked={selectedCatalogRows.some(row => row.key === item.key)}
+                        onChange={(e) => handleMaterialSelect(item, e.target.checked)}
+                      />
+                    </td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialCode}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialName}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialType}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.specification}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.model}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.batchNumber || '-'}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.productionDate || '-'}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.expiryDate || '-'}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.minPackage}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.unit}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>¥{item.unitPrice.toFixed(2)}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.stock}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', position: 'relative' }}>
+                      <Input 
+                        size="small" 
+                        placeholder="请输入" 
+                        style={{ width: '80px' }}
+                        value={item.outboundQuantity || ''}
+                        onChange={(e) => handleOutboundQuantityChange(item.key, e.target.value)}
+                        onFocus={(e) => handleQuantityInputFocus(item.key, e)}
+                      />
+                    </td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.registrationNumber || '-'}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.supplier}</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.manufacturer}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -1408,27 +1098,20 @@ const StockOutConsumption = () => {
         }}>
           <div>
             <span style={{ color: '#666', fontSize: '14px' }}>
-              共 <strong>{(filteredMaterials.length > 0 ? filteredMaterials : materialCatalog).length}</strong> 条记录，当前选中 <strong style={{ color: '#1890ff' }}>{materialCatalog.filter(item => item.selected).length}</strong> 项
+              共 <strong>{catalogTotal}</strong> 条记录，当前选中 <strong style={{ color: '#1890ff' }}>{selectedCatalogRows.length}</strong> 项
             </span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Select
-              value={catalogPageSize}
-              onChange={(value) => {
-                setCatalogPageSize(value);
-                setCatalogCurrentPage(1);
-              }}
-              style={{ width: 120 }}
-              size="middle"
-              options={[
-                { value: 5, label: '5条' },
-                { value: 10, label: '10条' },
-                { value: 20, label: '20条' }
-              ]}
+            <Pagination
+              size="small"
+              current={catalogCurrentPage}
+              pageSize={catalogPageSize}
+              total={catalogTotal}
+              onChange={handleCatalogPageChange}
+              showSizeChanger
+              showQuickJumper
+              pageSizeOptions={['5', '10', '20']}
             />
-            <span style={{ color: '#666', fontSize: '14px' }}>
-              第 <strong style={{ color: '#1890ff' }}>{catalogCurrentPage}</strong> 页 / 共 <strong>{Math.ceil((filteredMaterials.length > 0 ? filteredMaterials : materialCatalog).length / catalogPageSize)}</strong> 页
-            </span>
           </div>
         </div>
 
@@ -1576,31 +1259,8 @@ const StockOutConsumption = () => {
           将删除 {selectedRowKeys.length} 条明细记录，此操作不可撤销。
         </p>
       </Modal>
-
-      {/* 确认出库弹窗 */}
-      <Modal
-        title="确认出库"
-        open={stockOutConfirmVisible}
-        onCancel={() => setStockOutConfirmVisible(false)}
-        footer={[
-          <Button key="no" onClick={() => setStockOutConfirmVisible(false)}>
-            取消
-          </Button>,
-          <Button key="yes" type="primary" onClick={() => {
-            form.submit();
-            setStockOutConfirmVisible(false);
-          }}>
-            确认
-          </Button>
-        ]}
-      >
-        <p>是否确认执行出库操作？</p>
-        <p style={{ color: '#1890ff', fontSize: '14px', marginTop: '8px' }}>
-          {mode === 'scan' ? '扫码出库' : '手动出库'}操作将提交并不可撤销。
-        </p>
-      </Modal>
-     </div>
-   );
- };
+    </div>
+  );
+};
 
 export default StockOutConsumption;

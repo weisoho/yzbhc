@@ -16,7 +16,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnauthorizedException.class)
     public AjaxResult<Void> handleUnauthorizedException(UnauthorizedException e, HttpServletResponse response) {
-        logger.error("未授权访问 - {}", e.getMessage());
+        logger.error("未授权访问: {}", e.getMessage());
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         return AjaxResult.res(e.getCode(), e.getMessage(), null);
     }
@@ -44,15 +44,44 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(RuntimeException.class)
     public AjaxResult<Void> handleRuntimeException(RuntimeException e, HttpServletResponse response) {
-        logger.error("运行时异常: ", e);
+        logger.error("运行时异常", e);
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         return AjaxResult.res(400, e.getMessage(), null);
     }
 
+    @ExceptionHandler(ScmBusinessException.class)
+    public AjaxResult<Void> handleScmBusinessException(ScmBusinessException e, HttpServletResponse response) {
+        logger.warn("供应链业务异常: {}", e.getMessage());
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        return AjaxResult.res(400, e.getMessage(), null);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public AjaxResult<Void> handleMethodArgumentNotValidException(MethodArgumentNotValidException e,
+                                                                  HttpServletResponse response) {
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .orElse("请求参数不合法");
+        return AjaxResult.res(400, message, null);
+    }
+
+    @ExceptionHandler(BindException.class)
+    public AjaxResult<Void> handleBindException(BindException e, HttpServletResponse response) {
+        response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .findFirst()
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .orElse("请求参数不合法");
+        return AjaxResult.res(400, message, null);
+    }
+
     @ExceptionHandler(Exception.class)
     public AjaxResult<Void> handleException(Exception e, HttpServletResponse response) {
-        logger.error("系统异常: ", e);
+        logger.error("系统异常", e);
         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         return AjaxResult.res(500, "系统异常，请联系管理员", null);
     }
 }
+

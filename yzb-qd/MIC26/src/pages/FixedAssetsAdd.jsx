@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card, Form, Input, Select, DatePicker, InputNumber, Button, Row, Col, message, Upload, Modal, Badge, Checkbox, Table } from 'antd';
 import { PlusOutlined, UploadOutlined, SwapOutlined } from '@ant-design/icons';
+import api from '../utils/api';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -83,18 +84,38 @@ const FixedAssetsAdd = () => {
     },
   ];
 
-  const handleSubmit = () => {
-    form.validateFields().then(values => {
+  const handleSubmit = async () => {
+    try {
       setLoading(true);
-      // 模拟提交
-      setTimeout(() => {
+      const values = await form.validateFields();
+      
+      const assetData = {
+        assetCode: values.assetCode,
+        assetName: values.assetName,
+        assetSpec: values.specification,
+        manufacturer: values.manufacturer,
+        purchaseDate: values.purchaseDate,
+        originalValue: values.originalValue,
+        netValue: values.originalValue, // 初始净值等于原值
+        location: values.location,
+        responsiblePerson: values.responsiblePerson,
+        assetState: values.status === '在用' ? 1 : 0,
+        usefulLife: values.usefulLife,
+        serialNumber: values.serialNumber
+      };
+      
+      const response = await api.post('/yzb/addAsset', assetData);
+      if (response.code === 1) {
         message.success('资产新增成功！');
         form.resetFields();
-        setLoading(false);
-      }, 1000);
-    }).catch(error => {
-      console.error('表单验证失败:', error);
-    });
+      } else {
+        message.error('资产新增失败');
+      }
+    } catch (error) {
+      message.error('请检查输入信息！');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReset = () => {

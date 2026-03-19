@@ -50,7 +50,7 @@ const CampusSelectorModal = ({ visible, onCancel, onSelect, currentCampus }) => 
                 position: 'relative',
                 overflow: 'hidden'
               }}
-              bodyStyle={{ padding: 16 }}
+              styles={{ body: { padding: 16 } }}
             >
               {currentCampus === campus.name && (
                 <div style={{

@@ -27,6 +27,7 @@ import {
   DownloadOutlined,
   ReloadOutlined
 } from '@ant-design/icons';
+import api from '../utils/api';
 
 const { Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -147,78 +148,60 @@ const PurchaseOrderAcceptance = () => {
   // 初始化数据
   const loadData = useCallback(() => {
     setLoading(true);
-    // 模拟API调用
-    setTimeout(() => {
-      // 模拟采购订单数据
-      const mockPurchaseOrders = [
-        {
-          key: '1',
-          orderNumber: 'PO-20260301-001',
-          supplierName: '医疗用品供应商A',
-          department: '采购部',
-          itemCount: 3,
-          totalAmount: 15000,
-          receiver: '张三',
-          receiptDate: '2026-03-01',
-          status: '待入库',
-          remark: '无',
-          productCode: 'P001',
-          productName: '医用口罩',
-          manufacturer: '口罩制造厂',
-          items: [
-            { key: '1-1', productCode: 'P001', productName: '医用口罩', specification: '三层防护', model: 'M-001', manufacturer: '口罩制造厂', registrationNumber: 'ZCBH001', unit: '盒', quantity: 100, price: 50, amount: 5000, status: '待验收' },
-            { key: '1-2', productCode: 'P002', productName: '医用手套', specification: '乳胶', model: 'L-001', manufacturer: '手套制造厂', registrationNumber: 'ZCBH002', unit: '盒', quantity: 200, price: 30, amount: 6000, status: '待验收' },
-            { key: '1-3', productCode: 'P003', productName: '消毒液', specification: '500ml', model: 'D-001', manufacturer: '消毒液制造厂', registrationNumber: 'ZCBH003', unit: '瓶', quantity: 100, price: 40, amount: 4000, status: '待验收' },
-          ]
-        },
-        {
-          key: '2',
-          orderNumber: 'PO-20260302-002',
-          supplierName: '医疗器械供应商B',
-          department: '采购部',
-          itemCount: 2,
-          totalAmount: 8000,
-          receiver: '李四',
-          receiptDate: '2026-03-02',
-          status: '待入库',
-          remark: '无',
-          productCode: 'P004',
-          productName: '体温计',
-          manufacturer: '体温计制造厂',
-          items: [
-            { key: '2-1', productCode: 'P004', productName: '体温计', specification: '电子', model: 'T-001', manufacturer: '体温计制造厂', registrationNumber: 'ZCBH004', unit: '支', quantity: 50, price: 100, amount: 5000, status: '已验收' },
-            { key: '2-2', productCode: 'P005', productName: '血压计', specification: '上臂式', model: 'B-001', manufacturer: '血压计制造厂', registrationNumber: 'ZCBH005', unit: '台', quantity: 20, price: 150, amount: 3000, status: '已验收' },
-          ]
-        },
-        {
-          key: '3',
-          orderNumber: 'PO-20260303-003',
-          supplierName: '消毒用品供应商C',
-          department: '采购部',
-          itemCount: 1,
-          totalAmount: 6000,
-          receiver: '王五',
-          receiptDate: '2026-03-03',
-          status: '待入库',
-          remark: '部分商品质量问题',
-          productCode: 'P006',
-          productName: '酒精',
-          manufacturer: '酒精制造厂',
-          items: [
-            { key: '3-1', productCode: 'P006', productName: '酒精', specification: '75%', model: 'A-001', manufacturer: '酒精制造厂', registrationNumber: 'ZCBH006', unit: '瓶', quantity: 100, price: 60, amount: 6000, status: '部分验收' },
-          ]
-        },
-      ];
-      
-      setData(mockPurchaseOrders);
-      setFilteredData(mockPurchaseOrders);
-      setPagination(prev => ({
-        ...prev,
-        total: mockPurchaseOrders.length,
-      }));
-      setLoading(false);
-    }, 500);
-  }, []);
+    // 从API获取待收货的采购订单
+    api.get('/api/scm/purchases/orders/pending-receive', {
+      pageNum: pagination.current,
+      pageSize: pagination.pageSize
+    })
+      .then(response => {
+        if (response.code === 1 && response.data) {
+          const orderList = response.data.records.map(order => ({
+            key: order.id,
+            orderNumber: order.orderNumber,
+            supplierName: order.supplierName,
+            department: order.departmentName,
+            itemCount: order.itemCount,
+            totalAmount: order.totalAmount,
+            receiver: order.receiverName || '',
+            receiptDate: order.receiptDate || '',
+            status: order.status,
+            remark: order.remark || '',
+            productCode: order.details && order.details.length > 0 ? order.details[0].materialCode : '',
+            productName: order.details && order.details.length > 0 ? order.details[0].productName : '',
+            manufacturer: order.details && order.details.length > 0 ? order.details[0].manufacturer : '',
+            items: order.details ? order.details.map((item, index) => ({
+              key: `${order.id}-${index}`,
+              productCode: item.materialCode,
+              productName: item.productName,
+              specification: item.specification,
+              model: item.model,
+              manufacturer: item.manufacturer,
+              registrationNumber: item.registrationNumber,
+              unit: item.unit,
+              quantity: item.quantity,
+              price: item.unitPrice,
+              amount: item.amount,
+              status: '待验收'
+            })) : []
+          }));
+          setData(orderList);
+          setFilteredData(orderList);
+          setPagination(prev => ({
+            ...prev,
+            total: response.data.total,
+          }));
+        } else {
+          message.error(response.message || '加载采购订单失败');
+        }
+      })
+      .catch(error => {
+        console.error('加载采购订单失败:', error);
+        message.error('加载采购订单失败，请检查网络连接或联系管理员');
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [pagination.current, pagination.pageSize]);
 
   useEffect(() => {
     loadData();
@@ -420,30 +403,35 @@ const PurchaseOrderAcceptance = () => {
     Modal.confirm({
       title: '确认收货',
       content: `确定要确认收货选中的 ${selectedRowKeys.length} 个订单吗？`,
-      onOk: () => {
+      onOk: async () => {
         setLoading(true);
-        // 模拟API调用
-        setTimeout(() => {
-          const updatedData = data.map(item => {
-            if (selectedRowKeys.includes(item.key)) {
-              return {
-                ...item,
-                status: '待入库',
-                items: item.items.map(subItem => ({
-                  ...subItem,
-                  status: '已验收'
+        try {
+          let successCount = 0;
+          for (const key of selectedRowKeys) {
+            const order = data.find(item => item.key === key);
+            if (order) {
+              const receiveData = {
+                receiverName: '当前用户',
+                items: order.items.map(item => ({
+                  materialId: item.productCode,
+                  quantity: item.quantity
                 }))
               };
+              const response = await api.post(`/api/scm/purchases/orders/${key}/receive`, receiveData);
+              if (response.code === 1) {
+                successCount++;
+              }
             }
-            return item;
-          });
-          
-          setData(updatedData);
-          setFilteredData(updatedData);
+          }
+          message.success(`成功确认收货 ${successCount} 个订单`);
+          loadData();
           setSelectedRowKeys([]);
+        } catch (error) {
+          console.error('批量确认收货失败:', error);
+          message.error('批量确认收货失败，请检查网络连接或联系管理员');
+        } finally {
           setLoading(false);
-          message.success(`成功确认收货 ${selectedRowKeys.length} 个订单`);
-        }, 1000);
+        }
       },
     });
   };
@@ -453,29 +441,29 @@ const PurchaseOrderAcceptance = () => {
     Modal.confirm({
       title: '确认收货',
       content: `确定要确认收货订单 ${record.orderNumber} 吗？`,
-      onOk: () => {
+      onOk: async () => {
         setLoading(true);
-        // 模拟API调用
-        setTimeout(() => {
-          const updatedData = data.map(item => {
-            if (item.key === record.key) {
-              return {
-                ...item,
-                status: '待入库',
-                items: item.items.map(subItem => ({
-                  ...subItem,
-                  status: '已验收'
-                }))
-              };
-            }
-            return item;
-          });
-          
-          setData(updatedData);
-          setFilteredData(updatedData);
+        try {
+          const receiveData = {
+            receiverName: '当前用户',
+            items: record.items.map(item => ({
+              materialId: item.productCode,
+              quantity: item.quantity
+            }))
+          };
+          const response = await api.post(`/api/scm/purchases/orders/${record.key}/receive`, receiveData);
+          if (response.code === 1) {
+            message.success(`订单 ${record.orderNumber} 已确认收货`);
+            loadData();
+          } else {
+            message.error(response.message || '确认收货失败');
+          }
+        } catch (error) {
+          console.error('确认收货失败:', error);
+          message.error('确认收货失败，请检查网络连接或联系管理员');
+        } finally {
           setLoading(false);
-          message.success(`订单 ${record.orderNumber} 已确认收货`);
-        }, 500);
+        }
       },
     });
   };
@@ -644,7 +632,7 @@ const PurchaseOrderAcceptance = () => {
     {
       title: '操作',
       key: 'action',
-      width: 100,
+      width: 200,
       align: 'center',
       render: (_, record) => (
         <Space size="small">
@@ -655,6 +643,14 @@ const PurchaseOrderAcceptance = () => {
             onClick={() => handleViewOrder(record)}
           >
             入库详情
+          </Button>
+          <Button
+            type="primary"
+            size="small"
+            icon={<CheckCircleOutlined />}
+            onClick={() => handleSingleAccept(record)}
+          >
+            确认收货
           </Button>
         </Space>
       ),
@@ -837,6 +833,16 @@ const PurchaseOrderAcceptance = () => {
       
       {/* 订单表格 */}
       <Card>
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end', gap: 16 }}>
+          <Button 
+            type="primary" 
+            icon={<CheckCircleOutlined />}
+            onClick={handleBatchAccept}
+            disabled={selectedRowKeys.length === 0}
+          >
+            批量确认收货
+          </Button>
+        </div>
         <Table
           columns={columns}
           dataSource={filteredData}

@@ -1,10 +1,23 @@
-import React from 'react';
-import { Table, Card, Input, Select, Button, Space, Tag, Row, Col } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Table, Card, Input, Select, Button, Space, Tag, Row, Col, message } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
+import api from '../utils/api';
 
 
 
 const InventoryTransfer = () => {
+  const [transferData, setTransferData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchParams, setSearchParams] = useState({
+    transferNumber: '',
+    fromWarehouse: 'all',
+    toWarehouse: 'all'
+  });
+  const [warehouseList, setWarehouseList] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+
   const transferColumns = [
     { title: '调拨单号', dataIndex: 'transferNumber', key: 'transferNumber' },
     { title: '商品名称', dataIndex: 'materialName', key: 'materialName' },
@@ -27,22 +40,112 @@ const InventoryTransfer = () => {
     { 
       title: '操作', 
       key: 'action',
-      render: () => (
+      render: (_, record) => (
         <Space size="middle">
-          <a>查看详情</a>
-          <a>编辑</a>
-          <a>取消</a>
+          <a onClick={() => handleViewDetail(record)}>查看详情</a>
+          <a onClick={() => handleEdit(record)}>编辑</a>
+          <a onClick={() => handleCancel(record)}>取消</a>
         </Space>
       )
     },
   ];
 
-  const transferData = [
-    { key: '1', transferNumber: 'TF20240601001', materialName: '一次性注射器', specification: '10ml', fromWarehouse: '仓库1', toWarehouse: '仓库2', quantity: 200, unit: '支', transferDate: '2024-06-01', transferor: '张三', status: 'completed' },
-    { key: '2', transferNumber: 'TF20240601002', materialName: '输液器', specification: '500ml', fromWarehouse: '仓库2', toWarehouse: '仓库3', quantity: 100, unit: '个', transferDate: '2024-06-01', transferor: '李四', status: 'pending' },
-    { key: '3', transferNumber: 'TF20240531001', materialName: '医用棉签', specification: '100支/包', fromWarehouse: '仓库1', toWarehouse: '仓库3', quantity: 50, unit: '包', transferDate: '2024-05-31', transferor: '王五', status: 'approved' },
-    { key: '4', transferNumber: 'TF20240530001', materialName: '酒精棉球', specification: '50g/瓶', fromWarehouse: '仓库3', toWarehouse: '仓库1', quantity: 30, unit: '瓶', transferDate: '2024-05-30', transferor: '赵六', status: 'canceled' },
-  ];
+  // 从API获取仓库列表
+  const loadWarehouseList = async () => {
+    try {
+      const response = await api.get('/api/scm/transfer/warehouses');
+      if (response.code === 1 && response.data) {
+        setWarehouseList(response.data);
+      }
+    } catch (error) {
+      console.error('加载仓库列表失败:', error);
+    }
+  };
+
+  // 从API获取调拨数据
+  const loadTransferData = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/scm/transfer/orders', {
+        ...searchParams,
+        pageNum: currentPage,
+        pageSize: pageSize
+      });
+      if (response.code === 1 && response.data) {
+        const data = response.data.records.map(item => ({
+          key: item.id,
+          transferNumber: item.transferNumber,
+          materialName: item.materialName,
+          specification: item.specification,
+          fromWarehouse: item.fromWarehouse,
+          toWarehouse: item.toWarehouse,
+          quantity: item.quantity,
+          unit: item.unit,
+          transferDate: item.transferDate,
+          transferor: item.transferor,
+          status: item.status
+        }));
+        setTransferData(data);
+        setTotal(response.data.total);
+      } else {
+        message.error(response.message || '加载调拨数据失败');
+      }
+    } catch (error) {
+      console.error('加载调拨数据失败:', error);
+      message.error('加载调拨数据失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 处理查看详情
+  const handleViewDetail = (record) => {
+    message.info(`查看调拨单 ${record.transferNumber} 详情`);
+  };
+
+  // 处理编辑
+  const handleEdit = (record) => {
+    message.info(`编辑调拨单 ${record.transferNumber}`);
+  };
+
+  // 处理取消
+  const handleCancel = (record) => {
+    message.info(`取消调拨单 ${record.transferNumber}`);
+  };
+
+  // 处理搜索
+  const handleSearch = () => {
+    setCurrentPage(1);
+    loadTransferData();
+  };
+
+  // 处理分页变化
+  const handlePaginationChange = (page, pageSize) => {
+    setCurrentPage(page);
+    setPageSize(pageSize);
+    loadTransferData();
+  };
+
+  // 处理重置
+  const handleReset = () => {
+    setSearchParams({
+      transferNumber: '',
+      fromWarehouse: 'all',
+      toWarehouse: 'all'
+    });
+    loadTransferData();
+  };
+
+  // 处理新建调拨
+  const handleCreateTransfer = () => {
+    message.info('新建调拨单');
+  };
+
+  // 组件加载时获取数据
+  useEffect(() => {
+    loadWarehouseList();
+    loadTransferData();
+  }, []);
 
   return (
     <div style={{ padding: '0 16px' }}>
@@ -52,30 +155,50 @@ const InventoryTransfer = () => {
         <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>调拨单号：</span>
-            <Input placeholder="请输入调拨单号" style={{ width: '200px' }} />
+            <Input 
+              placeholder="请输入调拨单号" 
+              style={{ width: '200px' }} 
+              value={searchParams.transferNumber}
+              onChange={(e) => setSearchParams({...searchParams, transferNumber: e.target.value})}
+            />
           </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>调出仓库：</span>
-            <Select placeholder="请选择调出仓库" style={{ width: '200px' }}>
+            <Select 
+              placeholder="请选择调出仓库" 
+              style={{ width: '200px' }}
+              value={searchParams.fromWarehouse}
+              onChange={(value) => setSearchParams({...searchParams, fromWarehouse: value})}
+            >
               <Select.Option value="all">全部仓库</Select.Option>
-              <Select.Option value="warehouse1">仓库1</Select.Option>
-              <Select.Option value="warehouse2">仓库2</Select.Option>
-              <Select.Option value="warehouse3">仓库3</Select.Option>
+              {warehouseList.map(warehouse => (
+                <Select.Option key={warehouse.value} value={warehouse.value}>
+                  {warehouse.label}
+                </Select.Option>
+              ))}
             </Select>
           </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>调入仓库：</span>
-            <Select placeholder="请选择调入仓库" style={{ width: '200px' }}>
+            <Select 
+              placeholder="请选择调入仓库" 
+              style={{ width: '200px' }}
+              value={searchParams.toWarehouse}
+              onChange={(value) => setSearchParams({...searchParams, toWarehouse: value})}
+            >
               <Select.Option value="all">全部仓库</Select.Option>
-              <Select.Option value="warehouse1">仓库1</Select.Option>
-              <Select.Option value="warehouse2">仓库2</Select.Option>
-              <Select.Option value="warehouse3">仓库3</Select.Option>
+              {warehouseList.map(warehouse => (
+                <Select.Option key={warehouse.value} value={warehouse.value}>
+                  {warehouse.label}
+                </Select.Option>
+              ))}
             </Select>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-          <Button type="primary">新建调拨</Button>
+          <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
+          <Button onClick={handleReset}>重置</Button>
+          <Button type="primary" onClick={handleCreateTransfer}>新建调拨</Button>
         </div>
       </Card>
       
@@ -97,11 +220,15 @@ const InventoryTransfer = () => {
             })
           }))} 
           dataSource={transferData} 
+          loading={loading}
           pagination={{ 
-            pageSize: 10,
+            current: currentPage,
+            pageSize: pageSize,
+            total: total,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条记录`,
+            onChange: handlePaginationChange,
             style: {
               display: 'flex',
               justifyContent: 'center',

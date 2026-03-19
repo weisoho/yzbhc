@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Card, Table, Space, Tag, Select, Input, Button, Modal, Checkbox, Typography } from 'antd';
+import { Card, Table, Space, Tag, Select, Input, Button, Modal, Checkbox, Typography, message } from 'antd';
 import { SearchOutlined, WarningOutlined, AlertOutlined, CheckCircleOutlined, EyeOutlined, PlusOutlined, FileOutlined, InboxOutlined, DownloadOutlined } from '@ant-design/icons';
 import moment from 'moment';
+import api from '../utils/api';
 
 const { Text } = Typography;
 
 const SupplierQualificationWarning = () => {
   const [warningData, setWarningData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [statistics, setStatistics] = useState({ supplierCount: 0, manufacturerCount: 0, productCount: 0 });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -19,187 +24,140 @@ const SupplierQualificationWarning = () => {
   const [supplyChainData, setSupplyChainData] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState('hefei'); // hefei, asahi
   const [supplyChainTab, setSupplyChainTab] = useState('basic'); // basic, qualification, contract
+  
+  // 搜索参数
+  const [searchParams, setSearchParams] = useState({
+    supplier: '',
+    certificateType: '',
+    status: '',
+    certificateNumber: '',
+    manufacturer: '',
+    productName: '',
+    days: ''
+  });
 
-  // 模拟数据：整合所有供应商的资质信息
-  const qualificationData = [
-    // 营业执照数据
-    {
-      key: '1',
-      supplierName: '供应商A',
-      certificateType: '营业执照',
-      certificateNumber: 'BC2024001',
-      expiryDate: '2029-12-31',
-      status: '有效',
-      daysUntilExpiry: 1430,
-    },
-    {
-      key: '2',
-      supplierName: '供应商B',
-      certificateType: '营业执照',
-      certificateNumber: 'BC2024002',
-      expiryDate: '2026-11-19',
-      status: '即将过期',
-      daysUntilExpiry: 300,
-    },
-    {
-      key: '3',
-      supplierName: '供应商C',
-      certificateType: '营业执照',
-      certificateNumber: 'BC2024003',
-      expiryDate: '2026-03-15',
-      status: '即将过期',
-      daysUntilExpiry: 45,
-    },
-    // 经营许可证数据
-    {
-      key: '4',
-      supplierName: '供应商A',
-      certificateType: '经营许可证',
-      certificateNumber: 'BL2024001',
-      expiryDate: '2028-01-15',
-      status: '有效',
-      daysUntilExpiry: 730,
-    },
-    {
-      key: '5',
-      supplierName: '供应商B',
-      certificateType: '经营许可证',
-      certificateNumber: 'BL2024002',
-      expiryDate: '2026-02-28',
-      status: '即将过期',
-      daysUntilExpiry: 30,
-    },
-    {
-      key: '6',
-      supplierName: '供应商C',
-      certificateType: '经营许可证',
-      certificateNumber: 'BL2024003',
-      expiryDate: '2026-02-15',
-      status: '即将过期',
-      daysUntilExpiry: 15,
-    },
-    // 生产许可证数据
-    {
-      key: '7',
-      supplierName: '供应商A',
-      certificateType: '生产许可证',
-      certificateNumber: 'SC2024001',
-      expiryDate: '2027-06-30',
-      status: '有效',
-      daysUntilExpiry: 1095,
-    },
-    {
-      key: '8',
-      supplierName: '供应商B',
-      certificateType: '生产许可证',
-      certificateNumber: 'SC2024002',
-      expiryDate: '2026-02-10',
-      status: '即将过期',
-      daysUntilExpiry: 10,
-    },
-    {
-      key: '9',
-      supplierName: '供应商C',
-      certificateType: '生产许可证',
-      certificateNumber: 'SC2024003',
-      expiryDate: '2026-01-25',
-      status: '已过期',
-      daysUntilExpiry: -5,
-    },
-  ];
+  // 加载统计数据
+  const fetchStatistics = async () => {
+    try {
+      const response = await api.get('/api/scm/suppliers/warning-statistics');
+      if (response.code === 1) {
+        setStatistics(response.data);
+      }
+    } catch (error) {
+      console.error('加载统计数据失败:', error);
+    }
+  };
 
-  // 计算预警状态
+  // 计算预警状态 (辅助函数，用于显示)
   const calculateWarningStatus = (expiryDate) => {
     try {
       const today = moment();
-      let expiry;
-      
-      // 检查 expiryDate 是否为 null 或 undefined
-      if (expiryDate == null) {
-        return { status: '无效日期', daysUntilExpiry: 0 };
-      }
-      
-      // 检查是否已经是 moment 对象
-      if (typeof expiryDate.isValid === 'function') {
-        expiry = expiryDate;
-      } else {
-        // 尝试转换为 moment 对象
-        expiry = moment(expiryDate);
-      }
-      
-      // 检查日期是否有效
-      if (!expiry.isValid()) {
-        return { status: '无效日期', daysUntilExpiry: 0 };
-      }
-      
+      let expiry = moment(expiryDate);
+      if (!expiry.isValid()) return { status: '无效日期', daysUntilExpiry: 0 };
       const diffDays = expiry.diff(today, 'days');
-
-      if (diffDays < 0) {
-        return { status: '已过期', daysUntilExpiry: diffDays };
-      } else if (diffDays <= 90) {
-        return { status: '即将过期', daysUntilExpiry: diffDays };
-      } else {
-        return { status: '有效', daysUntilExpiry: diffDays };
-      }
+      if (diffDays < 0) return { status: '已过期', daysUntilExpiry: diffDays };
+      else if (diffDays <= 90) return { status: '即将过期', daysUntilExpiry: diffDays };
+      else return { status: '有效', daysUntilExpiry: diffDays };
     } catch {
-      // 日期计算错误
       return { status: '计算错误', daysUntilExpiry: 0 };
     }
   };
 
-  // 模拟厂商数据
-  const mockManufacturerData = [
-    { key: '1', manufacturer: '莲花医疗用品有限公司', pinyin: 'LHLYPYXGS', supplier: '安徽精诚医疗器械贸易有限公司', companyType: '生产企业', expiredCount: 0 },
-    { key: '2', manufacturer: '波科国际医疗贸易（上海）有限公司', pinyin: 'BKGJLYMY (SH) YXGS', supplier: '安徽精诚医疗器械贸易有限公司', companyType: '生产企业', expiredCount: 0 },
-    { key: '3', manufacturer: '爱瑞通医疗器械（北京）有限公司', pinyin: 'ARTYLQJX (BJ) YXGS', supplier: '安徽精诚医疗器械贸易有限公司', companyType: '生产企业', expiredCount: 0 },
-    { key: '4', manufacturer: '朝日英达科（北京）有限公司', pinyin: 'CRYDKS (BJ) YXGS', supplier: '安徽精诚医疗器械贸易有限公司', companyType: '生产企业', expiredCount: 0 },
-    { key: '5', manufacturer: '美敦力（上海）管理有限公司', pinyin: 'MDL (SH) GLYXGS', supplier: '安徽精诚医疗器械贸易有限公司', companyType: '生产企业', expiredCount: 0 },
-    { key: '6', manufacturer: '尼普诺医疗器械贸易（上海）有限公司', pinyin: 'NPNYLQXMY (SH) YXGS', supplier: '安徽精诚医疗器械贸易有限公司', companyType: '生产企业', expiredCount: 0 },
-    { key: '7', manufacturer: '北京仙桥医疗科技有限公司', pinyin: 'BJXQLYJS (BJ) YXGS', supplier: '安徽精诚医疗器械贸易有限公司', companyType: '生产企业', expiredCount: 0 },
-    { key: '8', manufacturer: '杭州山友医疗器械有限公司', pinyin: 'HSYLYQX (HZ) YXGS', supplier: '安徽精诚医疗器械贸易有限公司', companyType: '生产企业', expiredCount: 0 },
-    { key: '9', manufacturer: '扬州晨阳医疗器械有限公司', pinyin: 'YZCYLYQX (YZ) YXGS', supplier: '安徽精诚医疗器械贸易有限公司', companyType: '经营企业', expiredCount: 0 },
-  ];
-
-  // 模拟产品数据
-  const mockProductData = [
-    { key: '1', productName: 'PTCA导丝', productType: '高值耗材', qualificationNumber: '国械注进20183301817', supplier: '合肥博雅医疗科技有限公司', expiryDate: '2028-03-14' },
-    { key: '2', productName: 'PTCA导丝', productType: '高值耗材', qualificationNumber: '国械注进20183301817', supplier: '合肥博雅医疗科技有限公司', expiryDate: '2028-03-14' },
-    { key: '3', productName: 'PTCA导丝', productType: '高值耗材', qualificationNumber: '国械注进20183301817', supplier: '合肥博雅医疗科技有限公司', expiryDate: '2028-03-14' },
-    { key: '4', productName: 'PTCA导丝', productType: '高值耗材', qualificationNumber: '国械注进20183301817', supplier: '合肥博雅医疗科技有限公司', expiryDate: '2028-03-14' },
-    { key: '5', productName: 'PTCA导丝', productType: '高值耗材', qualificationNumber: '国械注进20183301817', supplier: '合肥博雅医疗科技有限公司', expiryDate: '2028-03-14' },
-    { key: '6', productName: 'PTCA导丝', productType: '高值耗材', qualificationNumber: '国械注进20183301817', supplier: '合肥博雅医疗科技有限公司', expiryDate: '2028-03-14' },
-    { key: '7', productName: 'Y形连接器', productType: '低值耗材', qualificationNumber: '注册证许可2025472', supplier: '演示供应商', expiryDate: '2027-12-31' },
-    { key: '8', productName: '充盈压力泵系统', productType: '低值耗材', qualificationNumber: '国械注进20183302060', supplier: '演示供应商', expiryDate: '2027-03-29' },
-    { key: '9', productName: '穿刺针', productType: '低值耗材', qualificationNumber: '45542446153055', supplier: '测试供应商-kkk', expiryDate: '2099-12-31' },
-  ];
-
   // 加载预警数据
-  useEffect(() => {
+  const loadWarningData = async () => {
     setLoading(true);
-    
-    // 模拟API请求延迟
-    setTimeout(() => {
-      const processedData = qualificationData.map(item => {
-        const { status, daysUntilExpiry } = calculateWarningStatus(item.expiryDate);
-        return {
-          ...item,
-          status,
-          daysUntilExpiry,
+    try {
+      let response;
+      if (mainTab === 'supplier' || mainTab === 'product') {
+        const params = {
+          pageNum: currentPage,
+          pageSize: pageSize,
+          certificateName: mainTab === 'supplier' ? searchParams.supplier : searchParams.productName,
+          type: mainTab === 'product' ? 'REGISTRATION_CERTIFICATE' : searchParams.certificateType,
+          licenseNumber: searchParams.certificateNumber,
+          warningStatus: searchParams.status === '已过期' ? 'EXPIRED' : (searchParams.status === '即将过期' ? 'EXPIRING_SOON' : (searchParams.status === '有效' ? 'VALID' : '')),
+          warningDays: searchParams.days ? parseInt(searchParams.days) : null
         };
-      });
-      
-      // 按预警级别排序：已过期 > 即将过期 > 有效
-      const sortedData = processedData.sort((a, b) => {
-        const statusOrder = { '已过期': 0, '即将过期': 1, '有效': 2 };
-        return statusOrder[a.status] - statusOrder[b.status];
-      });
-      
-      setWarningData(sortedData);
-      setManufacturerData(mockManufacturerData);
-      setProductData(mockProductData);
+        
+        // 如果是供应商页且没有选类型，排除注册证
+        if (mainTab === 'supplier' && !params.type) {
+          // 后端需要处理排除逻辑，或者前端过滤。这里假设后端返回所有。
+        }
+
+        response = await api.get('/api/scm/suppliers/qualifications', params);
+        if (response.code === 1 && response.data) {
+          const { records, total: totalCount } = response.data;
+          const processedData = records.map(item => {
+            const { status, daysUntilExpiry } = calculateWarningStatus(item.expiryDate);
+            return {
+              ...item,
+              key: item.id,
+              supplierName: item.supplierName,
+              certificateType: item.type,
+              certificateNumber: item.licenseNumber,
+              status,
+              daysUntilExpiry,
+            };
+          });
+          
+          if (mainTab === 'supplier') {
+            setWarningData(processedData);
+          } else {
+            setProductData(processedData.map(item => ({
+              ...item,
+              productName: item.certificateName,
+              productType: item.licenseType,
+              qualificationNumber: item.licenseNumber,
+              supplier: item.supplierName
+            })));
+          }
+          setTotal(totalCount);
+        }
+      } else if (mainTab === 'manufacturer') {
+        // 厂商分页逻辑：目前后端没有直接支持，通过物资字典获取
+        const params = {
+          pageNum: currentPage,
+          pageSize: pageSize,
+          manufacturer: searchParams.manufacturer,
+          supplier: searchParams.supplier
+        };
+        response = await api.get('/api/scm/materials', params);
+        if (response.code === 1 && response.data) {
+          const { records, total: totalCount } = response.data;
+          // 去重厂商
+          const uniqueManufacturers = [];
+          const seen = new Set();
+          records.forEach(item => {
+            if (item.manufacturer && !seen.has(item.manufacturer)) {
+              seen.add(item.manufacturer);
+              uniqueManufacturers.push({
+                key: item.id,
+                manufacturer: item.manufacturer,
+                supplier: item.supplierName,
+                companyType: '生产企业',
+                expiredCount: 0 // 实际应从后端获取
+              });
+            }
+          });
+          setManufacturerData(uniqueManufacturers);
+          setTotal(totalCount); // 这里的 total 可能不准确，因为去重了
+        }
+      }
+    } catch (error) {
+      console.error('加载预警数据失败:', error);
+      message.error('加载预警数据失败');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
+  };
+  
+  useEffect(() => {
+    fetchStatistics();
   }, []);
+
+  useEffect(() => {
+    loadWarningData();
+  }, [mainTab, currentPage, pageSize]);
 
   // 状态标签渲染
   const renderStatusTag = (status) => {
@@ -331,6 +289,35 @@ const SupplierQualificationWarning = () => {
     };
     setSupplyChainData(chainData);
     setShowSupplyChainModal(true);
+  };
+  
+  // 处理搜索参数变化
+  const handleSearchParamChange = (field, value) => {
+    setSearchParams(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+  
+  // 处理搜索
+  const handleSearch = () => {
+    setCurrentPage(1);
+    loadWarningData();
+  };
+  
+  // 处理重置
+  const handleReset = () => {
+    setSearchParams({
+      supplier: '',
+      certificateType: '',
+      status: '',
+      certificateNumber: '',
+      manufacturer: '',
+      productName: '',
+      days: ''
+    });
+    setCurrentPage(1);
+    // loadWarningData 会在 useEffect 中被触发，因为 currentPage 改变了
   };
 
   const columns = [
@@ -499,23 +486,23 @@ const SupplierQualificationWarning = () => {
           <Button 
             key="supplier-tab"
             type={mainTab === 'supplier' ? 'primary' : 'default'}
-            onClick={() => setMainTab('supplier')}
+            onClick={() => { setMainTab('supplier'); setCurrentPage(1); }}
           >
-            供应商 (210)
+            供应商 ({statistics.supplierCount})
           </Button>
           <Button 
             key="manufacturer-tab"
             type={mainTab === 'manufacturer' ? 'primary' : 'default'}
-            onClick={() => setMainTab('manufacturer')}
+            onClick={() => { setMainTab('manufacturer'); setCurrentPage(1); }}
           >
-            厂商 (353)
+            厂商 ({statistics.manufacturerCount})
           </Button>
           <Button 
             key="product-tab"
             type={mainTab === 'product' ? 'primary' : 'default'}
-            onClick={() => setMainTab('product')}
+            onClick={() => { setMainTab('product'); setCurrentPage(1); }}
           >
-            产品 (891)
+            产品 ({statistics.productCount})
           </Button>
         </Space>
       </div>
@@ -529,16 +516,21 @@ const SupplierQualificationWarning = () => {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>选择供应商：</span>
-                  <Select placeholder="选择供应商" style={{ width: 200 }}>
-                    <Select.Option value="">全部供应商</Select.Option>
-                    <Select.Option value="供应商A">供应商A</Select.Option>
-                    <Select.Option value="供应商B">供应商B</Select.Option>
-                    <Select.Option value="供应商C">供应商C</Select.Option>
-                  </Select>
+                  <Input 
+                    placeholder="输入供应商名称进行模糊查询" 
+                    style={{ width: 200 }}
+                    value={searchParams.supplier}
+                    onChange={(e) => handleSearchParamChange('supplier', e.target.value)}
+                  />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>选择资质类型：</span>
-                  <Select placeholder="选择资质类型" style={{ width: 180 }}>
+                  <Select 
+                    placeholder="选择资质类型" 
+                    style={{ width: 180 }}
+                    value={searchParams.certificateType}
+                    onChange={(value) => handleSearchParamChange('certificateType', value)}
+                  >
                     <Select.Option value="">全部类型</Select.Option>
                     <Select.Option value="营业执照">营业执照</Select.Option>
                     <Select.Option value="经营许可证">经营许可证</Select.Option>
@@ -547,7 +539,12 @@ const SupplierQualificationWarning = () => {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>选择预警状态：</span>
-                  <Select placeholder="选择预警状态" style={{ width: 150 }}>
+                  <Select 
+                    placeholder="选择预警状态" 
+                    style={{ width: 150 }}
+                    value={searchParams.status}
+                    onChange={(value) => handleSearchParamChange('status', value)}
+                  >
                     <Select.Option value="">全部状态</Select.Option>
                     <Select.Option value="已过期">已过期</Select.Option>
                     <Select.Option value="即将过期">即将过期</Select.Option>
@@ -556,14 +553,19 @@ const SupplierQualificationWarning = () => {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>搜索资质编号：</span>
-                  <Input placeholder="搜索资质编号" style={{ width: 200 }} />
+                  <Input 
+                    placeholder="搜索资质编号" 
+                    style={{ width: 200 }}
+                    value={searchParams.certificateNumber}
+                    onChange={(e) => handleSearchParamChange('certificateNumber', e.target.value)}
+                  />
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <Button type="primary" icon={<SearchOutlined />}>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
                   查询
                 </Button>
-                <Button icon={<SearchOutlined />}>
+                <Button icon={<SearchOutlined />} onClick={handleReset}>
                   重置
                 </Button>
               </div>
@@ -588,7 +590,9 @@ const SupplierQualificationWarning = () => {
               columns={columns}
               dataSource={warningData}
               pagination={{ 
-                pageSize: 10,
+                total: total,
+                current: currentPage,
+                pageSize: pageSize,
                 showSizeChanger: true,
                 showQuickJumper: true,
                 showTotal: (total) => `共 ${total} 条记录`,
@@ -596,6 +600,10 @@ const SupplierQualificationWarning = () => {
                   display: 'flex',
                   justifyContent: 'center',
                   marginTop: '16px'
+                },
+                onChange: (page, size) => {
+                  setCurrentPage(page);
+                  setPageSize(size);
                 }
               }}
               loading={loading}
@@ -617,15 +625,30 @@ const SupplierQualificationWarning = () => {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>生产/代理商：</span>
-                  <Input placeholder="输入名称/拼音查询" style={{ width: 250 }} />
+                  <Input 
+                    placeholder="输入名称/拼音查询" 
+                    style={{ width: 250 }}
+                    value={searchParams.manufacturer}
+                    onChange={(e) => handleSearchParamChange('manufacturer', e.target.value)}
+                  />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>供应商：</span>
-                  <Input placeholder="输入名称/拼音缩写查询" style={{ width: 250 }} />
+                  <Input 
+                    placeholder="输入名称/拼音缩写查询" 
+                    style={{ width: 250 }}
+                    value={searchParams.supplier}
+                    onChange={(e) => handleSearchParamChange('supplier', e.target.value)}
+                  />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>到期天数：</span>
-                  <Select placeholder="请选择到期天数" style={{ width: 200 }}>
+                  <Select 
+                    placeholder="请选择到期天数" 
+                    style={{ width: 200 }}
+                    value={searchParams.days}
+                    onChange={(value) => handleSearchParamChange('days', value)}
+                  >
                     <Select.Option value="">全部</Select.Option>
                     <Select.Option value="30">30天内</Select.Option>
                     <Select.Option value="60">60天内</Select.Option>
@@ -634,10 +657,10 @@ const SupplierQualificationWarning = () => {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <Button type="primary" icon={<SearchOutlined />}>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
                   查询
                 </Button>
-                <Button icon={<SearchOutlined />}>
+                <Button icon={<SearchOutlined />} onClick={handleReset}>
                   重置
                 </Button>
               </div>
@@ -836,7 +859,9 @@ const SupplierQualificationWarning = () => {
               ]}
               dataSource={manufacturerData}
               pagination={{ 
-                pageSize: 10,
+                total: total,
+                current: currentPage,
+                pageSize: pageSize,
                 showSizeChanger: true,
                 showQuickJumper: true,
                 showTotal: (total) => `共 ${total} 条记录`,
@@ -844,6 +869,10 @@ const SupplierQualificationWarning = () => {
                   display: 'flex',
                   justifyContent: 'center',
                   marginTop: '16px'
+                },
+                onChange: (page, size) => {
+                  setCurrentPage(page);
+                  setPageSize(size);
                 }
               }}
               loading={loading}
@@ -865,11 +894,21 @@ const SupplierQualificationWarning = () => {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>产品名称：</span>
-                  <Input placeholder="输入产品名称模糊查询" style={{ width: 250 }} />
+                  <Input 
+                    placeholder="输入产品名称模糊查询" 
+                    style={{ width: 250 }}
+                    value={searchParams.productName}
+                    onChange={(e) => handleSearchParamChange('productName', e.target.value)}
+                  />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>到期天数：</span>
-                  <Select placeholder="请选择到期天数" style={{ width: 200 }}>
+                  <Select 
+                    placeholder="请选择到期天数" 
+                    style={{ width: 200 }}
+                    value={searchParams.days}
+                    onChange={(value) => handleSearchParamChange('days', value)}
+                  >
                     <Select.Option value="">全部</Select.Option>
                     <Select.Option value="30">30天内</Select.Option>
                     <Select.Option value="60">60天内</Select.Option>
@@ -878,14 +917,19 @@ const SupplierQualificationWarning = () => {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span>供应商：</span>
-                  <Input placeholder="输入供应商名称模糊查询" style={{ width: 250 }} />
+                  <Input 
+                    placeholder="输入供应商名称模糊查询" 
+                    style={{ width: 250 }}
+                    value={searchParams.supplier}
+                    onChange={(e) => handleSearchParamChange('supplier', e.target.value)}
+                  />
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <Button type="primary" icon={<SearchOutlined />}>
+                <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
                   查询
                 </Button>
-                <Button icon={<SearchOutlined />}>
+                <Button icon={<SearchOutlined />} onClick={handleReset}>
                   重置
                 </Button>
               </div>
@@ -1079,7 +1123,9 @@ const SupplierQualificationWarning = () => {
               ]}
               dataSource={productData}
               pagination={{ 
-                pageSize: 10,
+                total: total,
+                current: currentPage,
+                pageSize: pageSize,
                 showSizeChanger: true,
                 showQuickJumper: true,
                 showTotal: (total) => `共 ${total} 条记录`,
@@ -1087,6 +1133,10 @@ const SupplierQualificationWarning = () => {
                   display: 'flex',
                   justifyContent: 'center',
                   marginTop: '16px'
+                },
+                onChange: (page, size) => {
+                  setCurrentPage(page);
+                  setPageSize(size);
                 }
               }}
               loading={loading}

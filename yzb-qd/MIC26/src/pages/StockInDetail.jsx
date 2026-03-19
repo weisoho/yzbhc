@@ -19,71 +19,28 @@ const StockInDetail = () => {
     const fetchStockInDetails = async () => {
       setLoading(true);
       try {
-        const response = await api.get('/api/stock-in-details');
-        // 为每个记录添加key属性
-        const data = response.data.map((item, index) => ({
-          ...item,
-          key: item.id || index.toString()
-        }));
-        setStockInDetails(data);
+        const response = await api.get('/api/scm/stock-in/orders');
+        if (response.code === 1 && response.data) {
+          // 为每个记录添加key属性
+          const data = response.data.records.map((item, index) => ({
+            ...item,
+            key: item.id || index.toString(),
+            date: item.createTime,
+            operator: item.operatorName,
+            stockInType: item.stockInType,
+            materialCount: item.itemCount,
+            totalAmount: item.totalAmount,
+            remark: item.remark,
+            supplier: item.supplierName,
+            items: item.details || []
+          }));
+          setStockInDetails(data);
+        } else {
+          message.error(response.message || '获取入库单数据失败');
+        }
       } catch (error) {
         console.error('获取入库单数据失败:', error);
-        message.error('获取入库单数据失败，请稍后重试');
-        // 使用模拟数据作为备用
-        const mockData = [
-          {
-            key: '1',
-            id: '1',
-            stockInNumber: 'SI-20240220-001',
-            date: '2024-02-20',
-            operator: '张三',
-            stockInType: '采购入库',
-            materialCount: 1000,
-            totalAmount: 5000,
-            remark: '常规采购',
-            supplier: '供应商A',
-            items: [
-              { materialCode: 'MAT001', materialName: '一次性注射器', materialType: '采购入库', specification: '2ml', model: 'SYR-001', batchNumber: '20240201', productionDate: '2024-02-01', expiryDate: '2025-02-01', minPackage: '100支/盒', unit: '支', purchasePrice: 2.5, stockInQuantity: 500, registrationNumber: '国药准字H20240001', supplier: '供应商A', manufacturer: '医疗用品有限公司', remark: '常规采购' },
-              { materialCode: 'MAT002', materialName: '输液器', materialType: '采购入库', specification: '50ml', model: 'INF-001', batchNumber: '20240202', productionDate: '2024-02-02', expiryDate: '2025-02-02', minPackage: '50支/盒', unit: '支', purchasePrice: 3.0, stockInQuantity: 300, registrationNumber: '国药准字H20240002', supplier: '供应商A', manufacturer: '医疗用品有限公司', remark: '常规采购' },
-              { materialCode: 'MAT003', materialName: '医用棉签', materialType: '采购入库', specification: '10cm', model: 'COT-001', batchNumber: '20240203', productionDate: '2024-02-03', expiryDate: '2025-02-03', minPackage: '1000支/包', unit: '支', purchasePrice: 0.1, stockInQuantity: 2000, registrationNumber: '国药准字H20240003', supplier: '供应商A', manufacturer: '医疗用品有限公司', remark: '常规采购' }
-            ]
-          },
-          {
-            key: '2',
-            id: '2',
-            stockInNumber: 'SI-20240219-002',
-            date: '2024-02-19',
-            operator: '李四',
-            stockInType: '采购入库',
-            materialCount: 500,
-            totalAmount: 3000,
-            remark: '紧急采购',
-            supplier: '供应商B',
-            items: [
-              { materialCode: 'MAT004', materialName: '医用口罩', materialType: '采购入库', specification: 'N95', model: 'MAS-001', batchNumber: '20240204', productionDate: '2024-02-04', expiryDate: '2025-02-04', minPackage: '50个/盒', unit: '个', purchasePrice: 3.0, stockInQuantity: 1000, registrationNumber: '国药准字H20240004', supplier: '供应商B', manufacturer: '防护用品有限公司', remark: '紧急采购' },
-              { materialCode: 'MAT005', materialName: '消毒液', materialType: '采购入库', specification: '500ml', model: 'DIS-001', batchNumber: '20240205', productionDate: '2024-02-05', expiryDate: '2025-02-05', minPackage: '20瓶/箱', unit: '瓶', purchasePrice: 10.0, stockInQuantity: 200, registrationNumber: '国药准字H20240005', supplier: '供应商B', manufacturer: '消毒制品有限公司', remark: '紧急采购' },
-              { materialCode: 'MAT006', materialName: '手术手套', materialType: '采购入库', specification: '乳胶', model: 'GLO-001', batchNumber: '20240206', productionDate: '2024-02-06', expiryDate: '2025-02-06', minPackage: '100副/盒', unit: '副', purchasePrice: 2.0, stockInQuantity: 500, registrationNumber: '国药准字H20240006', supplier: '供应商B', manufacturer: '医疗用品有限公司', remark: '紧急采购' }
-            ]
-          },
-          {
-            key: '3',
-            id: '3',
-            stockInNumber: 'SI-20240218-003',
-            date: '2024-02-18',
-            operator: '王五',
-            stockInType: '初始化入库',
-            materialCount: 200,
-            totalAmount: 1000,
-            remark: '初始库存',
-            supplier: '供应商A',
-            items: [
-              { materialCode: 'MAT007', materialName: '体温计', materialType: '初始化入库', specification: '电子', model: 'THE-001', batchNumber: '20240207', productionDate: '2024-02-07', expiryDate: '2025-02-07', minPackage: '20个/盒', unit: '个', purchasePrice: 50.0, stockInQuantity: 10, registrationNumber: '国药准字H20240007', supplier: '供应商A', manufacturer: '医疗器械有限公司', remark: '初始库存' },
-              { materialCode: 'MAT008', materialName: '血压计', materialType: '初始化入库', specification: '上臂式', model: 'BPG-001', batchNumber: '20240208', productionDate: '2024-02-08', expiryDate: '2025-02-08', minPackage: '10台/箱', unit: '台', purchasePrice: 200.0, stockInQuantity: 5, registrationNumber: '国药准字H20240008', supplier: '供应商A', manufacturer: '医疗器械有限公司', remark: '初始库存' },
-              { materialCode: 'MAT009', materialName: '纱布', materialType: '初始化入库', specification: '10cm*10cm', model: 'Gau-001', batchNumber: '20240209', productionDate: '2024-02-09', expiryDate: '2025-02-09', minPackage: '100片/包', unit: '片', purchasePrice: 0.5, stockInQuantity: 1000, registrationNumber: '国药准字H20240009', supplier: '供应商A', manufacturer: '医疗用品有限公司', remark: '初始库存' }
-            ]
-          }
-        ];
-        setStockInDetails(mockData);
+        message.error('获取入库单数据失败，请检查网络连接或联系管理员');
       } finally {
         setLoading(false);
       }
@@ -125,58 +82,41 @@ const StockInDetail = () => {
   const handleSearch = async (values) => {
     setLoading(true);
     try {
+      // 构建查询参数
+      const params = {
+        stockInNumber: values.stockInNumber,
+        productCode: values.materialCode,
+        productName: values.materialName,
+        supplier: values.supplier,
+        manufacturer: values.manufacturer
+      };
+      
       // 发送搜索请求到后端
-      const response = await api.get('/api/stock-in-details/search', values);
-      // 为每个记录添加key属性
-      const data = response.data.map((item, index) => ({
-        ...item,
-        key: item.id || index.toString()
-      }));
-      setFilteredData(data);
-      setShowCatalog(true);
+      const response = await api.get('/api/scm/stock-in/orders', { params });
+      if (response.code === 1 && response.data) {
+        // 为每个记录添加key属性
+        const data = response.data.records.map((item, index) => ({
+          ...item,
+          key: item.id || index.toString(),
+          date: item.createTime,
+          operator: item.operatorName,
+          stockInType: item.stockInType,
+          materialCount: item.itemCount,
+          totalAmount: item.totalAmount,
+          remark: item.remark,
+          supplier: item.supplierName,
+          materialCode: item.details?.[0]?.materialCode,
+          materialName: item.details?.[0]?.materialName,
+          manufacturer: item.details?.[0]?.manufacturer
+        }));
+        setFilteredData(data);
+        setShowCatalog(true);
+      } else {
+        message.error(response.message || '搜索入库单数据失败');
+      }
     } catch (error) {
       console.error('搜索入库单数据失败:', error);
-      message.error('搜索入库单数据失败，请稍后重试');
-      // 在前端进行过滤作为备用
-      let result = [...stockInDetails];
-
-      // 按入库单号筛选
-      if (values.stockInNumber) {
-        result = result.filter(item => 
-          item.stockInNumber.toLowerCase().includes(values.stockInNumber.toLowerCase())
-        );
-      }
-
-      // 按物资编码筛选
-      if (values.materialCode) {
-        result = result.filter(item => 
-          item.materialCode && item.materialCode.toLowerCase().includes(values.materialCode.toLowerCase())
-        );
-      }
-
-      // 按物资名称筛选
-      if (values.materialName) {
-        result = result.filter(item => 
-          item.materialName && item.materialName.toLowerCase().includes(values.materialName.toLowerCase())
-        );
-      }
-
-      // 按供应商筛选
-      if (values.supplier) {
-        result = result.filter(item => 
-          item.supplier && item.supplier.toLowerCase().includes(values.supplier.toLowerCase())
-        );
-      }
-
-      // 按生产厂家筛选
-      if (values.manufacturer) {
-        result = result.filter(item => 
-          item.manufacturer && item.manufacturer.toLowerCase().includes(values.manufacturer.toLowerCase())
-        );
-      }
-
-      setFilteredData(result);
-      setShowCatalog(true);
+      message.error('搜索入库单数据失败，请检查网络连接或联系管理员');
     } finally {
       setLoading(false);
     }
@@ -186,12 +126,28 @@ const StockInDetail = () => {
     setLoading(true);
     try {
       // 从后端获取入库单详情数据
-      const response = await api.get(`/api/stock-in-details/${record.id || record.key}`);
-      setSelectedRecord(response.data);
-      setIsDetailModalVisible(true);
+      const response = await api.get(`/api/scm/stock-in/orders/${record.id || record.key}`);
+      if (response.code === 1 && response.data) {
+        const detailData = {
+          ...response.data,
+          stockInNumber: response.data.stockInNumber,
+          date: response.data.createTime,
+          operator: response.data.operatorName,
+          stockInType: response.data.stockInType,
+          materialCount: response.data.itemCount,
+          totalAmount: response.data.totalAmount,
+          remark: response.data.remark,
+          supplier: response.data.supplierName,
+          items: response.data.details || []
+        };
+        setSelectedRecord(detailData);
+        setIsDetailModalVisible(true);
+      } else {
+        message.error(response.message || '获取入库单详情失败');
+      }
     } catch (error) {
       console.error('获取入库单详情失败:', error);
-      message.error('获取入库单详情失败，请稍后重试');
+      message.error('获取入库单详情失败，请检查网络连接或联系管理员');
       // 使用前端记录作为备用
       setSelectedRecord(record);
       setIsDetailModalVisible(true);

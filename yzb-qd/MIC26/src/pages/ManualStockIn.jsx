@@ -14,9 +14,7 @@ import {
   Row,
   Col,
   message,
-  Divider,
   Typography,
-  Tooltip,
   InputNumber,
   Checkbox,
   Spin
@@ -25,12 +23,10 @@ import api from '../utils/api';
 import {
   SearchOutlined,
   PlusOutlined,
-  EditOutlined,
   DeleteOutlined,
-  EyeOutlined,
-  DownloadOutlined,
   ReloadOutlined,
-  SaveOutlined
+  SaveOutlined,
+  DownloadOutlined
 } from '@ant-design/icons';
 
 const { Text } = Typography;
@@ -39,1561 +35,505 @@ const { Option } = Select;
 const { TextArea } = Input;
 
 const ManualStockIn = () => {
-  const [form] = Form.useForm();
   const [searchForm] = Form.useForm();
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [data, setData] = useState([]);
-  const [filteredData, setFilteredData] = useState([]);
+  const [data, setData] = useState([]); // 数据库中的历史数据
+  const [newItems, setNewItems] = useState([]); // 待提交的新增数据
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
     total: 0,
   });
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  
+
   // 物资选择相关状态
   const [materialSelectModalVisible, setMaterialSelectModalVisible] = useState(false);
   const [materialCatalog, setMaterialCatalog] = useState([]);
   const [filteredMaterials, setFilteredMaterials] = useState([]);
   const [catalogSelectAll, setCatalogSelectAll] = useState(false);
   const [catalogCurrentPage, setCatalogCurrentPage] = useState(1);
-  const [catalogPageSize, setCatalogPageSize] = useState(5);
+  const [catalogPageSize, setCatalogPageSize] = useState(10);
   const [materialSearchForm] = Form.useForm();
-  
-  // 编辑状态管理
-  const [editValues, setEditValues] = useState({});
-  const [validationErrors, setValidationErrors] = useState({});
 
-  // 样式定义
-  const styles = {
-    editableField: {
-      borderColor: '#1890ff',
-      transition: 'all 0.3s ease'
-    },
-    readonlyField: {
-      color: '#8c8c8c',
-      backgroundColor: '#f5f5f5',
-      cursor: 'not-allowed'
-    },
-    readonlyText: {
-      color: '#8c8c8c',
-      padding: '4px 8px',
-      borderRadius: '4px',
-      backgroundColor: '#fafafa'
-    },
-    amountField: {
-      color: '#8c8c8c',
-      fontWeight: 'bold',
-      padding: '4px 8px',
-      borderRadius: '4px',
-      backgroundColor: '#f0f0f0'
-    },
-    errorField: {
-      borderColor: '#ff4d4f',
-      backgroundColor: '#fff2f0'
-    }
-  };
-
-  // 验证函数
-  const validateInstockQuantity = (value, maxQuantity) => {
-    if (value === undefined || value === null || value === '') {
-      return { isValid: false, message: '入库数量不能为空' };
-    }
-    if (isNaN(value)) {
-      return { isValid: false, message: '入库数量必须是数字' };
-    }
-    if (value < 0) {
-      return { isValid: false, message: '入库数量不能小于0' };
-    }
-    if (value > maxQuantity) {
-      return { isValid: false, message: `入库数量不能超过订货数量(${maxQuantity})` };
-    }
-    return { isValid: true, message: '' };
-  };
-
-  const validateBatchNumber = (value) => {
-    if (value && value.length > 50) {
-      return { isValid: false, message: '批号长度不能超过50个字符' };
-    }
-    return { isValid: true, message: '' };
-  };
-
-  const validateDate = (date, fieldName) => {
-    if (date && !(date instanceof Date || (date && date._isAMomentObject))) {
-      return { isValid: false, message: `${fieldName}格式不正确` };
-    }
-    return { isValid: true, message: '' };
-  };
-
-  // 备注和提交单据相关状态
-  const [remark, setRemark] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  // 提交单据处理函数 - 页面级别
-  const handleSubmitDocument = () => {
-    // 检查是否有选中的入库单
-    if (selectedRowKeys.length === 0) {
-      message.warning('请先选择要入库的单据');
-      return;
-    }
-
-    // 获取选中的入库单数据
-    const selectedDocuments = data.filter(item => selectedRowKeys.includes(item.key));
-    
-    if (selectedDocuments.length === 0) {
-      message.warning('未找到选中的入库单数据');
-      return;
-    }
-
-    setSubmitting(true);
-    
-    // 模拟提交过程
-    setTimeout(() => {
-      // 构建提交数据
-      const submitData = {
-        documents: selectedDocuments.map(doc => ({
-          orderNumber: doc.orderNumber,
-          productCode: doc.productCode,
-          specification: doc.specification,
-          model: doc.model,
-          manufacturer: doc.manufacturer,
-          supplierName: doc.supplierName,
-          orderQuantity: doc.orderQuantity,
-          instockQuantity: doc.instockQuantity,
-          unit: doc.orderUnit,
-          batchNumber: doc.batchNumber,
-          productionDate: doc.productionDate,
-          expiryDate: doc.expiryDate,
-          purchasePrice: doc.purchasePrice,
-          purchaseAmount: doc.purchaseAmount,
-          department: doc.department
-        })),
-        remark: remark,
-        submitTime: new Date().toISOString(),
-        totalDocuments: selectedDocuments.length,
-        totalItems: selectedDocuments.reduce((sum, doc) => sum + doc.instockQuantity, 0),
-        totalAmount: selectedDocuments.reduce((sum, doc) => sum + doc.purchaseAmount, 0)
-      };
-
-      console.log('提交入库单据数据:', submitData);
-      
-      // 显示成功消息
-      message.success(`入库单据提交成功！共${selectedDocuments.length}张单据，${submitData.totalItems}项物资，总金额：¥${submitData.totalAmount.toFixed(2)}`);
-      
-      // 重置状态
-      setRemark('');
-      setSubmitting(false);
-      setSelectedRowKeys([]);
-      
-      // 可选：从数据中移除已提交的单据
-      // const remainingData = data.filter(item => !selectedRowKeys.includes(item.key));
-      // setData(remainingData);
-      // setFilteredData(remainingData);
-      // setPagination(prev => ({ ...prev, total: remainingData.length }));
-      
-    }, 1500);
-  };
-
-  // 物资选择相关函数
-  const handleOpenMaterialSelect = () => {
-    setMaterialSelectModalVisible(true);
-    setFilteredMaterials([...materialCatalog]);
-    materialSearchForm.resetFields();
-    setCatalogSelectAll(false);
-    setCatalogCurrentPage(1);
-  };
-
-  const handleCloseMaterialSelect = () => {
-    setMaterialSelectModalVisible(false);
-    setMaterialCatalog(materialCatalog.map(item => ({ ...item, selected: false, quantity: item.minOrderQuantity })));
-    setCatalogSelectAll(false);
-    setCatalogCurrentPage(1);
-  };
-
-  const handleMaterialCatalogSelect = (key) => {
-    // 同时更新 materialCatalog 和 filteredMaterials
-    const newCatalog = materialCatalog.map(item => 
-      item.key === key ? { ...item, selected: !item.selected } : item
-    );
-    setMaterialCatalog(newCatalog);
-    
-    // 如果 filteredMaterials 不为空，也更新它
-    if (filteredMaterials.length > 0) {
-      const newFiltered = filteredMaterials.map(item => 
-        item.key === key ? { ...item, selected: !item.selected } : item
-      );
-      setFilteredMaterials(newFiltered);
-    }
-    
-    // 更新全选状态
-    const displayData = filteredMaterials.length > 0 ? filteredMaterials : materialCatalog;
-    const currentPageMaterials = displayData.slice((catalogCurrentPage - 1) * catalogPageSize, catalogCurrentPage * catalogPageSize);
-    const allSelected = currentPageMaterials.length > 0 && currentPageMaterials.every(item => item.selected);
-    setCatalogSelectAll(allSelected);
-  };
-
-  const handleCatalogSelectAll = () => {
-    const newSelectAll = !catalogSelectAll;
-    setCatalogSelectAll(newSelectAll);
-    
-    const startIndex = (catalogCurrentPage - 1) * catalogPageSize;
-    const endIndex = catalogCurrentPage * catalogPageSize;
-    
-    // 更新 materialCatalog
-    const newCatalog = materialCatalog.map((item) => {
-      // 检查当前页面是否包含此 item
-      const displayData = filteredMaterials.length > 0 ? filteredMaterials : materialCatalog;
-      const currentPageItems = displayData.slice(startIndex, endIndex);
-      const isInCurrentPage = currentPageItems.some(pageItem => pageItem.key === item.key);
-      
-      if (isInCurrentPage) {
-        return { ...item, selected: newSelectAll };
-      }
-      return item;
-    });
-    setMaterialCatalog(newCatalog);
-    
-    // 更新 filteredMaterials
-    if (filteredMaterials.length > 0) {
-      const newFiltered = filteredMaterials.map((item) => {
-        const displayData = filteredMaterials.length > 0 ? filteredMaterials : materialCatalog;
-        const currentPageItems = displayData.slice(startIndex, endIndex);
-        const isInCurrentPage = currentPageItems.some(pageItem => pageItem.key === item.key);
-        
-        if (isInCurrentPage) {
-          return { ...item, selected: newSelectAll };
-        }
-        return item;
-      });
-      setFilteredMaterials(newFiltered);
-    }
-  };
-
-  const handleConfirmMaterialSelection = () => {
-    // 从显示的数据中获取选中的物资
-    const displayData = filteredMaterials.length > 0 ? filteredMaterials : materialCatalog;
-    const selectedMaterials = displayData.filter(item => item.selected);
-    
-    if (selectedMaterials.length === 0) {
-      message.warning('请先选择物资');
-      return;
-    }
-    
-    // 将选中的物资添加到入库明细中
-    const newData = [...data];
-    selectedMaterials.forEach(selectedItem => {
-      // 生成唯一的key
-      const newKey = `${selectedItem.key}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      // 添加新物资到入库明细
-      newData.push({
-        key: newKey,
-        orderNumber: `PO-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${newData.length + 1}`,
-        productCode: selectedItem.materialCode,
-        specification: selectedItem.specification,
-        model: selectedItem.model,
-        manufacturer: selectedItem.manufacturer,
-        supplierName: selectedItem.supplier,
-        registrationNumber: `REG-${new Date().getFullYear()}-${newData.length + 1}`,
-        orderQuantity: selectedItem.quantity,
-        orderUnit: selectedItem.unit,
-        instockQuantity: selectedItem.quantity,
-        packUnit: selectedItem.unit,
-        batchNumber: `BATCH${new Date().toISOString().slice(0, 10).replace(/-/g, '')}`,
-        productionDate: moment().format('YYYY-MM-DD'),
-        expiryDate: moment().add(1, 'year').format('YYYY-MM-DD'),
-        purchasePrice: selectedItem.unitPrice,
-        purchaseAmount: selectedItem.unitPrice * selectedItem.quantity,
-        department: '采购部',
-        createTime: moment().format('YYYY-MM-DD HH:mm:ss'),
-        remark: `从物资目录导入: ${selectedItem.materialName}`
-      });
-    });
-    
-    setData(newData);
-    setFilteredData(newData);
-    message.success(`已添加 ${selectedMaterials.length} 项物资到入库明细`);
-    handleCloseMaterialSelect();
-  };
-
-  const handleSearchMaterials = (values) => {
-    const filtered = materialCatalog.filter(item => {
-      const matchesMaterialName = !values.materialName || item.materialName.includes(values.materialName);
-      const matchesMaterialCode = !values.materialCode || item.materialCode.includes(values.materialCode);
-      const matchesSpecification = !values.specification || item.specification.includes(values.specification);
-      const matchesModel = !values.model || item.model.includes(values.model);
-      const matchesManufacturer = !values.manufacturer || item.manufacturer.includes(values.manufacturer);
-      const matchesSupplier = !values.supplier || item.supplier.includes(values.supplier);
-      const matchesMaterialType = !values.materialType || item.materialType === values.materialType;
-      
-      return matchesMaterialName && matchesMaterialCode && matchesSpecification && 
-             matchesModel && matchesManufacturer && matchesSupplier && matchesMaterialType;
-    });
-    
-    setFilteredMaterials(filtered);
-    setCatalogCurrentPage(1);
-    setCatalogSelectAll(false);
-  };
-
-  const handleResetSearch = () => {
-    materialSearchForm.resetFields();
-    setFilteredMaterials([...materialCatalog]);
-    setCatalogCurrentPage(1);
-    setCatalogSelectAll(false);
-  };
-
-  const handleCatalogPageChange = (page, size) => {
-    setCatalogCurrentPage(page);
-    setCatalogPageSize(size);
-    setCatalogSelectAll(false);
-  };
-
-  // 处理编辑字段变化
-  const handleEditChange = (itemKey, field, value) => {
-    setEditValues(prev => {
-      const newEditValues = {
-        ...prev,
-        [itemKey]: {
-          ...prev[itemKey],
-          [field]: value
-        }
-      };
-      
-      // 验证输入
-      setValidationErrors(prevErrors => {
-        const newErrors = { ...prevErrors };
-        const item = data.find(item => item.key === itemKey);
-        
-        if (field === 'instockQuantity' && item) {
-          const validation = validateInstockQuantity(value, item.orderQuantity);
-          if (!validation.isValid) {
-            newErrors[`${itemKey}_instockQuantity`] = validation.message;
-          } else {
-            delete newErrors[`${itemKey}_instockQuantity`];
-          }
-        } else if (field === 'batchNumber') {
-          const validation = validateBatchNumber(value);
-          if (!validation.isValid) {
-            newErrors[`${itemKey}_batchNumber`] = validation.message;
-          } else {
-            delete newErrors[`${itemKey}_batchNumber`];
-          }
-        } else if (field === 'productionDate') {
-          const validation = validateDate(value, '生产日期');
-          if (!validation.isValid) {
-            newErrors[`${itemKey}_productionDate`] = validation.message;
-          } else {
-            delete newErrors[`${itemKey}_productionDate`];
-          }
-        } else if (field === 'expiryDate') {
-          const validation = validateDate(value, '失效日期');
-          if (!validation.isValid) {
-            newErrors[`${itemKey}_expiryDate`] = validation.message;
-          } else {
-            delete newErrors[`${itemKey}_expiryDate`];
-          }
-        }
-        
-        return newErrors;
-      });
-      
-      return newEditValues;
-    });
-  };
-
-  // 初始化数据
-  // 初始化物资目录数据
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // 同时获取物资目录和入库数据
-        const [materialCatalogResponse, stockInResponse] = await Promise.all([
-          api.get('/api/materials'),
-          api.get('/api/manual-stock-in')
-        ]);
-        
-        // 处理物资目录数据
-        const materialCatalogData = materialCatalogResponse.data.map((item, index) => ({
-          ...item,
-          key: item.id || index.toString(),
-          quantity: item.minOrderQuantity || 1,
-          selected: false
-        }));
-        setMaterialCatalog(materialCatalogData);
-        setFilteredMaterials(materialCatalogData);
-        
-        // 处理入库数据
-        const stockInData = stockInResponse.data.map((item, index) => ({
-          ...item,
-          key: item.id || index.toString()
-        }));
-        setData(stockInData);
-        setFilteredData(stockInData);
-        setPagination(prev => ({
-          ...prev,
-          total: stockInData.length
-        }));
-      } catch (error) {
-        console.error('获取数据失败:', error);
-        message.error('获取数据失败，请稍后重试');
-        
-        // 使用模拟数据作为备用
-        const materialCatalogData = [
-          {
-            key: '1',
-            id: '1',
-            materialCode: 'MAT001',
-            materialName: '医用口罩',
-            specification: 'N95',
-            model: 'N95-001',
-            manufacturer: '医疗用品有限公司',
-            supplier: '医疗用品供应商',
-            materialType: '低值耗材',
-            minPackage: '10只/盒',
-            minOrderQuantity: 1,
-            quantity: 1,
-            selected: false,
-            unit: '盒',
-            unitPrice: 25.00,
-            stock: 100,
-            registrationNumber: 'REG-2024-001',
-            storageCondition: '常温'
-          },
-          {
-            key: '2',
-            id: '2',
-            materialCode: 'MAT002',
-            materialName: '医用防护服',
-            specification: 'L号',
-            model: 'PF-202',
-            manufacturer: '防护设备制造厂',
-            supplier: '防护用品供应商',
-            materialType: '高值耗材',
-            minPackage: '1件/袋',
-            minOrderQuantity: 1,
-            quantity: 1,
-            selected: false,
-            unit: '件',
-            unitPrice: 85.00,
-            stock: 50,
-            registrationNumber: 'REG-2024-002',
-            storageCondition: '常温'
-          },
-          {
-            key: '3',
-            id: '3',
-            materialCode: 'MAT003',
-            materialName: '医用手套',
-            specification: '乳胶',
-            model: 'GL-301',
-            manufacturer: '乳胶制品厂',
-            supplier: '医疗耗材供应商',
-            materialType: '低值耗材',
-            minPackage: '100双/箱',
-            minOrderQuantity: 1,
-            quantity: 10,
-            selected: false,
-            unit: '双',
-            unitPrice: 3.50,
-            stock: 200,
-            registrationNumber: 'REG-2024-003',
-            storageCondition: '常温'
-          },
-          {
-            key: '4',
-            id: '4',
-            materialCode: 'MAT004',
-            materialName: '消毒液',
-            specification: '500ml',
-            model: 'DL-450',
-            manufacturer: '消毒制品公司',
-            supplier: '清洁用品供应商',
-            materialType: '试剂',
-            minPackage: '12瓶/箱',
-            minOrderQuantity: 1,
-            quantity: 5,
-            selected: false,
-            unit: '瓶',
-            unitPrice: 18.00,
-            stock: 80,
-            registrationNumber: 'REG-2024-004',
-            storageCondition: '阴凉处'
-          },
-          {
-            key: '5',
-            id: '5',
-            materialCode: 'MAT005',
-            materialName: '体温计',
-            specification: '电子',
-            model: 'TM-550',
-            manufacturer: '医疗器械公司',
-            supplier: '医疗设备供应商',
-            materialType: '高值耗材',
-            minPackage: '1支/盒',
-            minOrderQuantity: 1,
-            quantity: 2,
-            selected: false,
-            unit: '支',
-            unitPrice: 32.00,
-            stock: 60,
-            registrationNumber: 'REG-2024-005',
-            storageCondition: '常温'
-          }
-        ];
-        
-        setMaterialCatalog(materialCatalogData);
-        setFilteredMaterials(materialCatalogData);
-        
-        const mockData = [
-          {
-            key: '1',
-            id: '1',
-            productCode: 'PROD001',
-            productName: '一次性医用口罩',
-            materialType: '低值耗材',
-            specification: '三层防护',
-            model: 'MASK-001',
-            batchNumber: 'BATCH20260115',
-            productionDate: '2026-01-01',
-            expiryDate: '2027-01-01',
-            minPackage: '10个/盒',
-            orderUnit: '个',
-            purchasePrice: 1.50,
-            instockQuantity: 1000,
-            registrationNumber: 'REG-2024-001',
-            supplierName: '医疗用品供应商A',
-            manufacturer: '口罩制造厂A',
-            remark: '手动入库测试'
-          },
-          {
-            key: '2',
-            id: '2',
-            productCode: 'PROD002',
-            productName: '乳胶手套',
-            materialType: '低值耗材',
-            specification: '无粉',
-            model: 'GLOVE-001',
-            batchNumber: 'BATCH20260114',
-            productionDate: '2026-01-01',
-            expiryDate: '2027-01-01',
-            minPackage: '100双/盒',
-            orderUnit: '双',
-            purchasePrice: 3.00,
-            instockQuantity: 500,
-            registrationNumber: 'REG-2024-002',
-            supplierName: '医疗用品供应商B',
-            manufacturer: '手套制造厂B',
-            remark: '检验科专用'
-          },
-          {
-            key: '3',
-            id: '3',
-            productCode: 'PROD003',
-            productName: '消毒液',
-            materialType: '试剂',
-            specification: '500ml/瓶',
-            model: 'DISINFECT-001',
-            batchNumber: 'BATCH20260113',
-            productionDate: '2026-01-01',
-            expiryDate: '2027-01-01',
-            minPackage: '12瓶/箱',
-            orderUnit: '瓶',
-            purchasePrice: 15.00,
-            instockQuantity: 200,
-            registrationNumber: 'REG-2024-003',
-            supplierName: '消毒用品供应商C',
-            manufacturer: '消毒液制造厂C',
-            remark: '手术室专用消毒'
-          }
-        ];
-        
-        setData(mockData);
-        setFilteredData(mockData);
-        setPagination(prev => ({
-          ...prev,
-          total: mockData.length
-        }));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  // 处理搜索
-  const handleSearch = async (values) => {
-    setLoading(true);
+  // 加载数据库中的入库记录
+  const fetchData = async () => {
     try {
-      // 发送搜索请求到后端
-      const response = await api.get('/api/manual-stock-in/search', values);
-      // 为每个记录添加key属性
-      const data = response.data.map((item, index) => ({
-        ...item,
-        key: item.id || index.toString()
-      }));
-      setFilteredData(data);
-      setPagination(prev => ({
-        ...prev,
-        current: 1,
-        total: data.length,
-      }));
+      setLoading(true);
+      const searchValues = searchForm.getFieldsValue();
+      const response = await api.get('/api/scm/stock-in/items', {
+        pageNum: pagination.current,
+        pageSize: pagination.pageSize,
+        productCode: searchValues.productCode,
+        productName: searchValues.productName,
+        supplier: searchValues.supplierName,
+        manufacturer: searchValues.manufacturer
+      });
+
+      if (response.code === 1 && response.data) {
+        const records = response.data.records.map(item => ({
+          ...item,
+          key: item.id,
+          productCode: item.materialCode,
+          productName: item.materialName,
+          orderUnit: item.unit,
+          instockQuantity: item.stockInQuantity,
+          isNew: false
+        }));
+        setData(records);
+        setPagination(prev => ({
+          ...prev,
+          total: response.data.total
+        }));
+      }
     } catch (error) {
-      console.error('搜索初始化入库数据失败:', error);
-      message.error('搜索初始化入库数据失败，请稍后重试');
-      // 在前端进行过滤作为备用
-      let filtered = [...data];
-      
-      if (values.productCode) {
-        filtered = filtered.filter(item => 
-          item.productCode.toLowerCase().includes(values.productCode.toLowerCase())
-        );
-      }
-      
-      if (values.productName) {
-        filtered = filtered.filter(item => 
-          (item.productName && item.productName.toLowerCase().includes(values.productName.toLowerCase())) ||
-          (item.materialName && item.materialName.toLowerCase().includes(values.productName.toLowerCase()))
-        );
-      }
-      
-      if (values.supplierName) {
-        filtered = filtered.filter(item => 
-          item.supplierName.toLowerCase().includes(values.supplierName.toLowerCase())
-        );
-      }
-      
-      if (values.manufacturer) {
-        filtered = filtered.filter(item => 
-          item.manufacturer.toLowerCase().includes(values.manufacturer.toLowerCase())
-        );
-      }
-      
-      setFilteredData(filtered);
-      setPagination(prev => ({
-        ...prev,
-        current: 1,
-        total: filtered.length,
-      }));
+      console.error('加载入库明细失败:', error);
+      message.error('加载数据失败');
     } finally {
       setLoading(false);
     }
   };
 
+  // 初始加载
+  useEffect(() => {
+    fetchData();
+  }, [pagination.current, pagination.pageSize]);
+
+  // 加载物资目录
+  const fetchMaterialCatalog = async () => {
+    try {
+      const response = await api.get('/api/scm/materials/enabled');
+      if (response.code === 1) {
+        const catalog = response.data.map((item, index) => ({
+          ...item,
+          key: item.id || `catalog_${index}`,
+          selected: false,
+          quantity: 1,
+          batchNumber: '',
+          productionDate: null,
+          expiryDate: null
+        }));
+        setMaterialCatalog(catalog);
+        setFilteredMaterials(catalog);
+      }
+    } catch (error) {
+      console.error('获取物资目录失败:', error);
+    }
+  };
+
+  // 搜索处理
+  const handleSearch = () => {
+    setPagination(prev => ({ ...prev, current: 1 }));
+    fetchData();
+  };
+
   // 重置搜索
   const handleReset = () => {
     searchForm.resetFields();
-    setFilteredData(data);
-    message.success('搜索条件已重置');
+    setPagination(prev => ({ ...prev, current: 1 }));
+    fetchData();
   };
 
-  // 处理新增
-  const handleAdd = () => {
-    setIsEditMode(false);
-    form.resetFields();
-    setSelectedItem(null);
-    setIsModalVisible(true);
+  // 打开物资选择
+  const handleOpenMaterialSelect = () => {
+    setMaterialSelectModalVisible(true);
+    fetchMaterialCatalog();
+    materialSearchForm.resetFields();
+    setCatalogSelectAll(false);
+    setCatalogCurrentPage(1);
   };
 
-  // 处理编辑
-  const handleEdit = (record) => {
-    setIsEditMode(true);
-    setSelectedItem(record);
-    form.setFieldsValue({
-      ...record,
-      productionDate: record.productionDate ? moment(record.productionDate) : null,
-      expiryDate: record.expiryDate ? moment(record.expiryDate) : null
+  // 关闭物资选择
+  const handleCloseMaterialSelect = () => {
+    setMaterialSelectModalVisible(false);
+  };
+
+  // 物资目录搜索
+  const handleSearchMaterials = (values) => {
+    const filtered = materialCatalog.filter(item => {
+      const matchesCode = !values.materialCode || item.materialCode.includes(values.materialCode);
+      const matchesName = !values.materialName || item.materialName.includes(values.materialName);
+      const matchesSupplier = !values.supplier || (item.supplier && item.supplier.includes(values.supplier));
+      return matchesCode && matchesName && matchesSupplier;
     });
-    setIsModalVisible(true);
+    setFilteredMaterials(filtered);
+    setCatalogCurrentPage(1);
   };
 
-  // 处理删除
-  const handleDelete = (record) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除入库单 ${record.stockInNumber} 吗？`,
-      onOk: () => {
-        const newData = data.filter(item => item.key !== record.key);
-        setData(newData);
-        setFilteredData(newData);
-        setPagination(prev => ({
-          ...prev,
-          total: newData.length
-        }));
-        message.success('入库单已删除');
-      }
+  // 物资全选
+  const handleCatalogSelectAll = (e) => {
+    const checked = e.target.checked;
+    setCatalogSelectAll(checked);
+    const startIndex = (catalogCurrentPage - 1) * catalogPageSize;
+    const endIndex = startIndex + catalogPageSize;
+    const currentPageItems = filteredMaterials.slice(startIndex, endIndex);
+    
+    const newFiltered = [...filteredMaterials];
+    currentPageItems.forEach((item, idx) => {
+      newFiltered[startIndex + idx] = { ...item, selected: checked };
     });
+    setFilteredMaterials(newFiltered);
   };
 
-  // 处理批量删除
-  const handleBatchDelete = () => {
-    if (selectedRowKeys.length === 0) {
-      message.warning('请选择要删除的记录');
+  // 物资单选
+  const handleMaterialCatalogSelect = (key) => {
+    const newFiltered = filteredMaterials.map(item => 
+      item.key === key ? { ...item, selected: !item.selected } : item
+    );
+    setFilteredMaterials(newFiltered);
+    
+    const startIndex = (catalogCurrentPage - 1) * catalogPageSize;
+    const endIndex = startIndex + catalogPageSize;
+    const currentPageItems = newFiltered.slice(startIndex, endIndex);
+    setCatalogSelectAll(currentPageItems.every(i => i.selected));
+  };
+
+  // 确认物资选择
+  const handleConfirmMaterialSelection = () => {
+    const selected = filteredMaterials.filter(i => i.selected);
+    if (selected.length === 0) {
+      message.warning('请选择物资');
       return;
     }
-    
-    Modal.confirm({
-      title: '确认批量删除',
-      content: `确定要删除选中的 ${selectedRowKeys.length} 条记录吗？`,
-      onOk: () => {
-        const newData = data.filter(item => !selectedRowKeys.includes(item.key));
-        setData(newData);
-        setFilteredData(newData);
-        setSelectedRowKeys([]);
-        setPagination(prev => ({
-          ...prev,
-          total: newData.length
-        }));
-        message.success(`成功删除 ${selectedRowKeys.length} 条记录`);
-      }
-    });
+
+    const newItemsToAdd = selected.map(item => ({
+      key: `new_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      productCode: item.materialCode,
+      productName: item.materialName,
+      materialType: item.materialType,
+      specification: item.specification,
+      model: item.model,
+      minPackage: item.minPackage,
+      manufacturer: item.manufacturer,
+      supplierName: item.supplier,
+      registrationNumber: item.registrationNumber,
+      orderUnit: item.unit,
+      instockQuantity: item.quantity || 1,
+      batchNumber: item.batchNumber || '',
+      productionDate: item.productionDate ? item.productionDate.format('YYYY-MM-DD') : null,
+      expiryDate: item.expiryDate ? item.expiryDate.format('YYYY-MM-DD') : null,
+      purchasePrice: item.unitPrice || 0,
+      purchaseAmount: (item.unitPrice || 0) * (item.quantity || 1),
+      isNew: true
+    }));
+
+    setNewItems([...newItemsToAdd, ...newItems]);
+    setMaterialSelectModalVisible(false);
+    message.success(`已添加 ${selected.length} 项待入库物资`);
   };
 
-  // 处理保存
-  const handleSave = () => {
-    form.validateFields().then(async values => {
+  // 提交入库
+  const handleSubmitStockIn = async () => {
+    if (newItems.length === 0) {
+      message.warning('没有待提交的入库明细');
+      return;
+    }
+
+    // 简单验证
+    const invalidItem = newItems.find(i => !i.batchNumber || !i.instockQuantity);
+    if (invalidItem) {
+      message.error(`物资 ${invalidItem.productName} 的批号或入库数量不能为空`);
+      return;
+    }
+
+    try {
       setLoading(true);
-      
-      try {
-        const saveData = {
-          stockInNumber: values.stockInNumber,
-          productCode: values.productCode,
-          productName: values.productName,
-          specification: values.specification,
-          model: values.model,
-          manufacturer: values.manufacturer,
-          supplierName: values.supplierName,
-          registrationNumber: values.registrationNumber,
-          orderQuantity: values.orderQuantity,
-          orderUnit: values.orderUnit,
-          stockInQuantity: values.stockInQuantity,
-          packageUnit: values.packageUnit,
-          batchNumber: values.batchNumber,
-          productionDate: values.productionDate ? values.productionDate.format('YYYY-MM-DD') : '',
-          expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : '',
-          purchasePrice: values.purchasePrice,
-          purchaseAmount: values.purchaseAmount,
-          department: values.department,
-          remark: values.remark
-        };
-        
-        let response;
-        if (isEditMode) {
-          // 更新操作
-          response = await api.put(`/api/manual-stock-in/${selectedItem.id || selectedItem.key}`, saveData);
-          const updatedItem = {
-            ...response.data,
-            key: response.data.id || selectedItem.key
-          };
-          const newData = data.map(item => 
-            item.key === selectedItem.key ? updatedItem : item
-          );
-          setData(newData);
-          setFilteredData(newData);
-          message.success('入库单已更新');
-        } else {
-          // 创建操作
-          response = await api.post('/api/manual-stock-in', saveData);
-          const newItem = {
-            ...response.data,
-            key: response.data.id || `new-${Date.now()}`
-          };
-          const newData = [newItem, ...data];
-          setData(newData);
-          setFilteredData(newData);
-          setPagination(prev => ({
-            ...prev,
-            total: newData.length
-          }));
-          message.success('入库单已创建');
-        }
-        
-        setIsModalVisible(false);
-        form.resetFields();
-      } catch (error) {
-        console.error('保存入库单失败:', error);
-        message.error('保存入库单失败，请稍后重试');
-      } finally {
-        setLoading(false);
+      const saveData = {
+        stockInType: '初始化入库',
+        operatorName: '管理员', // 实际应从登录信息获取
+        remark: '系统初始化入库',
+        items: newItems.map(i => ({
+          materialCode: i.productCode,
+          materialName: i.productName,
+          materialType: i.materialType,
+          specification: i.specification,
+          model: i.model,
+          minPackage: i.minPackage,
+          unit: i.orderUnit,
+          purchasePrice: i.purchasePrice,
+          orderQuantity: i.instockQuantity, // 初始化入库，订货数量等于入库数量
+          stockInQuantity: i.instockQuantity,
+          supplierName: i.supplierName,
+          manufacturer: i.manufacturer,
+          registrationNumber: i.registrationNumber,
+          batchNumber: i.batchNumber,
+          productionDate: i.productionDate,
+          expiryDate: i.expiryDate
+        }))
+      };
+
+      const response = await api.post('/api/scm/stock-in/manual', saveData);
+      if (response.code === 1) {
+        message.success('入库成功');
+        setNewItems([]);
+        fetchData();
+      } else {
+        message.error(response.message || '入库失败');
       }
-    }).catch(error => {
-      console.error('表单验证失败:', error);
-    });
+    } catch (error) {
+      console.error('入库失败:', error);
+      message.error('系统异常，入库失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // 表格列配置
+  // 删除待入库项
+  const handleDeleteNewItem = (key) => {
+    setNewItems(newItems.filter(i => i.key !== key));
+  };
+
+  // 修改待入库项
+  const handleUpdateNewItem = (key, field, value) => {
+    setNewItems(newItems.map(item => {
+      if (item.key === key) {
+        const updated = { ...item, [field]: value };
+        if (field === 'instockQuantity' || field === 'purchasePrice') {
+          updated.purchaseAmount = (updated.instockQuantity || 0) * (updated.purchasePrice || 0);
+        }
+        return updated;
+      }
+      return item;
+    }));
+  };
+
   const columns = [
     {
-      title: '物资编码',
-      dataIndex: 'productCode',
-      key: 'productCode',
-      width: 120,
+      title: '状态',
+      key: 'status',
+      width: 80,
+      render: (_, record) => record.isNew ? <Tag color="blue">待提交</Tag> : <Tag color="green">已入库</Tag>
     },
-    {
-      title: '物资名称',
-      key: 'productName',
-      width: 150,
-      render: (_, record) => record.productName || record.materialName || '',
-    },
-    {
-      title: '物资类型',
-      key: 'materialType',
-      width: 100,
-      render: (_, record) => record.materialType || '',
-    },
-    {
-      title: '规格',
-      dataIndex: 'specification',
-      key: 'specification',
-      width: 150,
-    },
-    {
-      title: '型号',
-      dataIndex: 'model',
-      key: 'model',
-      width: 100,
-    },
+    { title: '物资编码', dataIndex: 'productCode', key: 'productCode', width: 120 },
+    { title: '物资名称', dataIndex: 'productName', key: 'productName', width: 150 },
+    { title: '规格', dataIndex: 'specification', key: 'specification', width: 120 },
+    { title: '型号', dataIndex: 'model', key: 'model', width: 100 },
+    { title: '最小包装', dataIndex: 'minPackage', key: 'minPackage', width: 120 },
     {
       title: '批号',
       key: 'batchNumber',
-      width: 120,
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const batchNumber = itemEditValues.batchNumber || record.batchNumber || '';
-        return <div style={styles.readonlyText}>{batchNumber}</div>;
-      },
+      width: 150,
+      render: (_, record) => record.isNew ? (
+        <Input 
+          value={record.batchNumber} 
+          onChange={e => handleUpdateNewItem(record.key, 'batchNumber', e.target.value)}
+          placeholder="必填"
+          size="small"
+        />
+      ) : record.batchNumber
     },
     {
       title: '生产日期',
       key: 'productionDate',
-      width: 120,
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const productionDate = itemEditValues.productionDate ? 
-          itemEditValues.productionDate.format('YYYY年MM月DD日') : 
-          (record.productionDate ? moment(record.productionDate).format('YYYY年MM月DD日') : '');
-        return <div style={styles.readonlyText}>{productionDate}</div>;
-      },
+      width: 150,
+      render: (_, record) => record.isNew ? (
+        <DatePicker 
+          value={record.productionDate ? moment(record.productionDate) : null}
+          onChange={date => handleUpdateNewItem(record.key, 'productionDate', date ? date.format('YYYY-MM-DD') : null)}
+          size="small"
+        />
+      ) : record.productionDate
     },
     {
       title: '失效日期',
       key: 'expiryDate',
-      width: 120,
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const expiryDate = itemEditValues.expiryDate ? 
-          itemEditValues.expiryDate.format('YYYY年MM月DD日') : 
-          (record.expiryDate ? moment(record.expiryDate).format('YYYY年MM月DD日') : '');
-        return <div style={styles.readonlyText}>{expiryDate}</div>;
-      },
-    },
-    {
-      title: '最小包装',
-      key: 'minPackage',
-      width: 100,
-      render: (_, record) => <div style={styles.readonlyText}>{record.minPackage || ''}</div>,
-    },
-    {
-      title: '单位',
-      key: 'unit',
-      width: 80,
-      render: (_, record) => <div style={styles.readonlyText}>{record.orderUnit || record.unit || ''}</div>,
-    },
-    {
-      title: '采购价格',
-      dataIndex: 'purchasePrice',
-      key: 'purchasePrice',
-      width: 100,
-      render: (price) => <div style={styles.readonlyText}>¥{price?.toFixed(2) || '0.00'}</div>,
+      width: 150,
+      render: (_, record) => record.isNew ? (
+        <DatePicker 
+          value={record.expiryDate ? moment(record.expiryDate) : null}
+          onChange={date => handleUpdateNewItem(record.key, 'expiryDate', date ? date.format('YYYY-MM-DD') : null)}
+          size="small"
+        />
+      ) : record.expiryDate
     },
     {
       title: '入库数量',
       key: 'instockQuantity',
-      width: 100,
-      render: (_, record) => {
-        const itemEditValues = editValues[record.key] || {};
-        const instockQuantity = itemEditValues.instockQuantity !== undefined ? itemEditValues.instockQuantity : record.instockQuantity || 0;
-        return <div style={styles.readonlyText}>{instockQuantity}</div>;
-      },
+      width: 120,
+      render: (_, record) => record.isNew ? (
+        <InputNumber 
+          min={1} 
+          value={record.instockQuantity} 
+          onChange={val => handleUpdateNewItem(record.key, 'instockQuantity', val)}
+          size="small"
+        />
+      ) : record.instockQuantity
+    },
+    { title: '单位', dataIndex: 'orderUnit', key: 'orderUnit', width: 80 },
+    {
+      title: '单价',
+      key: 'purchasePrice',
+      width: 120,
+      render: (_, record) => record.isNew ? (
+        <InputNumber 
+          min={0} 
+          value={record.purchasePrice} 
+          onChange={val => handleUpdateNewItem(record.key, 'purchasePrice', val)}
+          size="small"
+          prefix="¥"
+        />
+      ) : `¥${record.purchasePrice?.toFixed(2)}`
     },
     {
-      title: '注册证号',
-      dataIndex: 'registrationNumber',
-      key: 'registrationNumber',
-      width: 150,
+      title: '金额',
+      key: 'purchaseAmount',
+      width: 120,
+      render: (_, record) => `¥${record.purchaseAmount?.toFixed(2)}`
     },
+    { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 150 },
+    { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 150 },
     {
-      title: '供应商',
-      dataIndex: 'supplierName',
-      key: 'supplierName',
-      width: 150,
-    },
-    {
-      title: '生产厂家',
-      dataIndex: 'manufacturer',
-      key: 'manufacturer',
-      width: 150,
-    },
-    {
-      title: '备注',
-      dataIndex: 'remark',
-      key: 'remark',
-      width: 150,
-    },
+      title: '操作',
+      key: 'action',
+      width: 80,
+      fixed: 'right',
+      render: (_, record) => record.isNew ? (
+        <Button type="link" danger onClick={() => handleDeleteNewItem(record.key)}>删除</Button>
+      ) : null
+    }
   ];
-
-  // 表格行选择配置
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (newSelectedRowKeys) => {
-      setSelectedRowKeys(newSelectedRowKeys);
-    },
-  };
 
   return (
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>初始化入库</h1>
       
-      {/* 搜索区域 */}
-      <Card style={{ marginBottom: 24, padding: '16px' }}>
-        <Form
-          form={searchForm}
-          onFinish={handleSearch}
-        >
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>物资编码</label>
-              <Form.Item name="productCode" noStyle>
-                <Input placeholder="请输入物资编码" style={{ width: 200 }} />
-              </Form.Item>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>物资名称</label>
-              <Form.Item name="productName" noStyle>
-                <Input placeholder="请输入物资名称" style={{ width: 200 }} />
-              </Form.Item>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>供应商</label>
-              <Form.Item name="supplierName" noStyle>
-                <Input placeholder="请输入供应商" style={{ width: 200 }} />
-              </Form.Item>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>生产厂家</label>
-              <Form.Item name="manufacturer" noStyle>
-                <Input placeholder="请输入生产厂家" style={{ width: 200 }} />
-              </Form.Item>
-            </div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <Button type="primary" icon={<SearchOutlined />} htmlType="submit">
-                查询
-              </Button>
-              <Button onClick={handleReset}>
-                重置
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={() => {
-                setFilteredData(data);
-                searchForm.resetFields();
-              }}>
-                刷新
-              </Button>
-            </div>
-          </div>
+      <Card style={{ marginBottom: 24 }}>
+        <Form form={searchForm} layout="inline">
+          <Form.Item name="productCode" label="物资编码">
+            <Input placeholder="请输入物资编码" allowClear style={{ width: 160 }} />
+          </Form.Item>
+          <Form.Item name="productName" label="物资名称">
+            <Input placeholder="请输入物资名称" allowClear style={{ width: 160 }} />
+          </Form.Item>
+          <Form.Item name="supplierName" label="供应商">
+            <Input placeholder="请输入供应商" allowClear style={{ width: 160 }} />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
+              <Button onClick={handleReset}>重置</Button>
+            </Space>
+          </Form.Item>
         </Form>
       </Card>
-      
-      {/* 初始化入库列表 */}
+
       <Card>
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
           <Space>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenMaterialSelect}>
-              新增入库
-            </Button>
-            <Button 
-              type="default" 
-              danger 
-              icon={<DeleteOutlined />}
-              onClick={handleBatchDelete}
-              disabled={selectedRowKeys.length === 0}
-            >
-              批量删除
-            </Button>
-            <Button icon={<DownloadOutlined />}>
-              导出数据
-            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenMaterialSelect}>新增入库</Button>
+            <Button icon={<DownloadOutlined />}>导出数据</Button>
           </Space>
+          <Button 
+            type="primary" 
+            icon={<SaveOutlined />} 
+            onClick={handleSubmitStockIn} 
+            disabled={newItems.length === 0}
+            loading={loading}
+          >
+            确认提交入库
+          </Button>
         </div>
         
         <Table
           columns={columns}
-          dataSource={filteredData}
-          rowSelection={rowSelection}
+          dataSource={[...newItems, ...data]}
           loading={loading}
-          scroll={{ x: 2500 }}
+          scroll={{ x: 2200 }}
           pagination={{
             ...pagination,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-            style: {
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              margin: '24px 0 0 0',
-            },
+            showTotal: (total) => `共 ${total} 条历史记录`,
             onChange: (page, pageSize) => {
-              setPagination(prev => ({
-                ...prev,
-                current: page,
-                pageSize,
-              }));
-            },
+              setPagination(prev => ({ ...prev, current: page, pageSize }));
+            }
           }}
         />
       </Card>
 
-
-      
-      {/* 新增/编辑模态框 */}
-      <Modal
-        title={isEditMode ? '编辑入库单' : '新增入库单'}
-        open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        width={800}
-        footer={[
-          <Button key="cancel" onClick={() => setIsModalVisible(false)}>
-            取消
-          </Button>,
-          <Button key="save" type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={loading}>
-            保存
-          </Button>
-        ]}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-        >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item 
-                name="orderNumber" 
-                label="订单号" 
-                rules={[{ required: true, message: '请输入订单号' }]}
-              >
-                <Input placeholder="请输入订单号" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item 
-                name="productCode" 
-                label="物资编码" 
-                rules={[{ required: true, message: '请输入物资编码' }]}
-              >
-                <Input placeholder="请输入物资编码" />
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item 
-                name="specification" 
-                label="规格" 
-                rules={[{ required: true, message: '请输入规格' }]}
-              >
-                <Input placeholder="请输入规格" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item 
-                name="model" 
-                label="型号" 
-                rules={[{ required: true, message: '请输入型号' }]}
-              >
-                <Input placeholder="请输入型号" />
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item 
-                name="model" 
-                label="型号" 
-                rules={[{ required: true, message: '请输入型号' }]}
-              >
-                <Input placeholder="请输入型号" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item 
-                name="manufacturer" 
-                label="生产厂家" 
-                rules={[{ required: true, message: '请输入生产厂家' }]}
-              >
-                <Input placeholder="请输入生产厂家" />
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item 
-                name="supplierName" 
-                label="供应商" 
-                rules={[{ required: true, message: '请输入供应商' }]}
-              >
-                <Input placeholder="请输入供应商" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item 
-                name="registrationNumber" 
-                label="注册证号" 
-                rules={[{ required: true, message: '请输入注册证号' }]}
-              >
-                <Input placeholder="请输入注册证号" />
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item 
-                name="orderQuantity" 
-                label="订货数量" 
-                rules={[{ required: true, message: '请输入订货数量' }]}
-              >
-                <InputNumber 
-                  style={{ width: '100%' }}
-                  min={1}
-                  precision={0}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item 
-                name="orderUnit" 
-                label="订货单位" 
-                rules={[{ required: true, message: '请输入订货单位' }]}
-              >
-                <Input placeholder="请输入订货单位" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item 
-                name="instockQuantity" 
-                label="入库数量" 
-                rules={[{ required: true, message: '请输入入库数量' }]}
-              >
-                <InputNumber 
-                  style={{ width: '100%' }}
-                  min={1}
-                  precision={0}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item 
-                name="packUnit" 
-                label="打包单位" 
-                rules={[{ required: true, message: '请输入打包单位' }]}
-              >
-                <Input placeholder="请输入打包单位" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item 
-                name="batchNumber" 
-                label="批号" 
-                rules={[{ required: true, message: '请输入批号' }]}
-              >
-                <Input placeholder="请输入批号" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item 
-                name="department" 
-                label="申领科室" 
-                rules={[{ required: true, message: '请输入申领科室' }]}
-              >
-                <Select placeholder="请选择申领科室">
-                  <Option value="采购部">采购部</Option>
-                  <Option value="检验科">检验科</Option>
-                  <Option value="手术室">手术室</Option>
-                  <Option value="急诊科">急诊科</Option>
-                  <Option value="内科">内科</Option>
-                  <Option value="外科">外科</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item 
-                name="productionDate" 
-                label="生产日期"
-              >
-                <DatePicker style={{ width: '100%' }} format="YYYY年MM月DD日" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item 
-                name="expiryDate" 
-                label="失效日期"
-              >
-                <DatePicker style={{ width: '100%' }} format="YYYY年MM月DD日" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item 
-                name="purchasePrice" 
-                label="采购单价" 
-                rules={[{ required: true, message: '请输入采购单价' }]}
-              >
-                <InputNumber 
-                  style={{ width: '100%' }}
-                  min={0}
-                  precision={2}
-                  formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value.replace(/¥\s?|(,*)/g, '')}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item 
-                name="purchaseAmount" 
-                label="采购金额" 
-                rules={[{ required: true, message: '请输入采购金额' }]}
-              >
-                <InputNumber 
-                  style={{ width: '100%' }}
-                  min={0}
-                  precision={2}
-                  formatter={value => `¥ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value.replace(/¥\s?|(,*)/g, '')}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Form.Item 
-            name="remark" 
-            label="备注"
-          >
-            <TextArea rows={3} placeholder="请输入备注信息" />
-          </Form.Item>
-        </Form>
-      </Modal>
-
       {/* 物资选择弹窗 */}
       <Modal
-        title="选择耗材物资"
+        title="选择物资"
         open={materialSelectModalVisible}
         onCancel={handleCloseMaterialSelect}
-        width={1400}
+        width={1200}
         footer={null}
-        style={{ top: 20 }}
       >
-        {/* 顶部检索框 */}
-        <Card 
-          style={{ 
-            marginBottom: 16,
-            borderRadius: 8,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-          }}
-        >
-          <Form 
-            form={materialSearchForm} 
-            layout="vertical" 
-            onFinish={handleSearchMaterials}
-          >
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>物资编码</label>
-                <Form.Item name="materialCode" noStyle>
-                  <Input 
-                    placeholder="请输入物资编码" 
-                    allowClear
-                    style={{ width: 200 }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>物资名称</label>
-                <Form.Item name="materialName" noStyle>
-                  <Input 
-                    placeholder="请输入物资名称" 
-                    allowClear
-                    style={{ width: 200 }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>物资类型</label>
-                <Form.Item name="materialType" noStyle>
-                  <Select 
-                    placeholder="物资类型" 
-                    allowClear
-                    style={{ width: 200 }}
-                    size="middle"
-                    options={[
-                      { value: '试剂', label: '试剂' },
-                      { value: '低值耗材', label: '低值耗材' },
-                      { value: '高值耗材', label: '高值耗材' }
-                    ]}
-                  />
-                </Form.Item>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>供应商</label>
-                <Form.Item name="supplier" noStyle>
-                  <Input 
-                    placeholder="请输入供应商" 
-                    allowClear
-                    style={{ width: 200 }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <label style={{ fontSize: '14px', color: '#333', minWidth: '80px' }}>生产厂家</label>
-                <Form.Item name="manufacturer" noStyle>
-                  <Input 
-                    placeholder="请输入生产厂家" 
-                    allowClear
-                    style={{ width: 200 }}
-                    size="middle"
-                  />
-                </Form.Item>
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <Button 
-                  onClick={handleResetSearch}
-                  style={{ minWidth: 90 }}
-                >
-                  重置
-                </Button>
-                <Button 
-                  type="primary" 
-                  htmlType="submit"
-                  style={{ minWidth: 90 }}
-                >
-                  搜索
-                </Button>
-              </div>
-            </div>
+        <Card style={{ marginBottom: 16 }}>
+          <Form form={materialSearchForm} layout="inline" onFinish={handleSearchMaterials}>
+            <Form.Item name="materialCode" label="编码">
+              <Input placeholder="物资编码" allowClear />
+            </Form.Item>
+            <Form.Item name="materialName" label="名称">
+              <Input placeholder="物资名称" allowClear />
+            </Form.Item>
+            <Form.Item name="supplier" label="供应商">
+              <Input placeholder="供应商" allowClear />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit">搜索</Button>
+            </Form.Item>
           </Form>
         </Card>
 
-        {/* 物资目录表单 */}
-        <div style={{ 
-          overflowX: 'auto', 
-          marginBottom: 16,
-          border: '1px solid #f0f0f0',
-          borderRadius: 8
-        }}>
+        <div style={{ marginBottom: 16 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ backgroundColor: '#fafafa' }}>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '60px' }}>
-                  <Checkbox 
-                    checked={catalogSelectAll}
-                    onChange={handleCatalogSelectAll}
-                  />
+                <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>
+                  <Checkbox checked={catalogSelectAll} onChange={handleCatalogSelectAll} />
                 </th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资编码</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>物资名称</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资类型</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>规格</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>型号</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>批号</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>生产日期</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>失效日期</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>最小包装</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>单位</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>采购价格</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>数量</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>注册证号</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>供应商</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>生产厂家</th>
-                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>储存条件</th>
+                <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>编码</th>
+                <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>名称</th>
+                <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>规格</th>
+                <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>厂家</th>
+                <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>最小包装</th>
+                <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>单价</th>
+                <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>数量</th>
               </tr>
             </thead>
             <tbody>
-              {(filteredMaterials.length > 0 ? filteredMaterials : materialCatalog)
-                .slice((catalogCurrentPage - 1) * catalogPageSize, catalogCurrentPage * catalogPageSize)
-                .map(item => (
-                <tr key={item.key} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
-                    <Checkbox 
-                      checked={item.selected}
-                      onChange={() => handleMaterialCatalogSelect(item.key)}
-                    />
+              {filteredMaterials.slice((catalogCurrentPage-1)*catalogPageSize, catalogCurrentPage*catalogPageSize).map(item => (
+                <tr key={item.key}>
+                  <td style={{ padding: 12, border: '1px solid #f0f0f0', textAlign: 'center' }}>
+                    <Checkbox checked={item.selected} onChange={() => handleMaterialCatalogSelect(item.key)} />
                   </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialCode}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialName}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialType}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.specification}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.model}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
-                    <Input 
-                      value={item.batchNumber || ''}
-                      onChange={(e) => {
-                        const newCatalog = materialCatalog.map(catalogItem => 
-                          catalogItem.key === item.key ? { ...catalogItem, batchNumber: e.target.value } : catalogItem
-                        );
-                        setMaterialCatalog(newCatalog);
-                        
-                        if (filteredMaterials.length > 0) {
-                          const newFiltered = filteredMaterials.map(filteredItem => 
-                            filteredItem.key === item.key ? { ...filteredItem, batchNumber: e.target.value } : filteredItem
-                          );
-                          setFilteredMaterials(newFiltered);
-                        }
+                  <td style={{ padding: 12, border: '1px solid #f0f0f0' }}>{item.materialCode}</td>
+                  <td style={{ padding: 12, border: '1px solid #f0f0f0' }}>{item.materialName}</td>
+                  <td style={{ padding: 12, border: '1px solid #f0f0f0' }}>{item.specification}</td>
+                  <td style={{ padding: 12, border: '1px solid #f0f0f0' }}>{item.manufacturer}</td>
+                  <td style={{ padding: 12, border: '1px solid #f0f0f0' }}>{item.minPackage}</td>
+                  <td style={{ padding: 12, border: '1px solid #f0f0f0' }}>¥{item.unitPrice?.toFixed(2)}</td>
+                  <td style={{ padding: 12, border: '1px solid #f0f0f0' }}>
+                    <InputNumber 
+                      min={1} 
+                      value={item.quantity} 
+                      onChange={val => {
+                        const newFiltered = filteredMaterials.map(i => i.key === item.key ? { ...i, quantity: val } : i);
+                        setFilteredMaterials(newFiltered);
                       }} 
-                      placeholder="请输入批号"
-                      style={{ width: '100px' }}
                     />
                   </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
-                    <DatePicker 
-                      value={item.productionDate ? moment(item.productionDate) : null}
-                      onChange={(date) => {
-                        const newCatalog = materialCatalog.map(catalogItem => 
-                          catalogItem.key === item.key ? { ...catalogItem, productionDate: date } : catalogItem
-                        );
-                        setMaterialCatalog(newCatalog);
-                        
-                        if (filteredMaterials.length > 0) {
-                          const newFiltered = filteredMaterials.map(filteredItem => 
-                            filteredItem.key === item.key ? { ...filteredItem, productionDate: date } : filteredItem
-                          );
-                          setFilteredMaterials(newFiltered);
-                        }
-                      }} 
-                      placeholder="请选择"
-                      format="YYYY年MM月DD日"
-                      style={{ width: '120px' }}
-                    />
-                  </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
-                    <DatePicker 
-                      value={item.expiryDate ? moment(item.expiryDate) : null}
-                      onChange={(date) => {
-                        const newCatalog = materialCatalog.map(catalogItem => 
-                          catalogItem.key === item.key ? { ...catalogItem, expiryDate: date } : catalogItem
-                        );
-                        setMaterialCatalog(newCatalog);
-                        
-                        if (filteredMaterials.length > 0) {
-                          const newFiltered = filteredMaterials.map(filteredItem => 
-                            filteredItem.key === item.key ? { ...filteredItem, expiryDate: date } : filteredItem
-                          );
-                          setFilteredMaterials(newFiltered);
-                        }
-                      }} 
-                      placeholder="请选择"
-                      format="YYYY年MM月DD日"
-                      style={{ width: '120px' }}
-                    />
-                  </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.minPackage}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.unit}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>¥{item.unitPrice?.toFixed(2)}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
-                    <InputNumber
-                      min={item.minOrderQuantity}
-                      value={item.quantity}
-                      onChange={(value) => {
-                        const newCatalog = materialCatalog.map(catalogItem => 
-                          catalogItem.key === item.key ? { ...catalogItem, quantity: value } : catalogItem
-                        );
-                        setMaterialCatalog(newCatalog);
-                        
-                        if (filteredMaterials.length > 0) {
-                          const newFiltered = filteredMaterials.map(filteredItem => 
-                            filteredItem.key === item.key ? { ...filteredItem, quantity: value } : filteredItem
-                          );
-                          setFilteredMaterials(newFiltered);
-                        }
-                      }}
-                      style={{ width: '80px' }}
-                    />
-                  </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.registrationNumber || ''}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.supplier}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.manufacturer}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.storageCondition || '常温'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
 
-        {/* 分页 */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Button disabled={catalogCurrentPage === 1} onClick={() => setCatalogCurrentPage(c => c - 1)}>上一页</Button>
+            <span style={{ alignSelf: 'center' }}>第 {catalogCurrentPage} 页</span>
             <Button 
-              onClick={() => handleCatalogPageChange(catalogCurrentPage - 1, catalogPageSize)}
-              disabled={catalogCurrentPage === 1}
-            >
-              上一页
-            </Button>
-            <span>第 {catalogCurrentPage} 页</span>
-            <Button 
-              onClick={() => handleCatalogPageChange(catalogCurrentPage + 1, catalogPageSize)}
-              disabled={catalogCurrentPage * catalogPageSize >= (filteredMaterials.length > 0 ? filteredMaterials.length : materialCatalog.length)}
+              disabled={catalogCurrentPage * catalogPageSize >= filteredMaterials.length} 
+              onClick={() => setCatalogCurrentPage(c => c + 1)}
             >
               下一页
             </Button>
-            <span>共 {Math.ceil((filteredMaterials.length > 0 ? filteredMaterials.length : materialCatalog.length) / catalogPageSize)} 页</span>
           </div>
-        </div>
-
-        {/* 底部按钮 */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'flex-end', 
-          gap: 12,
-          paddingTop: 20,
-          borderTop: '1px solid #f0f0f0'
-        }}>
-          <Button 
-            onClick={handleCloseMaterialSelect}
-            style={{ 
-              minWidth: '80px',
-              height: '36px'
-            }}
-          >
-            关闭
-          </Button>
-          <Button 
-            type="primary" 
-            onClick={handleConfirmMaterialSelection}
-            style={{ 
-              minWidth: '80px',
-              height: '36px',
-              backgroundColor: '#1890ff',
-              borderColor: '#1890ff'
-            }}
-          >
-            确定
-          </Button>
+          <Space>
+            <Button onClick={handleCloseMaterialSelect}>取消</Button>
+            <Button type="primary" onClick={handleConfirmMaterialSelection}>确认选择</Button>
+          </Space>
         </div>
       </Modal>
     </div>

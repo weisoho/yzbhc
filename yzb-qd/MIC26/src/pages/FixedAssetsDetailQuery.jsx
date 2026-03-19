@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Table, Input, Select, DatePicker, Button, Space, Tag, Modal, Descriptions, message, Pagination, Form, Upload } from 'antd';
 import { SearchOutlined, EditOutlined, DownloadOutlined, PrinterOutlined, UploadOutlined, EyeOutlined } from '@ant-design/icons';
+import api from '../utils/api';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -12,114 +13,51 @@ const FixedAssetsDetailQuery = () => {
   const [form] = Form.useForm();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [assets, setAssets] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
 
-  const assets = [
-    { 
-      key: '1', 
-      assetCode: 'FA2024001', 
-      assetName: 'CT扫描仪', 
-      assetType: '医疗设备', 
-      specification: '64排128层',
-      manufacturer: '西门子医疗',
-      purchaseDate: '2024-01-15',
-      originalValue: 2800000,
-      netValue: 2520000,
-      department: '放射科',
-      location: 'A栋1楼',
-      responsiblePerson: '张医生',
-      status: '在用',
-      depreciationMethod: '直线法',
-      usefulLife: 10,
-      serialNumber: 'CT-SIEMENS-001',
-      qualityCertificate: '资产合格证_FA2024001.pdf',
-      calibrationCertificate: '校准报告证书_FA2024001.pdf',
-      inspectionCertificate: '检验合格证书_FA2024001.pdf'
-    },
-    { 
-      key: '2', 
-      assetCode: 'FA2024002', 
-      assetName: '彩色超声诊断仪', 
-      assetType: '医疗设备', 
-      specification: '高端彩超',
-      manufacturer: 'GE医疗',
-      purchaseDate: '2024-02-20',
-      originalValue: 1500000,
-      netValue: 1425000,
-      department: '超声科',
-      location: 'B栋2楼',
-      responsiblePerson: '李医生',
-      status: '在用',
-      depreciationMethod: '直线法',
-      usefulLife: 8,
-      serialNumber: 'US-GE-002',
-      qualityCertificate: '资产合格证_FA2024002.pdf',
-      calibrationCertificate: '校准报告证书_FA2024002.pdf',
-      inspectionCertificate: '检验合格证书_FA2024002.pdf'
-    },
-    { 
-      key: '3', 
-      assetCode: 'FA2024003', 
-      assetName: '服务器', 
-      assetType: '办公设备', 
-      specification: 'Dell PowerEdge',
-      manufacturer: '戴尔',
-      purchaseDate: '2024-03-10',
-      originalValue: 80000,
-      netValue: 76000,
-      department: '信息科',
-      location: '数据中心',
-      responsiblePerson: '王工程师',
-      status: '在用',
-      depreciationMethod: '直线法',
-      usefulLife: 5,
-      serialNumber: 'SRV-DELL-003',
-      qualityCertificate: '资产合格证_FA2024003.pdf',
-      calibrationCertificate: '校准报告证书_FA2024003.pdf',
-      inspectionCertificate: '检验合格证书_FA2024003.pdf'
-    },
-    { 
-      key: '4', 
-      assetCode: 'FA2023001', 
-      assetName: '公务用车', 
-      assetType: '车辆', 
-      specification: '丰田凯美瑞',
-      manufacturer: '丰田',
-      purchaseDate: '2023-06-15',
-      originalValue: 250000,
-      netValue: 212500,
-      department: '行政部',
-      location: '停车场',
-      responsiblePerson: '赵主任',
-      status: '在用',
-      depreciationMethod: '直线法',
-      usefulLife: 8,
-      serialNumber: 'CAR-TOYOTA-001',
-      qualityCertificate: '资产合格证_FA2023001.pdf',
-      calibrationCertificate: '校准报告证书_FA2023001.pdf',
-      inspectionCertificate: '检验合格证书_FA2023001.pdf'
-    },
-    { 
-      key: '5', 
-      assetCode: 'FA2022001', 
-      assetName: '办公桌椅', 
-      assetType: '家具', 
-      specification: '实木办公桌椅',
-      manufacturer: '宜家',
-      purchaseDate: '2022-08-20',
-      originalValue: 5000,
-      netValue: 4000,
-      department: '运营组',
-      location: 'C栋3楼',
-      responsiblePerson: '孙经理',
-      status: '闲置',
-      depreciationMethod: '直线法',
-      usefulLife: 10,
-      serialNumber: 'FUR-IKEA-001',
-      qualityCertificate: '资产合格证_FA2022001.pdf',
-      calibrationCertificate: '校准报告证书_FA2022001.pdf',
-      inspectionCertificate: '检验合格证书_FA2022001.pdf'
-    },
-  ];
+  // 加载资产列表
+  useEffect(() => {
+    loadAssets();
+  }, [currentPage, pageSize]);
+
+  const loadAssets = async () => {
+    try {
+      setLoading(true);
+      const response = await api.post('/yzb/selectAsset', {
+        pageNum: currentPage,
+        pageSize: pageSize
+      });
+      if (response.code === 1 && response.data) {
+        const assetList = response.data.list.map(asset => ({
+          key: asset.id,
+          id: asset.id,
+          assetCode: asset.assetCode,
+          assetName: asset.assetName,
+          assetType: asset.assetTypeName || '未知类型', // 从API获取资产类型名称
+          specification: asset.assetSpec,
+          manufacturer: asset.manufacturer,
+          purchaseDate: asset.purchaseDate ? asset.purchaseDate.substring(0, 10) : '',
+          originalValue: asset.originalValue,
+          netValue: asset.netValue,
+          department: asset.depName || '未知部门', // 从API获取部门名称
+          location: asset.location,
+          responsiblePerson: asset.responsiblePerson,
+          status: asset.assetState === 1 ? '在用' : '闲置',
+          depreciationMethod: asset.depreciationMethod || '直线法', // 从API获取折旧方法
+          usefulLife: asset.usefulLife,
+          serialNumber: asset.serialNumber
+        }));
+        setAssets(assetList);
+        setTotal(response.data.total);
+      }
+    } catch (error) {
+      message.error('加载资产列表失败');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const columns = [
     { title: '资产编码', dataIndex: 'assetCode', key: 'assetCode', width: 120 },
@@ -139,16 +77,16 @@ const FixedAssetsDetailQuery = () => {
       dataIndex: 'originalValue', 
       key: 'originalValue', 
       width: 110,
-      render: (value) => value.toLocaleString(),
-      sorter: (a, b) => a.originalValue - b.originalValue
+      render: (value) => value ? value.toLocaleString() : '0',
+      sorter: (a, b) => (a.originalValue || 0) - (b.originalValue || 0)
     },
     { 
       title: '净值（元）', 
       dataIndex: 'netValue', 
       key: 'netValue', 
       width: 110,
-      render: (value) => value.toLocaleString(),
-      sorter: (a, b) => a.netValue - b.netValue
+      render: (value) => value ? value.toLocaleString() : '0',
+      sorter: (a, b) => (a.netValue || 0) - (b.netValue || 0)
     },
     { title: '使用部门', dataIndex: 'department', key: 'department', width: 100 },
     { 
@@ -208,13 +146,37 @@ const FixedAssetsDetailQuery = () => {
 
   const handleSave = async () => {
     try {
+      setLoading(true);
       const values = await form.validateFields();
-      // 这里可以添加保存逻辑，例如API调用
-      message.success('修改成功！');
-      setVisible(false);
-      // 可以在这里更新assets数组中的数据
+      
+      const assetData = {
+        id: editingAsset.id,
+        assetCode: values.assetCode,
+        assetName: values.assetName,
+        assetSpec: values.specification,
+        manufacturer: values.manufacturer,
+        purchaseDate: values.purchaseDate,
+        originalValue: values.originalValue,
+        netValue: values.netValue,
+        location: values.location,
+        responsiblePerson: values.responsiblePerson,
+        assetState: values.status === '在用' ? 1 : 0,
+        usefulLife: values.usefulLife,
+        serialNumber: values.serialNumber
+      };
+      
+      const response = await api.post('/yzb/updateAsset', assetData);
+      if (response.code === 1) {
+        message.success('修改成功！');
+        setVisible(false);
+        loadAssets();
+      } else {
+        message.error('修改失败');
+      }
     } catch (error) {
       message.error('请检查输入信息！');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -291,6 +253,7 @@ const FixedAssetsDetailQuery = () => {
             })
           }))} 
           dataSource={assets} 
+          loading={loading}
           pagination={false}
           scroll={{ x: 1600 }}
         />
@@ -303,7 +266,7 @@ const FixedAssetsDetailQuery = () => {
           showSizeChanger={true}
           showQuickJumper={true}
           showTotal={(total) => `共 ${total} 条记录`}
-          total={assets.length}
+          total={total}
           onChange={(page, size) => {
             setCurrentPage(page);
             setPageSize(size);
@@ -319,7 +282,7 @@ const FixedAssetsDetailQuery = () => {
           <Button key="close" onClick={() => setVisible(false)}>
             取消
           </Button>,
-          <Button key="save" type="primary" onClick={handleSave}>
+          <Button key="save" type="primary" onClick={handleSave} loading={loading}>
             保存
           </Button>
         ]}
@@ -435,75 +398,6 @@ const FixedAssetsDetailQuery = () => {
                 <Option value="维修">维修</Option>
                 <Option value="待报废">待报废</Option>
               </Select>
-            </Form.Item>
-
-            <Form.Item
-              name="qualityCertificate"
-              label="资产合格证"
-              valuePropName="fileList"
-            >
-              <div>
-                {selectedAsset.qualityCertificate && (
-                  <div style={{ marginBottom: 8 }}>
-                    <Button 
-                      type="link" 
-                      icon={<EyeOutlined />}
-                      onClick={() => console.log('查看资产合格证:', selectedAsset.qualityCertificate)}
-                    >
-                      {selectedAsset.qualityCertificate}
-                    </Button>
-                  </div>
-                )}
-                <Upload {...uploadProps}>
-                  <Button icon={<UploadOutlined />}>上传新附件</Button>
-                </Upload>
-              </div>
-            </Form.Item>
-
-            <Form.Item
-              name="calibrationCertificate"
-              label="校准报告证书"
-              valuePropName="fileList"
-            >
-              <div>
-                {selectedAsset.calibrationCertificate && (
-                  <div style={{ marginBottom: 8 }}>
-                    <Button 
-                      type="link" 
-                      icon={<EyeOutlined />}
-                      onClick={() => console.log('查看校准报告证书:', selectedAsset.calibrationCertificate)}
-                    >
-                      {selectedAsset.calibrationCertificate}
-                    </Button>
-                  </div>
-                )}
-                <Upload {...uploadProps}>
-                  <Button icon={<UploadOutlined />}>上传新附件</Button>
-                </Upload>
-              </div>
-            </Form.Item>
-
-            <Form.Item
-              name="inspectionCertificate"
-              label="检验合格证书"
-              valuePropName="fileList"
-            >
-              <div>
-                {selectedAsset.inspectionCertificate && (
-                  <div style={{ marginBottom: 8 }}>
-                    <Button 
-                      type="link" 
-                      icon={<EyeOutlined />}
-                      onClick={() => console.log('查看检验合格证书:', selectedAsset.inspectionCertificate)}
-                    >
-                      {selectedAsset.inspectionCertificate}
-                    </Button>
-                  </div>
-                )}
-                <Upload {...uploadProps}>
-                  <Button icon={<UploadOutlined />}>上传新附件</Button>
-                </Upload>
-              </div>
             </Form.Item>
           </Form>
         )}

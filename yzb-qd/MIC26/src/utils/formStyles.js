@@ -81,13 +81,11 @@ export const getResponsiveColProps = (config = {}) => {
 export const getFormLayoutStyle = (type = 'search') => {
   if (type === 'search') {
     return {
-      layout: FORM_STYLES.form.search.layout,
-      rowGutter: FORM_STYLES.form.search.rowGutter
+      layout: FORM_STYLES.form.search.layout
     };
   } else {
     return {
-      layout: FORM_STYLES.form.edit.layout,
-      rowGutter: FORM_STYLES.form.edit.rowGutter
+      layout: FORM_STYLES.form.edit.layout
     };
   }
 };
