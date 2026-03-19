@@ -1,8 +1,11 @@
 package com.yunsheng.yzb.exception;
 
+import com.yunsheng.yzb.common.ScmBusinessException;
 import com.yunsheng.yzb.utils.AjaxResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.validation.BindException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 

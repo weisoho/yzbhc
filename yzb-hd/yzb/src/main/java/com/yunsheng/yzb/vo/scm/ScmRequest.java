@@ -8,6 +8,7 @@ import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -24,6 +25,7 @@ public final class ScmRequest {
      * 供应商分页查询参数。
      */
     @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class SupplierQuery extends PageQuery {
         /** 供应商名称。 */
         private String name;
@@ -58,6 +60,7 @@ public final class ScmRequest {
 
         /** 联系电话。 */
         @NotBlank(message = "联系电话不能为空")
+        @Pattern(regexp = "^1[3-9]\\d{9}$|^0\\d{2,3}-?\\d{7,8}$", message = "联系电话格式不正确（手机号：11 位；固话：区号 - 电话号码）")
         private String contactPhone;
 
         /** 联系地址。 */
@@ -65,6 +68,7 @@ public final class ScmRequest {
         private String address;
 
         /** 统一社会信用代码。 */
+        @Pattern(regexp = "^[0-9A-HJ-NPQRTUWXY]{2}\\d{6}[0-9A-HJ-NPQRTUWXY]{10}$", message = "统一社会信用代码格式不正确（18 位字母和数字组合）")
         private String creditCode;
 
         /** 税号。 */
@@ -83,6 +87,7 @@ public final class ScmRequest {
     /**
      * 供应商资质分页查询参数。
      */
+    @EqualsAndHashCode(callSuper = true)
     @Data
     public static class QualificationQuery extends PageQuery {
         /** 供应商主键。 */
@@ -141,6 +146,16 @@ public final class ScmRequest {
 
         /** 附件地址。 */
         private String licenseFile;
+    }
+
+    /**
+     * 导出选中记录参数。
+     */
+    @Data
+    public static class ExportSelection {
+        /** 选中的主键集合。 */
+        @NotEmpty(message = "请选择至少一条记录")
+        private List<Long> ids;
     }
 
     /**
@@ -221,6 +236,7 @@ public final class ScmRequest {
      * 采购分页查询参数。
      */
     @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class PurchaseQuery extends PageQuery {
         /** 采购单号。 */
         private String orderNumber;
@@ -367,6 +383,7 @@ public final class ScmRequest {
      * 入库分页查询参数。
      */
     @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class StockInQuery extends PageQuery {
         /** 入库单号。 */
         private String stockInNumber;
@@ -490,6 +507,7 @@ public final class ScmRequest {
      * 库存分页查询参数。
      */
     @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class InventoryQuery extends PageQuery {
         /** 物资编码。 */
         private String materialCode;
@@ -536,6 +554,7 @@ public final class ScmRequest {
      * 出库撤销分页查询参数。
      */
     @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class StockOutQuery extends PageQuery {
         /** 物资编码。 */
         private String materialCode;
@@ -622,6 +641,7 @@ public final class ScmRequest {
      * 操作日志分页查询参数。
      */
     @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class OperationLogQuery extends PageQuery {
         /** 模糊搜索文本。 */
         private String searchText;

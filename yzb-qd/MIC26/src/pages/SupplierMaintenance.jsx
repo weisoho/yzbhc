@@ -178,6 +178,64 @@ const SupplierMaintenance = () => {
     setViewingRecord(null);
   };
 
+  // 处理导出
+  const handleExport = async () => {
+    if (!selectedRowKeys.length) {
+      message.warning('请先勾选要导出的供应商');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // 调用后端按选中主键导出接口
+      const response = await fetch(`${import.meta.env.VITE_REACT_APP_API_URL || ''}/api/scm/suppliers/export/selected`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': localStorage.getItem('token') || ''
+        },
+        body: JSON.stringify({ ids: selectedRowKeys }),
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('导出失败');
+      }
+      
+      // 获取文件名
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = '供应商数据.xlsx';
+      if (contentDisposition) {
+        const utf8FileNameMatch = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
+        const normalFileNameMatch = /filename="?([^";]+)"?/i.exec(contentDisposition);
+        if (utf8FileNameMatch && utf8FileNameMatch[1]) {
+          filename = decodeURIComponent(utf8FileNameMatch[1]);
+        } else if (normalFileNameMatch && normalFileNameMatch[1]) {
+          filename = decodeURIComponent(normalFileNameMatch[1]);
+        }
+      }
+      
+      // 创建下载链接
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+      
+      message.success(`导出成功，共 ${selectedRowKeys.length} 条`);
+    } catch (error) {
+      console.error('导出失败:', error);
+      message.error('导出失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const columns = [
     {
       title: <Checkbox 
@@ -363,10 +421,7 @@ const SupplierMaintenance = () => {
             <Button 
               type="primary" 
               icon={<DownloadOutlined />}
-              onClick={() => {
-                // 批量导出选中的供应商
-                alert(`已导出 ${selectedRowKeys.length} 条供应商记录`);
-              }}
+              onClick={handleExport}
             >
               批量导出
             </Button>

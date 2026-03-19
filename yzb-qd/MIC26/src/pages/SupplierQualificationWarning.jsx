@@ -24,6 +24,7 @@ const SupplierQualificationWarning = () => {
   const [supplyChainData, setSupplyChainData] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState('hefei'); // hefei, asahi
   const [supplyChainTab, setSupplyChainTab] = useState('basic'); // basic, qualification, contract
+  const [selectedWarningKeys, setSelectedWarningKeys] = useState([]);
   
   // 搜索参数
   const [searchParams, setSearchParams] = useState({
@@ -156,6 +157,7 @@ const SupplierQualificationWarning = () => {
   }, []);
 
   useEffect(() => {
+    setSelectedWarningKeys([]);
     loadWarningData();
   }, [mainTab, currentPage, pageSize]);
 
@@ -318,6 +320,67 @@ const SupplierQualificationWarning = () => {
     });
     setCurrentPage(1);
     // loadWarningData 会在 useEffect 中被触发，因为 currentPage 改变了
+  };
+
+  const handleClearSelectedWarnings = () => {
+    setSelectedWarningKeys([]);
+  };
+
+  const handleExportSelectedWarnings = async () => {
+    if (mainTab !== 'supplier' && mainTab !== 'product') {
+      message.warning('当前页签不支持资质预警导出');
+      return;
+    }
+    if (!selectedWarningKeys.length) {
+      message.warning('请先勾选要导出的资质预警记录');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fetch(`${import.meta.env.VITE_REACT_APP_API_URL || ''}/api/scm/suppliers/qualifications/warnings/export`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': localStorage.getItem('token') || ''
+        },
+        body: JSON.stringify({ ids: selectedWarningKeys }),
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('导出失败');
+      }
+
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = '资质预警.xlsx';
+      if (contentDisposition) {
+        const utf8FileNameMatch = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
+        const normalFileNameMatch = /filename="?([^";]+)"?/i.exec(contentDisposition);
+        if (utf8FileNameMatch && utf8FileNameMatch[1]) {
+          filename = decodeURIComponent(utf8FileNameMatch[1]);
+        } else if (normalFileNameMatch && normalFileNameMatch[1]) {
+          filename = decodeURIComponent(normalFileNameMatch[1]);
+        }
+      }
+
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+
+      message.success(`导出成功，共 ${selectedWarningKeys.length} 条`);
+    } catch (error) {
+      console.error('导出资质预警失败:', error);
+      message.error('导出失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const columns = [
@@ -575,11 +638,11 @@ const SupplierQualificationWarning = () => {
           {/* 批量操作 */}
           <Card style={{ marginBottom: 16 }}>
             <Space wrap>
-              <Button type="primary" icon={<DownloadOutlined />}>
+              <Button type="primary" icon={<DownloadOutlined />} onClick={handleExportSelectedWarnings}>
                 批量导出
               </Button>
-              <Text>已选择0项</Text>
-              <Button type="link">清空</Button>
+              <Text>已选择{selectedWarningKeys.length}项</Text>
+              <Button type="link" onClick={handleClearSelectedWarnings}>清空</Button>
               <Checkbox defaultChecked>仅查看未过期</Checkbox>
             </Space>
           </Card>
@@ -609,7 +672,10 @@ const SupplierQualificationWarning = () => {
               loading={loading}
               scroll={{ x: 1600 }}
               rowKey="key"
-              rowSelection={{}}
+              rowSelection={{
+                selectedRowKeys: selectedWarningKeys,
+                onChange: (keys) => setSelectedWarningKeys(keys)
+              }}
               size="small"
             />
           </Card>
@@ -670,11 +736,11 @@ const SupplierQualificationWarning = () => {
           {/* 批量操作 */}
           <Card style={{ marginBottom: 16 }}>
             <Space wrap>
-              <Button type="primary" icon={<DownloadOutlined />}>
+              <Button type="primary" icon={<DownloadOutlined />} onClick={handleExportSelectedWarnings}>
                 批量导出
               </Button>
-              <Text>已选择0项</Text>
-              <Button type="link">清空</Button>
+              <Text>已选择{selectedWarningKeys.length}项</Text>
+              <Button type="link" onClick={handleClearSelectedWarnings}>清空</Button>
               <Checkbox defaultChecked>仅查看未过期</Checkbox>
             </Space>
           </Card>
@@ -878,7 +944,10 @@ const SupplierQualificationWarning = () => {
               loading={loading}
               scroll={{ x: 1600 }}
               rowKey="key"
-              rowSelection={{}}
+              rowSelection={{
+                selectedRowKeys: selectedWarningKeys,
+                onChange: (keys) => setSelectedWarningKeys(keys)
+              }}
               size="small"
             />
           </Card>

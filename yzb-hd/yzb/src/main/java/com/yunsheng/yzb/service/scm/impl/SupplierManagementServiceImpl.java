@@ -6,6 +6,10 @@ import com.yunsheng.yzb.common.ScmBusinessException;
 import com.yunsheng.yzb.common.ScmCodeGenerator;
 import com.yunsheng.yzb.common.ScmConstants;
 import com.yunsheng.yzb.common.ScmPageHelper;
+import com.yunsheng.yzb.export.ExportConfig;
+import com.yunsheng.yzb.export.ExportProcessor;
+import com.yunsheng.yzb.export.scm.QualificationConverter;
+import com.yunsheng.yzb.export.scm.SupplierConverter;
 import com.yunsheng.yzb.vo.scm.PageResult;
 import com.yunsheng.yzb.vo.scm.ScmRequest;
 import com.yunsheng.yzb.vo.scm.SupplierQualificationView;
@@ -23,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.io.OutputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -205,6 +210,134 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
         return supplierMapper.selectList(new LambdaQueryWrapper<SupplierEntity>()
                 .eq(SupplierEntity::getStatus, ScmConstants.SUPPLIER_AVAILABLE)
                 .orderByAsc(SupplierEntity::getName));
+    }
+
+    @Override
+    public void exportSuppliers(ScmRequest.SupplierQuery query, OutputStream outputStream) {
+        // 构建查询条件，导出时采用分页拉取，避免一次性加载全量数据。
+        LambdaQueryWrapper<SupplierEntity> wrapper = buildSupplierQueryWrapper(query);
+
+        // 创建导出处理器和转换器
+        ExportProcessor<SupplierEntity> processor = new ExportProcessor<>();
+        SupplierConverter converter = new SupplierConverter();
+
+        // 配置导出参数
+        ExportConfig config = new ExportConfig();
+        config.setBatchSize(2000);
+        config.setThreadPoolSize(1);
+        config.setEnableProgress(true);
+        config.setProgressInterval(1000);
+        config.setSheetName("供应商列表");
+        config.setFileNamePrefix("supplier_export");
+        config.setIncludeHeader(true);
+
+        final int pageSize = config.getBatchSize();
+        processor.exportStream(pageIndex -> supplierMapper
+                        .selectPage(new Page<>(pageIndex + 1L, pageSize, false), wrapper)
+                        .getRecords(),
+                converter,
+                outputStream,
+                config,
+                null);
+    }
+
+    @Override
+    public void exportSuppliersByIds(List<Long> supplierIds, OutputStream outputStream) {
+        LambdaQueryWrapper<SupplierEntity> wrapper = new LambdaQueryWrapper<SupplierEntity>()
+                .in(SupplierEntity::getId, supplierIds)
+                .orderByDesc(SupplierEntity::getUpdateTime, SupplierEntity::getCreateTime);
+
+        List<SupplierEntity> suppliers = supplierMapper.selectList(wrapper);
+        ExportProcessor<SupplierEntity> processor = new ExportProcessor<>();
+        SupplierConverter converter = new SupplierConverter();
+        ExportConfig config = new ExportConfig();
+        config.setBatchSize(2000);
+        config.setThreadPoolSize(1);
+        config.setEnableProgress(true);
+        config.setProgressInterval(1000);
+        config.setSheetName("供应商列表");
+        config.setFileNamePrefix("supplier_export");
+        config.setIncludeHeader(true);
+
+        processor.export(suppliers, converter, outputStream, config, null);
+    }
+
+    @Override
+    public void exportQualifications(ScmRequest.QualificationQuery query, OutputStream outputStream) {
+        // 构建查询条件，导出时采用分页拉取，避免一次性加载全量数据。
+        LambdaQueryWrapper<SupplierQualificationEntity> wrapper = buildQualificationQueryWrapper(query);
+
+        // 创建导出处理器和转换器
+        ExportProcessor<SupplierQualificationEntity> processor = new ExportProcessor<>();
+        QualificationConverter converter = new QualificationConverter();
+
+        // 配置导出参数
+        ExportConfig config = new ExportConfig();
+        config.setBatchSize(2000);
+        config.setThreadPoolSize(1);
+        config.setEnableProgress(true);
+        config.setProgressInterval(1000);
+        config.setSheetName("供应商资质");
+        config.setFileNamePrefix("qualification_export");
+        config.setIncludeHeader(true);
+
+        final int pageSize = config.getBatchSize();
+        processor.exportStream(pageIndex -> qualificationMapper
+                        .selectPage(new Page<>(pageIndex + 1L, pageSize, false), wrapper)
+                        .getRecords(),
+                converter,
+                outputStream,
+                config,
+                null);
+    }
+
+    @Override
+    public void exportQualificationWarningsByIds(List<Long> qualificationIds, OutputStream outputStream) {
+        LambdaQueryWrapper<SupplierQualificationEntity> wrapper = new LambdaQueryWrapper<SupplierQualificationEntity>()
+                .in(SupplierQualificationEntity::getId, qualificationIds)
+                .orderByDesc(SupplierQualificationEntity::getExpiryDate, SupplierQualificationEntity::getCreateTime);
+
+        List<SupplierQualificationEntity> qualifications = qualificationMapper.selectList(wrapper);
+        ExportProcessor<SupplierQualificationEntity> processor = new ExportProcessor<>();
+        QualificationConverter converter = new QualificationConverter();
+        ExportConfig config = new ExportConfig();
+        config.setBatchSize(2000);
+        config.setThreadPoolSize(1);
+        config.setEnableProgress(true);
+        config.setProgressInterval(1000);
+        config.setSheetName("资质预警");
+        config.setFileNamePrefix("qualification_warning_export");
+        config.setIncludeHeader(true);
+
+        processor.export(qualifications, converter, outputStream, config, null);
+    }
+
+    /**
+     * 构建供应商查询条件。
+     */
+    private LambdaQueryWrapper<SupplierEntity> buildSupplierQueryWrapper(ScmRequest.SupplierQuery query) {
+        LambdaQueryWrapper<SupplierEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.like(StringUtils.hasText(query.getName()), SupplierEntity::getName, query.getName())
+                .like(StringUtils.hasText(query.getContactPerson()), SupplierEntity::getContactPerson, query.getContactPerson())
+                .like(StringUtils.hasText(query.getContactPhone()), SupplierEntity::getContactPhone, query.getContactPhone())
+                .like(StringUtils.hasText(query.getLegalRepresentative()), SupplierEntity::getLegalRepresentative, query.getLegalRepresentative())
+                .eq(StringUtils.hasText(query.getEnterpriseType()), SupplierEntity::getEnterpriseType, query.getEnterpriseType())
+                .eq(StringUtils.hasText(query.getStatus()), SupplierEntity::getStatus, query.getStatus())
+                .orderByDesc(SupplierEntity::getUpdateTime, SupplierEntity::getCreateTime);
+        return wrapper;
+    }
+
+    /**
+     * 构建资质查询条件。
+     */
+    private LambdaQueryWrapper<SupplierQualificationEntity> buildQualificationQueryWrapper(ScmRequest.QualificationQuery query) {
+        LambdaQueryWrapper<SupplierQualificationEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(query.getSupplierId() != null, SupplierQualificationEntity::getSupplierId, query.getSupplierId())
+                .eq(StringUtils.hasText(query.getType()), SupplierQualificationEntity::getType, query.getType())
+                .like(StringUtils.hasText(query.getCertificateName()), SupplierQualificationEntity::getCertificateName, query.getCertificateName())
+                .like(StringUtils.hasText(query.getLicenseNumber()), SupplierQualificationEntity::getLicenseNumber, query.getLicenseNumber())
+                .orderByDesc(SupplierQualificationEntity::getExpiryDate, SupplierQualificationEntity::getCreateTime);
+        return wrapper;
     }
 
     private void checkSupplierNameUnique(String supplierName, Long excludeId) {

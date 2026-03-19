@@ -6,6 +6,7 @@ import com.yunsheng.yzb.vo.scm.SupplierQualificationView;
 import com.yunsheng.yzb.model.scm.SupplierEntity;
 import com.yunsheng.yzb.model.scm.SupplierQualificationEntity;
 
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
 
@@ -111,4 +112,37 @@ public interface SupplierManagementService {
      * @return 可用供应商列表
      */
     List<SupplierEntity> listEnabledSuppliers();
+
+    /**
+     * 导出供应商数据到 Excel。
+     * 支持百万级数据，采用多线程、分批次处理。
+     *
+     * @param query 查询条件
+     * @param outputStream 输出流
+     */
+    void exportSuppliers(ScmRequest.SupplierQuery query, OutputStream outputStream);
+
+    /**
+     * 按选中供应商主键导出供应商数据。
+     *
+     * @param supplierIds 供应商主键集合
+     * @param outputStream 输出流
+     */
+    void exportSuppliersByIds(List<Long> supplierIds, OutputStream outputStream);
+
+    /**
+     * 导出供应商资质数据到 Excel。
+     *
+     * @param query 查询条件
+     * @param outputStream 输出流
+     */
+    void exportQualifications(ScmRequest.QualificationQuery query, OutputStream outputStream);
+
+    /**
+     * 按选中资质主键导出资质预警数据。
+     *
+     * @param qualificationIds 资质主键集合
+     * @param outputStream 输出流
+     */
+    void exportQualificationWarningsByIds(List<Long> qualificationIds, OutputStream outputStream);
 }
