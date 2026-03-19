@@ -28,11 +28,13 @@ import {
   DeleteOutlined,
   ExportOutlined
 } from '@ant-design/icons';
+import api from '../utils/api';
 
 const PurchaseOrderRequest = () => {
   // 配置dayjs使用中文
   dayjs.locale('zh-cn');
   
+  const [messageApi, contextHolder] = message.useMessage();
   const [form] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
@@ -42,189 +44,8 @@ const PurchaseOrderRequest = () => {
   const [hasSelectedView, setHasSelectedView] = useState(false); // 是否已选择视图
   const [selectedDetailKeys, setSelectedDetailKeys] = useState([]); // 采购明细弹窗中选中的商品明细行
   
-  // 物资目录数据（用于选择弹窗）
-  const [materialCatalog, setMaterialCatalog] = useState([
-    {
-      key: '1',
-      materialCode: 'MAT001',
-      materialName: '医用口罩',
-      specification: 'N95',
-      model: 'N95-001',
-      manufacturer: '医疗用品有限公司',
-      supplier: '医疗用品供应商',
-      materialType: '低值耗材',
-      minPackage: '10只/盒',
-      minOrderQuantity: 1,
-      quantity: 1,
-      selected: false,
-      unit: '盒',
-      unitPrice: 25.00,
-      stock: 100,
-      registrationNumber: '国械注准202326400123'
-    },
-    {
-      key: '2',
-      materialCode: 'MAT002',
-      materialName: '医用防护服',
-      specification: 'L号',
-      model: 'PF-202',
-      manufacturer: '防护设备制造厂',
-      supplier: '防护用品供应商',
-      materialType: '高值耗材',
-      minPackage: '1件/袋',
-      minOrderQuantity: 1,
-      quantity: 1,
-      selected: false,
-      unit: '件',
-      unitPrice: 85.00,
-      stock: 50,
-      registrationNumber: '国械注准202326400456'
-    },
-    {
-      key: '3',
-      materialCode: 'MAT003',
-      materialName: '医用手套',
-      specification: '乳胶',
-      model: 'GL-301',
-      manufacturer: '乳胶制品厂',
-      supplier: '医疗耗材供应商',
-      materialType: '低值耗材',
-      minPackage: '100双/箱',
-      minOrderQuantity: 1,
-      quantity: 10,
-      selected: false,
-      unit: '双',
-      unitPrice: 3.50,
-      stock: 200,
-      registrationNumber: '国械注准202326400789'
-    },
-    {
-      key: '4',
-      materialCode: 'MAT004',
-      materialName: '消毒液',
-      specification: '500ml',
-      model: 'DL-450',
-      manufacturer: '消毒制品公司',
-      supplier: '清洁用品供应商',
-      materialType: '试剂',
-      minPackage: '12瓶/箱',
-      minOrderQuantity: 1,
-      quantity: 5,
-      selected: false,
-      unit: '瓶',
-      unitPrice: 18.00,
-      stock: 80,
-      registrationNumber: '国械注准202326401234'
-    },
-    {
-      key: '5',
-      materialCode: 'MAT005',
-      materialName: '体温计',
-      specification: '电子',
-      model: 'TM-550',
-      manufacturer: '医疗器械公司',
-      supplier: '医疗设备供应商',
-      materialType: '高值耗材',
-      minPackage: '1支/盒',
-      minOrderQuantity: 1,
-      quantity: 2,
-      selected: false,
-      unit: '支',
-      unitPrice: 32.00,
-      stock: 60,
-      registrationNumber: '国械注准202326405678'
-    },
-    {
-      key: '6',
-      materialCode: 'MAT006',
-      materialName: '注射器',
-      specification: '5ml',
-      model: 'SY-605',
-      manufacturer: '注射器制造厂',
-      supplier: '医疗耗材供应商',
-      materialType: '低值耗材',
-      minPackage: '100支/箱',
-      minOrderQuantity: 1,
-      quantity: 50,
-      selected: false,
-      unit: '支',
-      unitPrice: 1.20,
-      stock: 300,
-      registrationNumber: '国械注准202326409012'
-    },
-    {
-      key: '7',
-      materialCode: 'MAT007',
-      materialName: '输液器',
-      specification: '一次性',
-      model: 'IV-701',
-      manufacturer: '输液设备公司',
-      supplier: '医疗设备供应商',
-      materialType: '高值耗材',
-      minPackage: '50套/箱',
-      minOrderQuantity: 1,
-      quantity: 20,
-      selected: false,
-      unit: '套',
-      unitPrice: 4.80,
-      stock: 150,
-      registrationNumber: '国械注准202326403456'
-    },
-    {
-      key: '8',
-      materialCode: 'MAT008',
-      materialName: '纱布',
-      specification: '10cm×10cm',
-      model: 'GS-810',
-      manufacturer: '医用敷料厂',
-      supplier: '医疗耗材供应商',
-      materialType: '低值耗材',
-      minPackage: '100包/箱',
-      minOrderQuantity: 1,
-      quantity: 10,
-      selected: false,
-      unit: '包',
-      unitPrice: 8.50,
-      stock: 120,
-      registrationNumber: '国械注准202326407890'
-    },
-    {
-      key: '9',
-      materialCode: 'MAT009',
-      materialName: '棉签',
-      specification: '医用',
-      model: 'CS-920',
-      manufacturer: '卫生用品公司',
-      supplier: '清洁用品供应商',
-      materialType: '低值耗材',
-      minPackage: '200包/箱',
-      minOrderQuantity: 1,
-      quantity: 20,
-      selected: false,
-      unit: '包',
-      unitPrice: 2.50,
-      stock: 180,
-      registrationNumber: '国械注准202326401234'
-    },
-    {
-      key: '10',
-      materialCode: 'MAT010',
-      materialName: '创可贴',
-      specification: '防水',
-      model: 'BP-103',
-      manufacturer: '创可贴制造厂',
-      supplier: '医疗耗材供应商',
-      materialType: '低值耗材',
-      minPackage: '100片/盒',
-      minOrderQuantity: 1,
-      quantity: 100,
-      selected: false,
-      unit: '片',
-      unitPrice: 0.80,
-      stock: 500,
-      registrationNumber: '国械注准202326405678'
-    }
-  ]);
+  // 物资目录数据（用于选择弹窗，从后端加载）
+  const [materialCatalog, setMaterialCatalog] = useState([]);
   
   // 搜索表单状态
   const [searchForm] = Form.useForm();
@@ -232,251 +53,149 @@ const PurchaseOrderRequest = () => {
   const [catalogSelectAll, setCatalogSelectAll] = useState(false);
   const [catalogCurrentPage, setCatalogCurrentPage] = useState(1);
   const [catalogPageSize, setCatalogPageSize] = useState(5);
-
-  // 初始化过滤数据
-  useEffect(() => {
-    setFilteredMaterials([...materialCatalog]);
-  }, []);
-  
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [selectAll, setSelectAll] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [currentOrderDetails, setCurrentOrderDetails] = useState(null);
   const [editingDetails, setEditingDetails] = useState([]); // 编辑中的商品明细数据
+  const [loading, setLoading] = useState(false);
+  const [suppliers, setSuppliers] = useState([]);
+  // 新建采购申请表单字段
+  const [newOrderForm] = Form.useForm();
 
-  const [remark, setRemark] = useState('');
-  // 科室列表
-  const departments = ['内科', '外科', '儿科', '妇产科', '急诊科'];
-
-  // 随机获取科室
-  const getRandomDepartment = () => {
-    return departments[Math.floor(Math.random() * departments.length)];
+  // 加载物资目录（从后端）
+  const loadMaterialCatalog = async () => {
+    try {
+      const response = await api.get('/api/scm/materials/enabled');
+      if (response.code === 1 && response.data) {
+        const catalog = response.data.map(m => ({
+          key: String(m.id),
+          materialCode: m.materialCode,
+          materialName: m.name,
+          specification: m.specification,
+          model: m.model,
+          manufacturer: m.manufacturer,
+          supplier: m.supplierName,
+          supplierId: m.supplierId,
+          materialType: m.materialType,
+          minPackage: m.minPackage,
+          minOrderQuantity: 1,
+          quantity: 1,
+          selected: false,
+          unit: m.unit,
+          unitPrice: parseFloat(m.purchasePrice) || 0,
+          stock: 0,
+          registrationNumber: m.registrationNumber
+        }));
+        setMaterialCatalog(catalog);
+        setFilteredMaterials(catalog);
+      }
+    } catch (error) {
+      console.error('加载物资目录失败:', error);
+    }
   };
 
-  const [purchaseOrders, setPurchaseOrders] = useState([
-    {
-      key: '1',
-      orderNumber: 'PO250001202601',
-      createTime: '2026-01-25 10:00:00',
-      status: 'pending',
-      supplier: '医疗用品有限公司',
-      department: '内科',
-      totalAmount: 1250.00,
-      itemCount: 5,
-      operator: '张三',
-      planType: 'weekly',
-      details: [
-        { key: '1-1', materialCode: 'MAT001', materialName: '医用口罩', specification: 'N95', unit: '盒', unitPrice: 25.00, quantity: 10, amount: 250.00 },
-        { key: '1-2', materialCode: 'MAT002', materialName: '医用防护服', specification: 'L号', unit: '件', unitPrice: 85.00, quantity: 5, amount: 425.00 },
-        { key: '1-3', materialCode: 'MAT003', materialName: '医用手套', specification: '乳胶', unit: '双', unitPrice: 3.50, quantity: 100, amount: 350.00 },
-        { key: '1-4', materialCode: 'MAT004', materialName: '消毒液', specification: '500ml', unit: '瓶', unitPrice: 18.00, quantity: 10, amount: 180.00 },
-        { key: '1-5', materialCode: 'MAT005', materialName: '体温计', specification: '电子', unit: '支', unitPrice: 32.00, quantity: 5, amount: 160.00 }
-      ]
-    },
-    {
-      key: '2',
-      orderNumber: 'PO250002202601',
-      createTime: '2026-01-24 14:30:00',
-      status: 'approved',
-      supplier: '医疗器械有限公司',
-      department: '外科',
-      totalAmount: 850.50,
-      itemCount: 3,
-      operator: '李四',
-      planType: 'monthly',
-      details: [
-        { key: '2-1', materialCode: 'MAT006', materialName: '注射器', specification: '5ml', unit: '支', unitPrice: 1.20, quantity: 200, amount: 240.00 },
-        { key: '2-2', materialCode: 'MAT007', materialName: '输液器', specification: '一次性', unit: '套', unitPrice: 4.80, quantity: 100, amount: 480.00 },
-        { key: '2-3', materialCode: 'MAT008', materialName: '纱布', specification: '10cm×10cm', unit: '包', unitPrice: 8.50, quantity: 15, amount: 127.50 }
-      ]
-    },
-    {
-      key: '3',
-      orderNumber: 'PO250003202601',
-      createTime: '2026-01-23 09:15:00',
-      status: 'completed',
-      supplier: '消毒用品有限公司',
-      department: '儿科',
-      totalAmount: 320.00,
-      itemCount: 2,
-      operator: '王五',
-      planType: 'weekly',
-      details: [
-        { key: '3-1', materialCode: 'MAT009', materialName: '棉签', specification: '医用', unit: '包', unitPrice: 2.50, quantity: 80, amount: 200.00 },
-        { key: '3-2', materialCode: 'MAT010', materialName: '创可贴', specification: '防水', unit: '片', unitPrice: 0.80, quantity: 150, amount: 120.00 }
-      ]
-    },
-    {
-      key: '4',
-      orderNumber: 'PO20241226-004',
-      createTime: '2024-12-26 16:30:00',
-      status: 'rejected',
-      supplier: '医疗用品有限公司',
-      department: '妇产科',
-      totalAmount: 2500.00,
-      itemCount: 1,
-      rejectReason: '库存充足，请降低采购数量',
-      operator: '赵六',
-      planType: 'monthly',
-      details: [
-        { key: '4-1', materialCode: 'MAT001', materialName: '医用口罩', specification: 'N95', unit: '盒', unitPrice: 25.00, quantity: 100, amount: 2500.00 }
-      ]
-    },
-    {
-      key: '5',
-      orderNumber: 'PO250004202601',
-      createTime: '2026-01-22 11:20:00',
-      status: 'shipping',
-      supplier: '实验室设备有限公司',
-      department: '急诊科',
-      totalAmount: 4500.00,
-      itemCount: 8,
-      operator: '钱七',
-      planType: 'weekly',
-      details: [
-        { key: '5-1', materialCode: 'MAT011', materialName: '显微镜', specification: '1000倍', unit: '台', unitPrice: 1200.00, quantity: 2, amount: 2400.00 },
-        { key: '5-2', materialCode: 'MAT012', materialName: '离心机', specification: '5000rpm', unit: '台', unitPrice: 800.00, quantity: 1, amount: 800.00 },
-        { key: '5-3', materialCode: 'MAT013', materialName: '培养皿', specification: '90mm', unit: '个', unitPrice: 5.00, quantity: 200, amount: 1000.00 },
-        { key: '5-4', materialCode: 'MAT014', materialName: '试管', specification: '15ml', unit: '支', unitPrice: 2.00, quantity: 150, amount: 300.00 }
-      ]
-    },
-    {
-      key: '5-1',
-      orderNumber: 'PO250005202601',
-      createTime: '2026-01-21 15:45:00',
-      status: 'receiving',
-      supplier: '办公用品有限公司',
-      department: '内科',
-      totalAmount: 1200.00,
-      itemCount: 4,
-      operator: '孙八',
-      planType: 'monthly',
-      details: [
-        { key: '5-1-1', materialCode: 'MAT015', materialName: 'A4纸', specification: '80g', unit: '包', unitPrice: 25.00, quantity: 20, amount: 500.00 },
-        { key: '5-1-2', materialCode: 'MAT016', materialName: '签字笔', specification: '黑色', unit: '支', unitPrice: 3.00, quantity: 100, amount: 300.00 },
-        { key: '5-1-3', materialCode: 'MAT017', materialName: '文件夹', specification: 'A4', unit: '个', unitPrice: 8.00, quantity: 30, amount: 240.00 },
-        { key: '5-1-4', materialCode: 'MAT018', materialName: '订书机', specification: '标准', unit: '个', unitPrice: 16.00, quantity: 10, amount: 160.00 }
-      ]
-    },
-    {
-      key: '6',
-      orderNumber: 'PO250006202601',
-      createTime: '2026-01-20 09:30:00',
-      status: 'terminated',
-      supplier: '测试设备有限公司',
-      department: '外科',
-      totalAmount: 780.00,
-      itemCount: 3,
-      operator: '周九',
-      planType: 'weekly',
-      details: [
-        { key: '6-1', materialCode: 'MAT019', materialName: '测试仪', specification: '数字', unit: '台', unitPrice: 300.00, quantity: 2, amount: 600.00 },
-        { key: '6-2', materialCode: 'MAT020', materialName: '探头', specification: '温度', unit: '个', unitPrice: 60.00, quantity: 3, amount: 180.00 }
-      ]
-    },
-    {
-      key: '7',
-      orderNumber: 'PO250007202601',
-      createTime: '2026-01-19 14:15:00',
-      status: 'pending',
-      supplier: '电子设备有限公司',
-      department: '儿科',
-      totalAmount: 2300.00,
-      itemCount: 6,
-      operator: '吴十',
-      planType: 'monthly',
-      details: [
-        { key: '7-1', materialCode: 'MAT021', materialName: '笔记本电脑', specification: 'i7/16G', unit: '台', unitPrice: 800.00, quantity: 2, amount: 1600.00 },
-        { key: '7-2', materialCode: 'MAT022', materialName: '显示器', specification: '24寸', unit: '台', unitPrice: 120.00, quantity: 3, amount: 360.00 },
-        { key: '7-3', materialCode: 'MAT023', materialName: '键盘', specification: '机械', unit: '个', unitPrice: 80.00, quantity: 2, amount: 160.00 },
-        { key: '7-4', materialCode: 'MAT024', materialName: '鼠标', specification: '无线', unit: '个', unitPrice: 60.00, quantity: 3, amount: 180.00 }
-      ]
-    },
-    {
-      key: '8',
-      orderNumber: 'PO250008202601',
-      createTime: '2026-01-18 16:50:00',
-      status: 'approved',
-      supplier: '家具设备有限公司',
-      department: '妇产科',
-      totalAmount: 5600.00,
-      itemCount: 10,
-      operator: '郑一',
-      planType: 'weekly',
-      details: [
-        { key: '8-1', materialCode: 'MAT025', materialName: '办公桌', specification: '1.6m', unit: '张', unitPrice: 800.00, quantity: 4, amount: 3200.00 },
-        { key: '8-2', materialCode: 'MAT026', materialName: '办公椅', specification: '人体工学', unit: '把', unitPrice: 400.00, quantity: 6, amount: 2400.00 }
-      ]
-    },
-    {
-      key: '9',
-      orderNumber: 'PO250009202601',
-      createTime: '2026-01-17 13:25:00',
-      status: 'completed',
-      supplier: '清洁用品有限公司',
-      department: '急诊科',
-      totalAmount: 890.00,
-      itemCount: 7,
-      operator: '王二',
-      planType: 'monthly',
-      details: [
-        { key: '9-1', materialCode: 'MAT027', materialName: '拖把', specification: '旋转', unit: '把', unitPrice: 45.00, quantity: 10, amount: 450.00 },
-        { key: '9-2', materialCode: 'MAT028', materialName: '水桶', specification: '20L', unit: '个', unitPrice: 25.00, quantity: 8, amount: 200.00 },
-        { key: '9-3', materialCode: 'MAT029', materialName: '抹布', specification: '超细纤维', unit: '条', unitPrice: 8.00, quantity: 30, amount: 240.00 }
-      ]
-    },
-    {
-      key: '10',
-      orderNumber: 'PO250010202601',
-      createTime: '2026-01-16 10:40:00',
-      status: 'shipping',
-      supplier: '包装材料有限公司',
-      department: '内科',
-      totalAmount: 3400.00,
-      itemCount: 12,
-      operator: '张三',
-      planType: 'weekly',
-      details: [
-        { key: '10-1', materialCode: 'MAT030', materialName: '纸箱', specification: '50×40×30', unit: '个', unitPrice: 8.00, quantity: 200, amount: 1600.00 },
-        { key: '10-2', materialCode: 'MAT031', materialName: '气泡膜', specification: '宽60cm', unit: '卷', unitPrice: 60.00, quantity: 20, amount: 1200.00 },
-        { key: '10-3', materialCode: 'MAT032', materialName: '胶带', specification: '宽5cm', unit: '卷', unitPrice: 12.00, quantity: 50, amount: 600.00 }
-      ]
-    },
-    {
-      key: '11',
-      orderNumber: 'PO250011202601',
-      createTime: '2026-01-15 08:55:00',
-      status: 'receiving',
-      supplier: '安全设备有限公司',
-      department: '外科',
-      totalAmount: 2100.00,
-      itemCount: 5,
-      operator: '李四',
-      planType: 'monthly',
-      details: [
-        { key: '11-1', materialCode: 'MAT033', materialName: '安全帽', specification: 'ABS', unit: '顶', unitPrice: 35.00, quantity: 40, amount: 1400.00 },
-        { key: '11-2', materialCode: 'MAT034', materialName: '防护眼镜', specification: '防冲击', unit: '副', unitPrice: 25.00, quantity: 20, amount: 500.00 },
-        { key: '11-3', materialCode: 'MAT035', materialName: '手套', specification: '防割', unit: '双', unitPrice: 20.00, quantity: 10, amount: 200.00 }
-      ]
-    },
-    {
-      key: '12',
-      orderNumber: 'PO250012202601',
-      createTime: '2026-01-14 17:30:00',
-      status: 'terminated',
-      supplier: '测试仪器有限公司',
-      department: '儿科',
-      totalAmount: 4300.00,
-      itemCount: 9,
-      operator: '王五',
-      planType: 'weekly',
-      details: [
-        { key: '12-1', materialCode: 'MAT036', materialName: '光谱仪', specification: '便携式', unit: '台', unitPrice: 2500.00, quantity: 1, amount: 2500.00 },
-        { key: '12-2', materialCode: 'MAT037', materialName: 'PH计', specification: '数字', unit: '台', unitPrice: 600.00, quantity: 3, amount: 1800.00 }
-      ]
+  // 加载供应商列表
+  const loadSuppliers = async () => {
+    try {
+      const response = await api.get('/api/scm/suppliers');
+      if (response.code === 1 && response.data) {
+        setSuppliers(response.data.records || []);
+      }
+    } catch (error) {
+      console.error('加载供应商失败:', error);
     }
-  ]);
+  };
+
+  // 初始化数据
+  useEffect(() => {
+    loadPurchaseOrders();
+    loadDepartments();
+    loadMaterialCatalog();
+    loadSuppliers();
+  }, []);
+
+  // 加载采购订单列表
+  const loadPurchaseOrders = async (currentPage = pagination.current, currentSize = pagination.pageSize) => {
+    try {
+      setLoading(true);
+      const values = searchForm.getFieldsValue();
+      const params = {
+        pageNum: currentPage,
+        pageSize: currentSize,
+        orderNumber: values.orderNumber,
+        materialCode: values.materialCode,
+        materialName: values.materialName,
+        createTime: values.createTime ? values.createTime.format('YYYY-MM-DD') : undefined
+      };
+      const response = await api.get('/api/scm/purchases/orders', params);
+      if (response.code === 1 && response.data) {
+        const orderList = response.data.records.map(order => ({
+          key: order.id,
+          orderNumber: order.orderNumber,
+          createTime: order.createTime,
+          status: order.status,
+          supplier: order.supplierName,
+          department: order.departmentName,
+          totalAmount: order.totalAmount,
+          itemCount: order.itemCount,
+          operator: order.operatorName,
+          planType: order.planType,
+          details: (order.details || []).map(item => ({
+            key: item.id,
+            materialCode: item.materialCode,
+            materialName: item.materialName,
+            materialType: item.materialType,
+            unit: item.unit,
+            unitPrice: item.unitPrice,
+            quantity: item.quantity,
+            amount: item.amount,
+            specification: item.specification,
+            model: item.model
+          }))
+        }));
+        setPurchaseOrders(orderList);
+        setPagination(prev => ({
+          ...prev,
+          total: response.data.total
+        }));
+      } else {
+        messageApi.error(response.message || '加载采购订单失败');
+      }
+    } catch (error) {
+      console.error('加载采购订单失败:', error);
+      messageApi.error('加载采购订单失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [remark, setRemark] = useState('');
+  const [departments, setDepartments] = useState([]);
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+
+  // 加载部门列表
+  const loadDepartments = async () => {
+    try {
+      const response = await api.get('/api/department/list');
+      if (response.code === 1 && response.data && response.data.length > 0) {
+        setDepartments(response.data.map(d => ({ id: d.id, name: d.name })));
+        return;
+      }
+    } catch (error) {
+      console.error('加载部门列表失败:', error);
+    }
+    // 后端无数据时使用默认值
+    setDepartments([
+      { id: 1, name: '内科' },
+      { id: 2, name: '外科' },
+      { id: 3, name: '儿科' },
+      { id: 4, name: '妇产科' },
+      { id: 5, name: '急诊科' },
+      { id: 6, name: '运营组' }
+    ]);
+  };
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -503,13 +222,14 @@ const PurchaseOrderRequest = () => {
   ];
 
   const handleSearch = (values) => {
-    message.info('搜索功能已触发');
-    console.log('搜索条件:', values);
+    setPagination(prev => ({ ...prev, current: 1 }));
+    loadPurchaseOrders(1);
   };
 
   const handleReset = () => {
-    form.resetFields();
-    message.info('搜索条件已重置');
+    searchForm.resetFields();
+    messageApi.info('搜索条件已重置');
+    loadPurchaseOrders();
   };
 
   const handleNewRequest = () => {
@@ -522,6 +242,7 @@ const PurchaseOrderRequest = () => {
     setSelectAll(false);
     setCurrentPage(1);
     setRemark('');
+    newOrderForm.resetFields();
   };
 
   const handleMaterialSelect = (key) => {
@@ -564,20 +285,99 @@ const PurchaseOrderRequest = () => {
     setMaterials(materials.filter(item => item.key !== key));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const selectedMaterials = materials.filter(item => item.selected);
-    console.log('保存的物资:', selectedMaterials);
-    console.log('备注信息:', remark);
-    message.success(`已保存 ${selectedMaterials.length} 项物资`);
-    handleModalCancel();
+    if (selectedMaterials.length === 0) {
+      messageApi.warning('请至少选择一项物资');
+      return;
+    }
+
+    let formValues;
+    try {
+      formValues = await newOrderForm.validateFields();
+    } catch {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const purchaseData = {
+        departmentId: formValues.departmentId,
+        departmentName: departments.find(d => d.id === formValues.departmentId)?.name || String(formValues.departmentId),
+        supplierId: formValues.supplierId,
+        operatorName: formValues.operatorName || '当前用户',
+        planType: formValues.planType || 'monthly',
+        remark: remark,
+        items: selectedMaterials.map(item => ({
+          materialId: parseInt(item.key),
+          quantity: item.quantity
+        }))
+      };
+
+      const response = await api.post('/api/scm/purchases/orders', purchaseData);
+      if (response.code === 1) {
+        messageApi.success(`已保存 ${selectedMaterials.length} 项物资`);
+        handleModalCancel();
+        loadPurchaseOrders();
+      } else {
+        messageApi.error(response.message || '保存失败');
+      }
+    } catch (error) {
+      console.error('保存采购订单失败:', error);
+      messageApi.error('保存失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const selectedMaterials = materials.filter(item => item.selected);
-    console.log('提交的物资:', selectedMaterials);
-    console.log('备注信息:', remark);
-    message.success(`已提交 ${selectedMaterials.length} 项物资`);
-    handleModalCancel();
+    if (selectedMaterials.length === 0) {
+      messageApi.warning('请至少选择一项物资');
+      return;
+    }
+
+    let formValues;
+    try {
+      formValues = await newOrderForm.validateFields();
+    } catch {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const purchaseData = {
+        departmentId: formValues.departmentId,
+        departmentName: departments.find(d => d.id === formValues.departmentId)?.name || String(formValues.departmentId),
+        supplierId: formValues.supplierId,
+        operatorName: formValues.operatorName || '当前用户',
+        planType: formValues.planType || 'monthly',
+        remark: remark,
+        items: selectedMaterials.map(item => ({
+          materialId: parseInt(item.key),
+          quantity: item.quantity
+        }))
+      };
+
+      const response = await api.post('/api/scm/purchases/orders', purchaseData);
+      if (response.code === 1) {
+        const submitResponse = await api.post(`/api/scm/purchases/orders/${response.data.id}/submit?operatorName=${encodeURIComponent(formValues.operatorName || '当前用户')}`);
+        if (submitResponse.code === 1) {
+          messageApi.success(`已提交 ${selectedMaterials.length} 项物资`);
+          handleModalCancel();
+          loadPurchaseOrders();
+        } else {
+          messageApi.error(submitResponse.message || '提交失败');
+        }
+      } else {
+        messageApi.error(response.message || '保存失败');
+      }
+    } catch (error) {
+      console.error('提交采购订单失败:', error);
+      messageApi.error('提交失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePageChange = (page, size) => {
@@ -694,7 +494,7 @@ const PurchaseOrderRequest = () => {
     setFilteredMaterials(filtered);
     setCatalogCurrentPage(1);
     setCatalogSelectAll(false);
-    message.info(`找到 ${filtered.length} 条记录`);
+    messageApi.info(`找到 ${filtered.length} 条记录`);
   };
 
   const handleResetSearch = () => {
@@ -702,7 +502,7 @@ const PurchaseOrderRequest = () => {
     setFilteredMaterials([...materialCatalog]);
     setCatalogCurrentPage(1);
     setCatalogSelectAll(false);
-    message.info('搜索条件已重置');
+    messageApi.info('搜索条件已重置');
   };
 
   const handleConfirmMaterialSelection = () => {
@@ -739,7 +539,7 @@ const PurchaseOrderRequest = () => {
     });
     
     setMaterials(newMaterials);
-    message.success(`已添加 ${selectedMaterials.length} 项物资到采购明细`);
+    messageApi.success(`已添加 ${selectedMaterials.length} 项物资到采购明细`);
     handleCloseMaterialSelect();
   };
 
@@ -751,7 +551,7 @@ const PurchaseOrderRequest = () => {
 
   const handleSelectChange = (selectedRowKeys) => {
     setSelectedRowKeys(selectedRowKeys);
-    message.info(`已选择 ${selectedRowKeys.length} 条记录`);
+    messageApi.info(`已选择 ${selectedRowKeys.length} 条记录`);
   };
 
   const handleTableChange = (newPagination) => {
@@ -760,27 +560,44 @@ const PurchaseOrderRequest = () => {
       current: newPagination.current,
       pageSize: newPagination.pageSize
     });
+    loadPurchaseOrders(newPagination.current, newPagination.pageSize);
   };
 
   const getStatusTag = (status) => {
     const statusMap = {
-      terminated: { color: 'error', text: '已终止' },
-      pending: { color: 'warning', text: '待提交' },
-      approved: { color: 'blue', text: '待审核' },
-      shipping: { color: 'purple', text: '待发货' },
-      receiving: { color: 'orange', text: '待收货' },
-      completed: { color: 'success', text: '已完成' },
-      rejected: { color: 'warning', text: '待提交' }
+      DRAFT: { color: 'warning', text: '待提交' },
+      WAIT_AUDIT: { color: 'blue', text: '待审核' },
+      WAIT_RECEIVE: { color: 'orange', text: '待收货' },
+      WAIT_STOCK_IN: { color: 'purple', text: '待入库' },
+      COMPLETED: { color: 'success', text: '已完成' },
+      REJECTED: { color: 'error', text: '已驳回' },
+      // 兼容旧值和中文
+      '待提交': { color: 'warning', text: '待提交' },
+      '待审核': { color: 'blue', text: '待审核' },
+      '待收货': { color: 'orange', text: '待收货' },
+      '待入库': { color: 'purple', text: '待入库' },
+      '已完成': { color: 'success', text: '已完成' },
+      '已驳回': { color: 'error', text: '已驳回' },
+      'pending': { color: 'warning', text: '待提交' },
+      'approved': { color: 'blue', text: '待审核' },
+      'completed': { color: 'success', text: '已完成' },
+      'rejected': { color: 'error', text: '已驳回' }
     };
-    
-    const statusInfo = statusMap[status] || { color: 'default', text: '未知' };
+
+    const statusInfo = statusMap[status] || { color: 'default', text: status || '未知' };
     return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
   };
 
   const getFilteredPurchaseOrders = () => {
-    return purchaseOrders.filter(order => 
-      order.status === 'pending' || order.status === 'rejected'
-    );
+    return purchaseOrders.filter(order => {
+      const status = String(order.status || '').toUpperCase();
+      // 包含：待提交、待审核、已驳回、待收货、已完成及其对应的各种标识
+      return [
+        'DRAFT', 'WAIT_AUDIT', 'REJECTED', 'WAIT_RECEIVE', 'COMPLETED',
+        '待提交', '待审核', '已驳回', '待收货', '已完成',
+        'PENDING', 'APPROVED', 'COMPLETED', 'REJECTED'
+      ].includes(status);
+    });
   };
 
   const filteredPurchaseOrders = getFilteredPurchaseOrders();
@@ -841,11 +658,42 @@ const PurchaseOrderRequest = () => {
           <Button 
             type="link" 
             size="small"
-            onClick={() => {
-              setCurrentOrderDetails(record);
+            onClick={async () => {
+              let orderWithDetails = record;
+              // 如果没有详情数据，尝试从后端获取
+              if (!record.details || record.details.length === 0) {
+                try {
+                  setLoading(true);
+                  const response = await api.get(`/api/scm/purchases/orders/${record.key}`);
+                  if (response.code === 1 && response.data) {
+                    const orderData = response.data;
+                    orderWithDetails = {
+                      ...record,
+                      details: (orderData.details || orderData.items || []).map(item => ({
+                        key: item.id,
+                        materialCode: item.materialCode,
+                        materialName: item.materialName || item.productName,
+                        materialType: item.materialType || '-',
+                        unit: item.unit,
+                        unitPrice: item.unitPrice,
+                        quantity: item.quantity,
+                        amount: item.amount,
+                        specification: item.specification,
+                        model: item.model
+                      }))
+                    };
+                  }
+                } catch (error) {
+                  console.error('获取订单详情失败:', error);
+                } finally {
+                  setLoading(false);
+                }
+              }
+              
+              setCurrentOrderDetails(orderWithDetails);
               setSelectedDetailKeys([]); // 重置选中的商品明细行
               // 初始化编辑数据
-              setEditingDetails(record.details.map(item => ({
+              setEditingDetails((orderWithDetails.details || []).map(item => ({
                 ...item,
                 originalKey: item.key // 保存原始key用于标识
               })));
@@ -1014,7 +862,7 @@ const PurchaseOrderRequest = () => {
   // 删除选中的商品明细记录
   const handleDeleteSelectedDetails = () => {
     if (selectedDetailKeys.length === 0) {
-      message.warning('请先选择要删除的商品明细');
+      messageApi.warning('请先选择要删除的商品明细');
       return;
     }
 
@@ -1028,7 +876,7 @@ const PurchaseOrderRequest = () => {
     setSelectedDetailKeys([]);
     
     // 显示删除成功消息
-    message.success(`成功删除 ${selectedDetailKeys.length} 条商品明细记录`);
+    messageApi.success(`成功删除 ${selectedDetailKeys.length} 条商品明细记录`);
     
     // 如果删除后没有记录，更新当前订单详情
     if (newEditingDetails.length === 0 && currentOrderDetails) {
@@ -1082,6 +930,7 @@ const PurchaseOrderRequest = () => {
 
   return (
     <div style={{ padding: '0 16px' }}>
+      {contextHolder}
       <style>
         {`
           .custom-scrollbar::-webkit-scrollbar {
@@ -1137,47 +986,58 @@ const PurchaseOrderRequest = () => {
       <Card 
         style={{ marginBottom: 24, borderRadius: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
       >
-        <div style={{ padding: '16px', border: '1px solid #e8e8e8', borderRadius: '4px' }}>
+        <Form 
+          form={searchForm} 
+          style={{ padding: '16px', border: '1px solid #e8e8e8', borderRadius: '4px' }}
+        >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ whiteSpace: 'nowrap' }}>物资编码：</span>
-                <Input 
-                  placeholder="请输入物资编码" 
-                  allowClear
-                  style={{ width: 180 }}
-                  size="middle"
-                />
+                <Form.Item name="materialCode" style={{ marginBottom: 0 }}>
+                  <Input 
+                    placeholder="请输入物资编码" 
+                    allowClear
+                    style={{ width: 180 }}
+                    size="middle"
+                  />
+                </Form.Item>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ whiteSpace: 'nowrap' }}>物资名称：</span>
-                <Input 
-                  placeholder="请输入物资名称" 
-                  allowClear
-                  style={{ width: 180 }}
-                  size="middle"
-                />
+                <Form.Item name="materialName" style={{ marginBottom: 0 }}>
+                  <Input 
+                    placeholder="请输入物资名称" 
+                    allowClear
+                    style={{ width: 180 }}
+                    size="middle"
+                  />
+                </Form.Item>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ whiteSpace: 'nowrap' }}>采购单号：</span>
-                <Input 
-                  placeholder="请输入采购单号" 
-                  allowClear
-                  style={{ width: 180 }}
-                  size="middle"
-                />
+                <Form.Item name="orderNumber" style={{ marginBottom: 0 }}>
+                  <Input 
+                    placeholder="请输入采购单号" 
+                    allowClear
+                    style={{ width: 180 }}
+                    size="middle"
+                  />
+                </Form.Item>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ whiteSpace: 'nowrap' }}>创建日期：</span>
-                <DatePicker 
-                  placeholder="请选择创建日期" 
-                  allowClear
-                  style={{ width: 180 }}
-                  size="middle"
-                  format="YYYY年MM月DD日"
-                  locale={zhCN}
-                  popupClassName="chinese-datepicker"
-                />
+                <Form.Item name="createTime" style={{ marginBottom: 0 }}>
+                  <DatePicker 
+                    placeholder="请选择创建日期" 
+                    allowClear
+                    style={{ width: 180 }}
+                    size="middle"
+                    format="YYYY年MM月DD日"
+                    locale={zhCN}
+                    classNames={{ popup: { root: 'chinese-datepicker' } }}
+                  />
+                </Form.Item>
               </div>
             </div>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
@@ -1185,7 +1045,7 @@ const PurchaseOrderRequest = () => {
                 type="primary" 
                 icon={<SearchOutlined />}
                 style={{ minWidth: 90 }}
-                onClick={handleSearch}
+                onClick={() => handleSearch(searchForm.getFieldsValue())}
               >
                 搜索
               </Button>
@@ -1204,7 +1064,7 @@ const PurchaseOrderRequest = () => {
               </Button>
             </div>
           </div>
-        </div>
+        </Form>
       </Card>
 
       {/* 新建采购申请按钮 */}
@@ -1261,13 +1121,37 @@ const PurchaseOrderRequest = () => {
         footer={null}
         style={{ top: 20 }}
       >
-        <div style={{ 
+        {/* 采购基本信息 */}
+        <Form form={newOrderForm} layout="inline" style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid #f0f0f0' }}>
+          <Form.Item name="departmentId" label="申领科室" rules={[{ required: true, message: '请选择科室' }]}>
+            <Select placeholder="请选择科室" style={{ width: 120 }}>
+              {departments.map(d => <Select.Option key={d.id} value={d.id}>{d.name}</Select.Option>)}
+            </Select>
+          </Form.Item>
+          <Form.Item name="supplierId" label="供应商" rules={[{ required: true, message: '请选择供应商' }]}>
+            <Select placeholder="请选择供应商" style={{ width: 160 }}>
+              {suppliers.filter(s => s.status === '可用').map(s => <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>)}
+            </Select>
+          </Form.Item>
+          <Form.Item name="operatorName" label="申请人" rules={[{ required: true, message: '请输入申请人' }]}>
+            <Input placeholder="申请人姓名" style={{ width: 100 }} />
+          </Form.Item>
+          <Form.Item name="planType" label="计划类型" rules={[{ required: true, message: '请选择计划类型' }]}>
+            <Select placeholder="计划类型" style={{ width: 100 }}>
+              <Select.Option value="monthly">月度</Select.Option>
+              <Select.Option value="weekly">周度</Select.Option>
+              <Select.Option value="emergency">紧急</Select.Option>
+            </Select>
+          </Form.Item>
+        </Form>
+
+        <div style={{
           marginBottom: 16,
           paddingBottom: 16,
           borderBottom: '1px solid #f0f0f0'
         }}>
-          <Button 
-            type="primary" 
+          <Button
+            type="primary"
             icon={<PlusOutlined />}
             onClick={handleOpenMaterialSelect}
             style={{
@@ -1279,8 +1163,8 @@ const PurchaseOrderRequest = () => {
           >
             选择耗材物资
           </Button>
-          <span style={{ 
-            marginLeft: '16px', 
+          <span style={{
+            marginLeft: '16px',
             color: '#666',
             fontSize: '14px'
           }}>
@@ -1426,7 +1310,27 @@ const PurchaseOrderRequest = () => {
               height: '36px'
             }}
           >
-            取消
+            关闭
+          </Button>
+          <Button 
+            type="primary" 
+            danger
+            onClick={() => {
+              const selectedItems = materials.filter(item => item.selected);
+              if (selectedItems.length === 0) {
+                messageApi.warning('请选择要删除的物资');
+                return;
+              }
+              setMaterials(materials.filter(item => !item.selected));
+              setSelectAll(false);
+              messageApi.success(`已移除 ${selectedItems.length} 项物资`);
+            }}
+            style={{ 
+              minWidth: '80px',
+              height: '36px'
+            }}
+          >
+            删除
           </Button>
           <Button 
             type="primary" 
@@ -1450,7 +1354,7 @@ const PurchaseOrderRequest = () => {
               borderColor: '#1890ff'
             }}
           >
-            提交
+            提交订单
           </Button>
         </div>
       </Modal>
@@ -1889,36 +1793,34 @@ const PurchaseOrderRequest = () => {
               </Button>
               <Button 
                 type="primary"
-                onClick={() => {
+                onClick={async () => {
                   // 保存订单逻辑
                   if (currentOrderDetails) {
-                    const updatedOrder = {
-                      ...currentOrderDetails,
-                      details: editingDetails.map(item => ({
-                        key: item.key,
-                        materialCode: item.materialCode,
-                        materialName: item.materialName,
-                        materialType: item.materialType,
-                        unit: item.unit,
-                        unitPrice: item.unitPrice,
-                        quantity: item.quantity,
-                        amount: item.unitPrice * item.quantity
-                      })),
-                      itemCount: editingDetails.length,
-                      totalAmount: editingDetails.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0)
-                    };
-                    
-                    // 更新主数据
-                    setPurchaseOrders(prev => 
-                      prev.map(order => 
-                        order.key === currentOrderDetails.key ? updatedOrder : order
-                      )
-                    );
-                    
-                    // 更新当前订单详情
-                    setCurrentOrderDetails(updatedOrder);
-                    
-                    message.success('订单已保存');
+                    try {
+                      setLoading(true);
+                      const updateData = {
+                        id: currentOrderDetails.key,
+                        remark: currentOrderDetails.remark,
+                        items: editingDetails.map(item => ({
+                          materialId: item.materialId || parseInt(item.key),
+                          quantity: item.quantity,
+                          unit: item.unit
+                        }))
+                      };
+                      const response = await api.put(`/api/scm/purchases/orders/${currentOrderDetails.key}`, updateData);
+                      if (response.code === 1) {
+                        messageApi.success('订单已保存');
+                        loadPurchaseOrders();
+                        setDetailModalVisible(false);
+                      } else {
+                        messageApi.error(response.message || '保存失败');
+                      }
+                    } catch (error) {
+                      console.error('保存订单失败:', error);
+                      messageApi.error('保存失败，请检查网络连接');
+                    } finally {
+                      setLoading(false);
+                    }
                   }
                 }}
                 style={{ 
@@ -1930,9 +1832,29 @@ const PurchaseOrderRequest = () => {
               </Button>
               <Button 
                 type="primary"
-                onClick={() => {
+                onClick={async () => {
                   // 提交订单逻辑
-                  message.success('订单已提交');
+                  if (currentOrderDetails) {
+                    try {
+                      setLoading(true);
+                      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+                      const operatorName = userInfo.realName || userInfo.userName || '管理员';
+                      
+                      const response = await api.post(`/api/scm/purchases/orders/${currentOrderDetails.key}/submit?operatorName=${encodeURIComponent(operatorName)}`);
+                      if (response.code === 1) {
+                        messageApi.success('订单已提交');
+                        loadPurchaseOrders();
+                        setDetailModalVisible(false);
+                      } else {
+                        messageApi.error(response.message || '提交失败');
+                      }
+                    } catch (error) {
+                      console.error('提交订单失败:', error);
+                      messageApi.error('提交失败，请检查网络连接');
+                    } finally {
+                      setLoading(false);
+                    }
+                  }
                 }}
                 style={{ 
                   minWidth: '80px',

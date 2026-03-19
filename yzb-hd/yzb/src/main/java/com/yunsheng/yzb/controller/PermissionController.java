@@ -13,7 +13,7 @@ import javax.annotation.Resource;
 import java.util.List;
 
 /**
- * 权限管理控制器
+ * 权限管理
  */
 @RestController
 @RequestMapping("/api/permission")
@@ -26,7 +26,7 @@ public class PermissionController {
      * 获取当前用户权限信息
      */
     @GetMapping("/current")
-    public AjaxResult getCurrentUserPermissions() {
+    public AjaxResult<UserPermissionVO> getCurrentUserPermissions() {
         Integer userId = LoginCacheUtil.getCurrentUserId();
         if (userId == null) {
             return AjaxResult.res(0, "未登录", null);
@@ -39,7 +39,7 @@ public class PermissionController {
      * 获取当前用户菜单树
      */
     @GetMapping("/menu/tree")
-    public AjaxResult getUserMenuTree() {
+    public AjaxResult<List<PermissionTreeVO>> getUserMenuTree() {
         Integer userId = LoginCacheUtil.getCurrentUserId();
         if (userId == null) {
             return AjaxResult.res(0, "未登录", null);
@@ -53,7 +53,7 @@ public class PermissionController {
      */
     @GetMapping("/tree")
     @RequiresPermission("system:permission:query")
-    public AjaxResult getAllPermissionTree() {
+    public AjaxResult<List<PermissionTreeVO>> getAllPermissionTree() {
         List<PermissionTreeVO> tree = permissionService.getAllPermissionTree();
         return AjaxResult.successInstance(tree);
     }
@@ -63,7 +63,7 @@ public class PermissionController {
      */
     @GetMapping("/role/{roleId}")
     @RequiresPermission("system:permission:query")
-    public AjaxResult getPermissionsByRoleId(@PathVariable Long roleId) {
+    public AjaxResult<List<SysPermission>> getPermissionsByRoleId(@PathVariable Long roleId) {
         List<SysPermission> permissions = permissionService.getPermissionsByRoleId(roleId);
         return AjaxResult.successInstance(permissions);
     }
@@ -73,7 +73,7 @@ public class PermissionController {
      */
     @PostMapping
     @RequiresPermission("system:permission:add")
-    public AjaxResult createPermission(@RequestBody SysPermission permission) {
+    public AjaxResult<String> createPermission(@RequestBody SysPermission permission) {
         permission.setCreateBy(LoginCacheUtil.getCurrentUserId());
         int result = permissionService.createPermission(permission);
         if (result > 0) {
@@ -87,7 +87,7 @@ public class PermissionController {
      */
     @PutMapping("/{id}")
     @RequiresPermission("system:permission:edit")
-    public AjaxResult updatePermission(@PathVariable Long id, @RequestBody SysPermission permission) {
+    public AjaxResult<String> updatePermission(@PathVariable Long id, @RequestBody SysPermission permission) {
         permission.setId(id);
         permission.setUpdateBy(LoginCacheUtil.getCurrentUserId());
         int result = permissionService.updatePermission(permission);
@@ -102,7 +102,7 @@ public class PermissionController {
      */
     @DeleteMapping("/{id}")
     @RequiresPermission("system:permission:delete")
-    public AjaxResult deletePermission(@PathVariable Long id) {
+    public AjaxResult<String> deletePermission(@PathVariable Long id) {
         int result = permissionService.deletePermission(id);
         if (result > 0) {
             return AjaxResult.successInstance("删除成功");
@@ -115,7 +115,7 @@ public class PermissionController {
      */
     @DeleteMapping("/batch")
     @RequiresPermission("system:permission:delete")
-    public AjaxResult deletePermissions(@RequestBody List<Long> ids) {
+    public AjaxResult<String> deletePermissions(@RequestBody List<Long> ids) {
         int result = permissionService.deletePermissions(ids);
         if (result > 0) {
             return AjaxResult.successInstance("删除成功");

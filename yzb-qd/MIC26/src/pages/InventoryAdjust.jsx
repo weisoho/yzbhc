@@ -1,60 +1,133 @@
-import React, { useState } from 'react';
-import { Table, Card, Input, Select, Button, Space, Tag, Row, Col, Modal, Form } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Table, Card, Input, Select, Button, Space, Tag, Row, Col, Modal, Form, message } from 'antd';
 import { SearchOutlined, EditOutlined } from '@ant-design/icons';
+import api from '../utils/api';
 
 
 
 const InventoryAdjust = () => {
   const [form] = Form.useForm();
   const [modalVisible, setModalVisible] = useState(false);
+  const [searchParams, setSearchParams] = useState({
+    materialName: '',
+    changeType: 'all',
+    status: 'all'
+  });
+  const [inventoryData, setInventoryData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [editingInventory, setEditingInventory] = useState(null);
+
+    // 加载库存数据
+  const loadInventoryData = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/scm/inventory');
+      if (response.code === 1 && response.data) {
+        const inventoryList = response.data.records.map(item => ({
+          key: item.id,
+          materialName: item.materialName,
+          specification: item.specification,
+          model: item.model,
+          unit: item.unit,
+          currentQuantity: item.quantity,
+          minQuantity: item.minQuantity,
+          maxQuantity: item.maxQuantity,
+          status: item.status
+        }));
+        setInventoryData(inventoryList);
+      } else {
+        message.error(response.message || '加载库存数据失败');
+      }
+    } catch (error) {
+      console.error('加载库存数据失败:', error);
+      message.error('加载库存数据失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 调整库存预警阈值
+  const handleAdjustThreshold = async (inventoryId, values) => {
+    try {
+      setLoading(true);
+      const requestData = {
+        minQuantity: values.minQuantity,
+        maxQuantity: values.maxQuantity
+      };
+      const response = await api.put(`/api/scm/inventory/${inventoryId}/adjust`, requestData);
+      if (response.code === 1) {
+        message.success('库存预警阈值调整成功');
+        setModalVisible(false);
+        form.resetFields();
+        setEditingInventory(null);
+        await loadInventoryData();
+      } else {
+        message.error(response.message || '调整失败');
+      }
+    } catch (error) {
+      console.error('调整库存预警阈值失败:', error);
+      message.error('调整失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 组件加载时获取库存数据
+  useEffect(() => {
+    loadInventoryData();
+  }, []);
+
+  // 处理搜索输入变化
+  const handleSearchChange = (field, value) => {
+    setSearchParams(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // 处理查询按钮点击
+  const handleSearch = () => {
+    // 这里可以根据搜索参数过滤数据或重新调用API
+    loadInventoryData();
+  };
+
+  // 处理调整按钮点击
+  const handleAdjust = (record) => {
+    setEditingInventory(record);
+    form.setFieldsValue({
+      minQuantity: record.minQuantity,
+      maxQuantity: record.maxQuantity
+    });
+    setModalVisible(true);
+  };
 
   const batchAuditColumns = [
-    { title: '申请编号', dataIndex: 'applyNumber', key: 'applyNumber' },
-    { title: '商品名称', dataIndex: 'materialName', key: 'materialName' },
-    { title: '规格型号', dataIndex: 'specification', key: 'specification' },
-    { title: '修改类型', dataIndex: 'changeType', key: 'changeType', render: (type) => {
-      const typeMap = {
-        price: '价格调整',
-        quantity: '数量调整',
-        info: '信息修改'
-      };
-      return typeMap[type] || type;
-    }},
-    { title: '申请前值', dataIndex: 'beforeValue', key: 'beforeValue' },
-    { title: '申请后值', dataIndex: 'afterValue', key: 'afterValue' },
-    { title: '申请人', dataIndex: 'applicant', key: 'applicant' },
-    { title: '申请时间', dataIndex: 'applyTime', key: 'applyTime' },
-    { title: '审核状态', dataIndex: 'status', key: 'status', render: (status) => {
-      const statusMap = {
-        pending: <Tag color="orange">待审核</Tag>,
-        approved: <Tag color="green">已通过</Tag>,
-        rejected: <Tag color="red">已拒绝</Tag>
-      };
-      return statusMap[status] || status;
+    { title: '序号', key: 'index', width: 60, render: (text, record, index) => index + 1 },
+    { title: '商品名称', dataIndex: 'materialName', key: 'materialName', width: 150 },
+    { title: '规格', dataIndex: 'specification', key: 'specification', width: 150 },
+    { title: '型号', dataIndex: 'model', key: 'model', width: 150 },
+    { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
+    { title: '当前库存', dataIndex: 'currentQuantity', key: 'currentQuantity', width: 100 },
+    { title: '最低预警', dataIndex: 'minQuantity', key: 'minQuantity', width: 100 },
+    { title: '最高预警', dataIndex: 'maxQuantity', key: 'maxQuantity', width: 100 },
+    { title: '状态', dataIndex: 'status', key: 'status', width: 80, render: (status) => {
+      return status === 'active' ? 
+        <Tag color="green">正常</Tag> : 
+        <Tag color="red">异常</Tag>;
     }},
     { 
       title: '操作', 
       key: 'action',
+      width: 120,
       render: (record) => (
         <Space size="middle">
-          {record.status === 'pending' && (
-            <>
-              <Button type="primary" size="small">通过</Button>
-              <Button danger size="small">拒绝</Button>
-            </>
-          )}
-          <a>查看详情</a>
+          <Button type="primary" size="small" onClick={() => handleAdjust(record)}>调整预警</Button>
         </Space>
       )
     },
   ];
 
-  const batchAuditData = [
-    { key: '1', applyNumber: 'BA20240601001', materialName: '一次性注射器', specification: '10ml', changeType: 'price', beforeValue: '2.5元', afterValue: '2.8元', applicant: '张三', applyTime: '2024-06-01 10:30', status: 'pending' },
-    { key: '2', applyNumber: 'BA20240601002', materialName: '输液器', specification: '500ml', changeType: 'quantity', beforeValue: '500个', afterValue: '550个', applicant: '李四', applyTime: '2024-06-01 11:20', status: 'pending' },
-    { key: '3', applyNumber: 'BA20240531001', materialName: '医用棉签', specification: '100支/包', changeType: 'info', beforeValue: '旧包装', afterValue: '新包装', applicant: '王五', applyTime: '2024-05-31 15:45', status: 'approved' },
-    { key: '4', applyNumber: 'BA20240530001', materialName: '酒精棉球', specification: '50g/瓶', changeType: 'price', beforeValue: '3.0元', afterValue: '3.5元', applicant: '赵六', applyTime: '2024-05-30 09:15', status: 'rejected' },
-  ];
+
 
   return (
     <div style={{ padding: '0 16px' }}>
@@ -64,77 +137,66 @@ const InventoryAdjust = () => {
         <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>商品名称：</span>
-            <Input placeholder="请输入商品名称" style={{ width: '200px' }} />
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>修改类型：</span>
-            <Select placeholder="请选择修改类型" style={{ width: '200px' }}>
-              <Select.Option value="all">全部类型</Select.Option>
-              <Select.Option value="price">价格调整</Select.Option>
-              <Select.Option value="quantity">数量调整</Select.Option>
-              <Select.Option value="info">信息修改</Select.Option>
-            </Select>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>审核状态：</span>
-            <Select placeholder="请选择审核状态" style={{ width: '200px' }}>
-              <Select.Option value="all">全部状态</Select.Option>
-              <Select.Option value="pending">待审核</Select.Option>
-              <Select.Option value="approved">已通过</Select.Option>
-              <Select.Option value="rejected">已拒绝</Select.Option>
-            </Select>
+            <Input 
+              placeholder="请输入商品名称" 
+              style={{ width: '200px' }}
+              value={searchParams.materialName}
+              onChange={(e) => handleSearchChange('materialName', e.target.value)}
+            />
           </div>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-          <Button type="primary" icon={<EditOutlined />} onClick={() => setModalVisible(true)}>申请调整</Button>
+          <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
         </div>
       </Card>
       
       <div style={{ overflowX: 'auto' }}>
-        <Table columns={batchAuditColumns} dataSource={batchAuditData} pagination={{ 
-          pageSize: 10,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total) => `共 ${total} 条记录`,
-          style: {
-            display: 'flex',
-            justifyContent: 'center',
-            marginTop: '16px'
-          }
-        }} size="small" />
+        <Table 
+          columns={batchAuditColumns} 
+          dataSource={inventoryData} 
+          loading={loading}
+          pagination={{ 
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total) => `共 ${total} 条记录`,
+            style: {
+              display: 'flex',
+              justifyContent: 'center',
+              marginTop: '16px'
+            }
+          }} 
+          size="small" 
+        />
       </div>
 
       <Modal
-        title="申请商品信息调整"
+        title="库存预警阈值调整"
         open={modalVisible}
-        onCancel={() => setModalVisible(false)}
+        onCancel={() => {
+          setModalVisible(false);
+          form.resetFields();
+          setEditingInventory(null);
+        }}
         onOk={() => {
-          form.validateFields().then(() => {
-            setModalVisible(false);
-            form.resetFields();
+          form.validateFields().then((values) => {
+            if (editingInventory) {
+              handleAdjustThreshold(editingInventory.key, values);
+            }
           });
         }}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="materialName" label="商品名称" rules={[{ required: true }]}>
-            <Input placeholder="请输入商品名称" />
+          {editingInventory && (
+            <Form.Item label="商品信息">
+              <div>{editingInventory.materialName} - {editingInventory.specification} - {editingInventory.model}</div>
+            </Form.Item>
+          )}
+          <Form.Item name="minQuantity" label="最低预警数量" rules={[{ required: true, message: '请输入最低预警数量' }]}>
+            <Input type="number" placeholder="请输入最低预警数量" />
           </Form.Item>
-          <Form.Item name="changeType" label="修改类型" rules={[{ required: true }]}>
-            <Select placeholder="请选择修改类型">
-              <Select.Option value="price">价格调整</Select.Option>
-              <Select.Option value="quantity">数量调整</Select.Option>
-              <Select.Option value="info">信息修改</Select.Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="beforeValue" label="申请前值" rules={[{ required: true }]}>
-            <Input placeholder="请输入申请前值" />
-          </Form.Item>
-          <Form.Item name="afterValue" label="申请后值" rules={[{ required: true }]}>
-            <Input placeholder="请输入申请后值" />
-          </Form.Item>
-          <Form.Item name="reason" label="调整原因">
-            <Input.TextArea rows={3} placeholder="请输入调整原因" />
+          <Form.Item name="maxQuantity" label="最高预警数量" rules={[{ required: true, message: '请输入最高预警数量' }]}>
+            <Input type="number" placeholder="请输入最高预警数量" />
           </Form.Item>
         </Form>
       </Modal>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   Table, 
@@ -25,6 +25,7 @@ import {
   UploadOutlined,
   FileTextOutlined
 } from '@ant-design/icons';
+import api from '../utils/api';
 
 const { RangePicker } = DatePicker;
 const { TextArea } = Input;
@@ -38,60 +39,44 @@ const MaintenanceRecord = () => {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [addForm] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [maintenanceRecords, setMaintenanceRecords] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
 
-  // 模拟数据
-  const maintenanceRecords = [
-    {
-      key: '1',
-      deviceName: '心脏起搏器',
-      serialNo: 'SN2023123456',
-      faultReason: '电池异常放电',
-      maintenancePlan: '更换电池',
-      cost: 12000,
-      maintenanceDate: '2024-01-15',
-      attachment: '维修报告.pdf'
-    },
-    {
-      key: '2',
-      deviceName: '呼吸机',
-      serialNo: 'SN2023112345',
-      faultReason: '传感器故障',
-      maintenancePlan: '更换传感器',
-      cost: 5000,
-      maintenanceDate: '2024-01-12',
-      attachment: '维修记录.docx'
-    },
-    {
-      key: '3',
-      deviceName: '输液泵',
-      serialNo: 'SN2023109876',
-      faultReason: '泵体堵塞',
-      maintenancePlan: '清洗泵体',
-      cost: 800,
-      maintenanceDate: '2024-01-10',
-      attachment: '维护记录.pdf'
-    },
-    {
-      key: '4',
-      deviceName: '监护仪',
-      serialNo: 'SN2023098765',
-      faultReason: '显示屏故障',
-      maintenancePlan: '更换显示屏',
-      cost: 3500,
-      maintenanceDate: '2024-01-08',
-      attachment: '维修报告.pdf'
-    },
-    {
-      key: '5',
-      deviceName: '除颤仪',
-      serialNo: 'SN2023087654',
-      faultReason: '电池老化',
-      maintenancePlan: '更换电池',
-      cost: 2000,
-      maintenanceDate: '2024-01-05',
-      attachment: '维修记录.docx'
+  // 加载维修记录列表
+  useEffect(() => {
+    loadMaintenanceRecords();
+  }, [currentPage, pageSize]);
+
+  const loadMaintenanceRecords = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/yzb/selectRepairList', {
+        pageNum: currentPage,
+        pageSize: pageSize
+      });
+      if (response.code === 1 && response.data) {
+        const records = response.data.list.map(record => ({
+          key: record.id,
+          id: record.id,
+          deviceName: record.assetName || '未知设备',
+          serialNo: record.serialNumber || '无',
+          faultReason: record.repairReason,
+          maintenancePlan: record.repairPlan,
+          cost: record.repairCost,
+          maintenanceDate: record.repairDate ? record.repairDate.substring(0, 10) : '',
+          attachment: record.attachment || '无附件'
+        }));
+        setMaintenanceRecords(records);
+        setTotal(response.data.total);
+      }
+    } catch (error) {
+      message.error('加载维修记录失败');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const columns = [
     {
@@ -131,7 +116,7 @@ const MaintenanceRecord = () => {
       dataIndex: 'cost', 
       key: 'cost', 
       width: 100,
-      render: (cost) => `¥${cost}`
+      render: (cost) => `¥${cost || 0}`
     },
     { 
       title: '维修日期', 
@@ -203,15 +188,32 @@ const MaintenanceRecord = () => {
     setAddModalVisible(true);
   };
 
-  const handleAddSubmit = () => {
-    addForm.validateFields().then(values => {
-      console.log('表单数据:', values);
-      message.success('已新增维修记录');
-      setAddModalVisible(false);
-      addForm.resetFields();
-    }).catch(errorInfo => {
-      console.log('表单验证失败:', errorInfo);
-    });
+  const handleAddSubmit = async () => {
+    try {
+      setLoading(true);
+      const values = await addForm.validateFields();
+      
+      const repairData = {
+        repairReason: values.faultReason,
+        repairPlan: values.maintenancePlan,
+        repairCost: values.cost,
+        repairDate: values.maintenanceDate
+      };
+      
+      const response = await api.post('/yzb/addRepair', repairData);
+      if (response.code === 1) {
+        message.success('已新增维修记录');
+        setAddModalVisible(false);
+        addForm.resetFields();
+        loadMaintenanceRecords();
+      } else {
+        message.error('新增维修记录失败');
+      }
+    } catch (error) {
+      message.error('请检查输入信息！');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddCancel = () => {
@@ -294,7 +296,12 @@ const MaintenanceRecord = () => {
             onChange: (keys) => setSelectedRowKeys(keys),
           }}
           pagination={{ 
-            pageSize: 10,
+            current: currentPage,
+            pageSize: pageSize,
+            onChange: (page, size) => {
+              setCurrentPage(page);
+              setPageSize(size);
+            },
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条记录`,
@@ -336,7 +343,7 @@ const MaintenanceRecord = () => {
                 {selectedRecord.maintenancePlan}
               </Descriptions.Item>
               <Descriptions.Item label="产生费用">
-                ¥{selectedRecord.cost}
+                ¥{selectedRecord.cost || 0}
               </Descriptions.Item>
               <Descriptions.Item label="维修日期">
                 {selectedRecord.maintenanceDate}
@@ -362,7 +369,7 @@ const MaintenanceRecord = () => {
           <Button key="cancel" onClick={handleAddCancel}>
             取消
           </Button>,
-          <Button key="submit" type="primary" onClick={handleAddSubmit}>
+          <Button key="submit" type="primary" onClick={handleAddSubmit} loading={loading}>
             提交
           </Button>
         ]}

@@ -1,150 +1,158 @@
-import React, { useState } from 'react';
-import { Card, Table, Input, Select, Space, Tag, Button, DatePicker, Modal, Descriptions } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Table, Input, Select, Space, Tag, Button, DatePicker, Modal, Descriptions, message } from 'antd';
 import { SearchOutlined, ExportOutlined } from '@ant-design/icons';
+import api from '../utils/api';
 
 const { Option } = Select;
 
 const PurchaseOrderQuery = () => {
+  const [messageApi, contextHolder] = message.useMessage();
   const [detailVisible, setDetailVisible] = useState(false);
   const [currentRecord, setCurrentRecord] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0
+  });
+  const [searchParams, setSearchParams] = useState({
+    orderNumber: '',
+    productName: '',
+    status: '',
+    departmentName: '',
+    materialCode: ''
+  });
+  const [orders, setOrders] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
 
-  const departments = ['内科', '外科', '儿科', '妇产科', '急诊科'];
-  const suppliers = ['供应商A', '供应商B', '供应商C'];
+  // 加载部门列表
+  const loadDepartments = async () => {
+    try {
+      const response = await api.get('/api/department/list', {
+        pageNum: 1,
+        pageSize: 1000
+      });
+      if (response.code === 1 && response.data) {
+        setDepartments(response.data.records || []);
+      }
+    } catch (error) {
+      console.error('加载部门列表失败:', error);
+    }
+  };
 
-  const orders = [
-    { 
-      key: '1', 
-      orderNo: 'PO-20241227-001', 
-      department: '内科', 
-      applicant: '张三', 
-      product: '医用口罩', 
-      quantity: 50, 
-      unit: '盒', 
-      price: 25.00, 
-      totalAmount: 1250.00, 
-      status: '待审核', 
-      supplier: '供应商A', 
-      warehouse: '仓库1', 
-      createTime: '2024-12-27 09:30', 
-      approveTime: null,
-      productCount: 1,
-      reason: '日常医疗物资补充',
-      completeTime: null,
-      items: [
-        { key: '1-1', productCode: 'PROD001', productName: '医用口罩', specification: 'N95 10只/盒', unit: '盒', quantity: 50, price: 25.00, amount: 1250.00 },
-      ]
-    },
-    { 
-      key: '2', 
-      orderNo: 'PO-20241227-002', 
-      department: '外科', 
-      applicant: '李四', 
-      product: '一次性手套', 
-      quantity: 100, 
-      unit: '盒', 
-      price: 15.00, 
-      totalAmount: 1500.00, 
-      status: '已审核', 
-      supplier: '供应商B', 
-      warehouse: '仓库1', 
-      createTime: '2024-12-27 10:15', 
-      approveTime: '2024-12-27 11:00',
-      productCount: 1,
-      reason: '手术室常规耗材补充',
-      completeTime: null,
-      items: [
-        { key: '2-1', productCode: 'PROD002', productName: '一次性手套', specification: '乳胶 100只/盒', unit: '盒', quantity: 100, price: 15.00, amount: 1500.00 },
-      ]
-    },
-    { 
-      key: '3', 
-      orderNo: 'PO-20241226-003', 
-      department: '儿科', 
-      applicant: '王五', 
-      product: '消毒酒精', 
-      quantity: 20, 
-      unit: '瓶', 
-      price: 18.00, 
-      totalAmount: 360.00, 
-      status: '已完成', 
-      supplier: '供应商C', 
-      warehouse: '仓库2', 
-      createTime: '2024-12-26 14:20', 
-      approveTime: '2024-12-26 15:00', 
-      completeTime: '2024-12-26 18:00',
-      productCount: 1,
-      reason: '儿科消毒用品补充',
-      items: [
-        { key: '3-1', productCode: 'PROD003', productName: '消毒酒精', specification: '75% 500ml/瓶', unit: '瓶', quantity: 20, price: 18.00, amount: 360.00 },
-      ]
-    },
-    { 
-      key: '4', 
-      orderNo: 'PO-20241226-004', 
-      department: '急诊科', 
-      applicant: '赵六', 
-      product: '医用口罩', 
-      quantity: 100, 
-      unit: '盒', 
-      price: 25.00, 
-      totalAmount: 2500.00, 
-      status: '已驳回', 
-      supplier: '供应商A', 
-      warehouse: '仓库1', 
-      createTime: '2024-12-26 16:30', 
-      approveTime: '2024-12-26 17:00',
-      productCount: 1,
-      reason: '急诊科物资补充',
-      completeTime: null,
-      items: [
-        { key: '4-1', productCode: 'PROD001', productName: '医用口罩', specification: 'N95 10只/盒', unit: '盒', quantity: 100, price: 25.00, amount: 2500.00 },
-      ]
-    },
-    { 
-      key: '5', 
-      orderNo: 'PO-20241225-005', 
-      department: '外科', 
-      applicant: '李四', 
-      product: '一次性手套', 
-      quantity: 200, 
-      unit: '盒', 
-      price: 15.00, 
-      totalAmount: 3000.00, 
-      status: '已完成', 
-      supplier: '供应商B', 
-      warehouse: '仓库3', 
-      createTime: '2024-12-25 09:00', 
-      approveTime: '2024-12-25 10:00', 
-      completeTime: '2024-12-25 16:00',
-      productCount: 1,
-      reason: '手术室耗材补充',
-      items: [
-        { key: '5-1', productCode: 'PROD002', productName: '一次性手套', specification: '乳胶 100只/盒', unit: '盒', quantity: 200, price: 15.00, amount: 3000.00 },
-      ]
-    },
-    { 
-      key: '6', 
-      orderNo: 'PO-20241225-006', 
-      department: '内科', 
-      applicant: '张三', 
-      product: '消毒酒精', 
-      quantity: 30, 
-      unit: '瓶', 
-      price: 18.00, 
-      totalAmount: 540.00, 
-      status: '已审核', 
-      supplier: '供应商C', 
-      warehouse: '仓库1', 
-      createTime: '2024-12-25 11:30', 
-      approveTime: '2024-12-25 14:00',
-      productCount: 1,
-      reason: '内科消毒用品补充',
-      completeTime: null,
-      items: [
-        { key: '6-1', productCode: 'PROD003', productName: '消毒酒精', specification: '75% 500ml/瓶', unit: '瓶', quantity: 30, price: 18.00, amount: 540.00 },
-      ]
-    },
-  ];
+  // 加载供应商列表
+  const loadSuppliers = async () => {
+    try {
+      const response = await api.get('/api/scm/suppliers');
+      if (response.code === 1 && response.data) {
+        setSuppliers(response.data.records || []);
+      }
+    } catch (error) {
+      console.error('加载供应商列表失败:', error);
+    }
+  };
+
+  // 加载采购订单数据
+  const loadPurchaseOrders = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        pageNum: pagination.current,
+        pageSize: pagination.pageSize,
+        orderNumber: searchParams.orderNumber,
+        materialName: searchParams.productName,
+        status: searchParams.status,
+        departmentName: searchParams.departmentName,
+        materialCode: searchParams.materialCode
+      };
+      const response = await api.get('/api/scm/purchases/orders', params);
+      if (response.code === 1 && response.data) {
+        const orderList = response.data.records.map(order => ({
+          key: order.id,
+          orderNo: order.orderNumber,
+          department: order.departmentName,
+          applicant: order.operatorName,
+          product: order.details && order.details.length > 0 ? order.details[0].materialName : '',
+          quantity: order.details && order.details.length > 0 ? order.details[0].quantity : 0,
+          unit: order.details && order.details.length > 0 ? order.details[0].unit : '',
+          price: order.details && order.details.length > 0 ? order.details[0].unitPrice : 0,
+          totalAmount: order.totalAmount,
+          status: order.status,
+          supplier: order.supplierName,
+          warehouse: order.warehouseName,
+          createTime: order.createTime,
+          approveTime: order.approveTime,
+          productCount: order.itemCount,
+          reason: order.remark,
+          completeTime: order.completeTime,
+          items: (order.details || order.items || []).map((item, index) => ({
+            key: `${order.id}-${index}`,
+            productCode: item.materialCode,
+            productName: item.materialName || item.productName,
+            specification: item.specification,
+            model: item.model,
+            unit: item.unit,
+            quantity: item.quantity,
+            price: item.unitPrice,
+            amount: item.amount,
+            manufacturer: item.manufacturer,
+            registrationNumber: item.registrationNumber,
+            createDate: item.createTime,
+            approveDate: item.updateTime
+          }))
+        }));
+        setOrders(orderList);
+        setPagination(prev => ({
+          ...prev,
+          total: response.data.total
+        }));
+      } else {
+        messageApi.error(response.message || '加载采购订单失败');
+      }
+    } catch (error) {
+      console.error('加载采购订单失败:', error);
+      messageApi.error('加载采购订单失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 组件加载时获取数据
+  useEffect(() => {
+    loadDepartments();
+    loadSuppliers();
+  }, []);
+
+  useEffect(() => {
+    loadPurchaseOrders();
+  }, [pagination.current, pagination.pageSize]);
+
+  // 搜索参数变更处理
+  const handleSearch = () => {
+    setPagination(prev => ({
+      ...prev,
+      current: 1
+    }));
+    loadPurchaseOrders();
+  };
+
+  // 重置搜索参数
+  const handleReset = () => {
+    setSearchParams({
+      orderNumber: '',
+      productName: '',
+      status: '',
+      departmentName: '',
+      materialCode: ''
+    });
+    setPagination(prev => ({
+      ...prev,
+      current: 1
+    }));
+  };
+
+
 
   const handleViewDetail = (record) => {
     setCurrentRecord(record);
@@ -171,10 +179,30 @@ const PurchaseOrderQuery = () => {
 
   const columns = [
     { title: '采购单号', dataIndex: 'orderNo', key: 'orderNo', fixed: 'left', width: 180 },
-    { title: '状态', dataIndex: 'status', key: 'status', width: 100, render: (status) => {
-      const colors = { '待审核': 'orange', '已审核': 'blue', '已驳回': 'red', '已完成': 'green' };
-      return <Tag color={colors[status]}>{status}</Tag>;
-    }},
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (status) => {
+        const statusMap = {
+          'DRAFT': { color: 'warning', text: '待提交' },
+          'WAIT_AUDIT': { color: 'blue', text: '待审核' },
+          'WAIT_RECEIVE': { color: 'orange', text: '待收货' },
+          'WAIT_STOCK_IN': { color: 'purple', text: '待入库' },
+          'COMPLETED': { color: 'success', text: '已完成' },
+          'REJECTED': { color: 'error', text: '已驳回' },
+          '待提交': { color: 'warning', text: '待提交' },
+          '待审核': { color: 'blue', text: '待审核' },
+          '待收货': { color: 'orange', text: '待收货' },
+          '已完成': { color: 'success', text: '已完成' },
+          '已驳回': { color: 'error', text: '已驳回' },
+          'completed': { color: 'success', text: '已完成' }
+        };
+        const info = statusMap[status] || { color: 'default', text: status || '未知' };
+        return <Tag color={info.color}>{info.text}</Tag>;
+      }
+    },
     { title: '采购分院', dataIndex: 'department', key: 'department', width: 100 },
     { title: '申请人', dataIndex: 'applicant', key: 'applicant', width: 80 },
     { title: '物资名称', dataIndex: 'product', key: 'product', width: 120 },
@@ -199,6 +227,7 @@ const PurchaseOrderQuery = () => {
 
   return (
     <div style={{ padding: '0 16px' }}>
+      {contextHolder}
       <h1 style={{ marginBottom: 24 }}>采购订单查询</h1>
       
       <Card style={{ marginBottom: 16, padding: '16px' }}>
@@ -211,6 +240,8 @@ const PurchaseOrderQuery = () => {
                 allowClear
                 style={{ width: 180 }}
                 size="middle"
+                value={searchParams.orderNumber}
+                onChange={(e) => setSearchParams({ ...searchParams, orderNumber: e.target.value })}
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -220,6 +251,34 @@ const PurchaseOrderQuery = () => {
                 allowClear
                 style={{ width: 180 }}
                 size="middle"
+                value={searchParams.productName}
+                onChange={(e) => setSearchParams({ ...searchParams, productName: e.target.value })}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ whiteSpace: 'nowrap' }}>采购分院：</span>
+              <Select 
+                placeholder="请选择采购分院" 
+                allowClear
+                style={{ width: 180 }}
+                size="middle"
+                value={searchParams.departmentName}
+                onChange={(value) => setSearchParams({ ...searchParams, departmentName: value })}
+              >
+                {departments.map((dept) => (
+                  <Select.Option key={dept.id} value={dept.deptName}>{dept.deptName}</Select.Option>
+                ))}
+              </Select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ whiteSpace: 'nowrap' }}>物资编码：</span>
+              <Input 
+                placeholder="请输入物资编码" 
+                allowClear
+                style={{ width: 180 }}
+                size="middle"
+                value={searchParams.materialCode}
+                onChange={(e) => setSearchParams({ ...searchParams, materialCode: e.target.value })}
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -229,9 +288,14 @@ const PurchaseOrderQuery = () => {
                 allowClear
                 style={{ width: 120 }}
                 size="middle"
+                value={searchParams.status}
+                onChange={(value) => setSearchParams({ ...searchParams, status: value })}
               >
-                <Option value="已审核">已审核</Option>
-                <Option value="已驳回">已驳回</Option>
+                <Option value="DRAFT">待提交</Option>
+                <Option value="WAIT_AUDIT">待审核</Option>
+                <Option value="WAIT_RECEIVE">待收货</Option>
+                <Option value="COMPLETED">已完成</Option>
+                <Option value="REJECTED">已驳回</Option>
               </Select>
             </div>
           </div>
@@ -240,6 +304,7 @@ const PurchaseOrderQuery = () => {
               type="primary" 
               icon={<SearchOutlined />}
               style={{ minWidth: 90 }}
+              onClick={handleSearch}
             >
               查询
             </Button>
@@ -249,6 +314,12 @@ const PurchaseOrderQuery = () => {
             >
               导出
             </Button>
+            <Button 
+              style={{ minWidth: 90 }}
+              onClick={handleReset}
+            >
+              重置
+            </Button>
           </div>
         </div>
       </Card>
@@ -256,12 +327,21 @@ const PurchaseOrderQuery = () => {
       <Card>
         <Table 
           columns={columns} 
-          dataSource={orders.filter(order => order.status === '已审核' || order.status === '已驳回')} 
+          dataSource={orders} 
           pagination={{ 
-            pageSize: 10,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条记录`,
+            onChange: (page, pageSize) => {
+              setPagination({
+                ...pagination,
+                current: page,
+                pageSize: pageSize
+              });
+            },
             style: {
               display: 'flex',
               justifyContent: 'center',
@@ -270,6 +350,7 @@ const PurchaseOrderQuery = () => {
           }}
           scroll={{ x: 1600 }}
           size="small"
+          loading={loading}
         />
       </Card>
 

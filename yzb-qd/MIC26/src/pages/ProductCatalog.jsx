@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Card, Button, Table, Input, Space, Popconfirm, Select, Row, Col, Tag, Modal, Form, InputNumber, message } from 'antd';
+import { useState, useEffect } from 'react';
+import { Card, Button, Table, Input, Space, Popconfirm, Select, Row, Col, Tag, Modal, Form, message } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ExportOutlined } from '@ant-design/icons';
-import { FORM_STYLES, getResponsiveColProps, getFormLayoutStyle, getModalConfig } from '../utils/formStyles';
+import { FORM_STYLES, getFormLayoutStyle, getModalConfig } from '../utils/formStyles';
+import api from '../utils/api';
 
 const { Option } = Select;
 
@@ -10,98 +11,241 @@ const ProductCatalog = () => {
     materialCode: '',
     name: '',
     supplier: '',
-    manufacturer: ''
+    manufacturer: '',
+    status: ''
   });
 
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [form] = Form.useForm();
   const [addForm] = Form.useForm();
+  const [editForm] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [suppliers, setSuppliers] = useState([]);
+  const [qualifications, setQualifications] = useState([]);
 
-  const [products, setProducts] = useState([
-    {
-      key: '1',
-      materialCode: 'MIC100010',
-      name: '医用检查手套',
-      materialType: '医用耗材',
-      specification: '未灭菌 无粉麻面特小号（XS）',
-      model: '未灭菌 无粉麻面特小号（XS）',
-      minPackage: '100只/盒',
-      unit: '只',
-      purchasePrice: '1.5',
-      registrationNumber: '赣械备20170001号',
-      supplier: '广州器化医疗设备有限公司',
-      manufacturer: '江西云鸽橡胶有限公司',
-      storageCondition: '常温',
-      status: 'active'
-    },
-    {
-      key: '2',
-      materialCode: 'MIC100011',
-      name: '25-羟基维生素D3标液',
-      materialType: '试剂',
-      specification: '4×1 mL(冻干品复溶体积)',
-      model: '4×1 mL(冻干品复溶体积)',
-      minPackage: '10盒/箱',
-      unit: '盒',
-      purchasePrice: '1200',
-      registrationNumber: '国械注进2018242095',
-      supplier: '广州市迪贤贸易有限公司',
-      manufacturer: '罗氏诊断公司Roche Diagnostics GmbH',
-      storageCondition: '冷藏',
-      status: 'active'
-    },
-    {
-      key: '3',
-      materialCode: 'MIC100012',
-      name: '肌红蛋白（MYO）测定试剂盒',
-      materialType: '试剂',
-      specification: '2×100 ml/份',
-      model: '2×100 ml/份',
-      minPackage: '10盒/箱',
-      unit: '盒',
-      purchasePrice: '850',
-      registrationNumber: '粤械注准20152400846',
-      supplier: '国药控股广州医疗供应链服务有限公司',
-      manufacturer: '深圳迈瑞生物医疗电子股份有限公司',
-      storageCondition: '冷藏',
-      status: 'active'
-    },
-    {
-      key: '4',
-      materialCode: 'MIC100013',
-      name: '梅毒螺旋体抗体（TP）试验（液体）标准物质',
-      materialType: '标准物质',
-      specification: '12-0.10A U/ml 0.5ml/管，20管/盒，GBW(E)090852',
-      model: '12-0.10A U/ml 0.5ml/管，20管/盒，GBW(E)090852',
-      minPackage: '5盒/箱',
-      unit: '盒',
-      purchasePrice: '2500',
-      registrationNumber: '2017标准物质定值证书17452号',
-      supplier: '广州为众生物科技有限公司',
-      manufacturer: '中国计量科学研究院',
-      storageCondition: '冷冻',
-      status: 'active'
-    },
-    {
-      key: '5',
-      materialCode: 'MIC100014',
-      name: '凝血质物',
-      materialType: '试剂',
-      specification: '水平2*12ml',
-      model: '水平2*12ml',
-      minPackage: '10盒/箱',
-      unit: '盒',
-      purchasePrice: '680',
-      registrationNumber: '国械注进2017241752',
-      supplier: '华润（广东）医学检验有限公司',
-      manufacturer: '伯乐实验有限公司Bio-Rad Laboratories, Inc.',
-      storageCondition: '冷藏',
-      status: 'active'
+  // 加载供应商列表
+  const loadSuppliers = async () => {
+    try {
+      const response = await api.get('/api/scm/suppliers');
+      if (response.code === 1 && response.data) {
+        const supplierList = response.data.records.map(supplier => ({
+          value: supplier.id,
+          label: supplier.name
+        }));
+        setSuppliers(supplierList);
+      }
+    } catch (error) {
+      console.error('加载供应商列表失败:', error);
     }
-  ]);
+  };
+
+  // 加载注册证列表
+  const loadQualifications = async (supplierId) => {
+    try {
+      if (!supplierId) {
+        setQualifications([]);
+        return;
+      }
+      const response = await api.get(`/api/scm/suppliers/${supplierId}/qualifications`);
+      if (response.code === 1 && response.data) {
+        const qualificationList = response.data.map(qualification => ({
+          value: qualification.id,
+          label: `${qualification.certificateName} (${qualification.licenseNumber})`
+        }));
+        setQualifications(qualificationList);
+      }
+    } catch (error) {
+      console.error('加载注册证列表失败:', error);
+    }
+  };
+
+  // 加载物资列表
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        materialCode: searchParams.materialCode,
+        name: searchParams.name,
+        supplier: searchParams.supplier,
+        manufacturer: searchParams.manufacturer,
+        status: searchParams.status,
+        pageNum: currentPage,
+        pageSize: pageSize
+      };
+      const response = await api.get('/api/scm/materials', params);
+      if (response.code === 1 && response.data) {
+        const productList = response.data.records.map(product => ({
+          key: product.id,
+          materialCode: product.materialCode,
+          name: product.name,
+          materialType: product.materialType,
+          specification: product.specification,
+          model: product.model,
+          minPackage: product.minPackage,
+          unit: product.unit,
+          purchasePrice: product.purchasePrice,
+          qualificationId: product.qualificationId,
+          supplierId: product.supplierId,
+          supplierName: product.supplierName,
+          registrationNumber: product.registrationNumber,
+          manufacturer: product.manufacturer,
+          storageCondition: product.storageCondition,
+          status: product.status
+        }));
+        setProducts(productList);
+        setTotal(response.data.total);
+      } else {
+        message.error(response.message || '加载物资列表失败');
+      }
+    } catch (error) {
+      console.error('加载物资列表失败:', error);
+      message.error('加载物资列表失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 组件加载时获取物资列表
+  useEffect(() => {
+    loadSuppliers();
+    loadProducts();
+  }, [currentPage, pageSize]);
+
+  // 处理搜索输入变化
+  const handleSearchChange = (field, value) => {
+    setSearchParams(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // 处理查询按钮点击
+  const handleSearch = () => {
+    loadProducts();
+  };
+
+  // 处理新增物资
+  const handleAddProduct = async (values) => {
+    try {
+      setLoading(true);
+      const productData = {
+        materialCode: values.materialCode,
+        name: values.name,
+        materialType: values.materialType,
+        specification: values.specification,
+        model: values.model,
+        minPackage: values.minPackage,
+        unit: values.unit,
+        purchasePrice: parseFloat(values.purchasePrice),
+        qualificationId: values.qualificationId,
+        supplierId: values.supplierId,
+        manufacturer: values.manufacturer,
+        storageCondition: values.storageCondition,
+        status: values.status || 'active'
+      };
+      const response = await api.post('/api/scm/materials', productData);
+      if (response.code === 1) {
+        message.success('物资新增成功');
+        setAddModalVisible(false);
+        addForm.resetFields();
+        await loadProducts();
+      } else {
+        message.error(response.message || '物资新增失败');
+      }
+    } catch (error) {
+      console.error('物资新增失败:', error);
+      message.error('物资新增失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 处理编辑物资
+  const handleEditProduct = async (values) => {
+    try {
+      setLoading(true);
+      const productData = {
+        materialCode: values.materialCode,
+        name: values.name,
+        materialType: values.materialType,
+        specification: values.specification,
+        model: values.model,
+        minPackage: values.minPackage,
+        unit: values.unit,
+        purchasePrice: parseFloat(values.purchasePrice),
+        qualificationId: values.qualificationId,
+        supplierId: values.supplierId,
+        manufacturer: values.manufacturer,
+        storageCondition: values.storageCondition,
+        status: values.status
+      };
+      const response = await api.put(`/api/scm/materials/${editingProduct.key}`, productData);
+      if (response.code === 1) {
+        message.success('物资编辑成功');
+        setEditModalVisible(false);
+        editForm.resetFields();
+        setEditingProduct(null);
+        await loadProducts();
+      } else {
+        message.error(response.message || '物资编辑失败');
+      }
+    } catch (error) {
+      console.error('物资编辑失败:', error);
+      message.error('物资编辑失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 处理删除物资
+  const handleDeleteProduct = async (record) => {
+    try {
+      setLoading(true);
+      const response = await api.delete(`/api/scm/materials/${record.key}`);
+      if (response.code === 1) {
+        message.success('物资删除成功');
+        await loadProducts();
+      } else {
+        message.error(response.message || '物资删除失败');
+      }
+    } catch (error) {
+      console.error('物资删除失败:', error);
+      message.error('物资删除失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 处理编辑按钮点击
+  const handleEdit = async (record) => {
+    setEditingProduct(record);
+    editForm.setFieldsValue({
+      materialCode: record.materialCode,
+      name: record.name,
+      materialType: record.materialType,
+      specification: record.specification,
+      model: record.model,
+      minPackage: record.minPackage,
+      unit: record.unit,
+      purchasePrice: record.purchasePrice,
+      qualificationId: record.qualificationId,
+      supplierId: record.supplierId,
+      manufacturer: record.manufacturer,
+      storageCondition: record.storageCondition,
+      status: record.status
+    });
+    // 加载该供应商的注册证列表
+    if (record.supplierId) {
+      await loadQualifications(record.supplierId);
+    }
+    setEditModalVisible(true);
+  };
 
   const columns = [
     { 
@@ -109,7 +253,7 @@ const ProductCatalog = () => {
       key: 'index', 
       width: 60, 
       fixed: 'left',
-      render: (text, record, index) => index + 1
+      render: (_, __, index) => index + 1
     },
     { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode', width: 120 },
     { title: '物资名称', dataIndex: 'name', key: 'name', width: 150 },
@@ -120,7 +264,7 @@ const ProductCatalog = () => {
     { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
     { title: '采购价格', dataIndex: 'purchasePrice', key: 'purchasePrice', width: 100, render: (price) => `¥${price}` },
     { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', width: 180 },
-    { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 150 },
+    { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 150 },
     { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 200 },
     { title: '储存条件', dataIndex: 'storageCondition', key: 'storageCondition', width: 100 },
     { title: '状态', dataIndex: 'status', key: 'status', width: 80,
@@ -140,7 +284,7 @@ const ProductCatalog = () => {
           <a onClick={() => handleEdit(record)}><EditOutlined />编辑</a>
           <Popconfirm
             title="确定要删除这个商品吗？"
-            onConfirm={() => handleDelete(record.key)}
+            onConfirm={() => handleDeleteProduct(record)}
             okText="确定"
             cancelText="取消"
           >
@@ -151,122 +295,7 @@ const ProductCatalog = () => {
     },
   ];
 
-  const handleEdit = (record) => {
-    setEditingProduct(record);
-    form.setFieldsValue({
-      materialCode: record.materialCode,
-      name: record.name,
-      materialType: record.materialType,
-      specification: record.specification,
-      model: record.model,
-      minPackage: record.minPackage,
-      unit: record.unit,
-      purchasePrice: record.purchasePrice,
-      registrationNumber: record.registrationNumber,
-      supplier: record.supplier,
-      manufacturer: record.manufacturer,
-      storageCondition: record.storageCondition,
-      status: record.status
-    });
-    setEditModalVisible(true);
-  };
 
-  const handleDelete = (key) => {
-    setProducts(products.filter(item => item.key !== key));
-    setFilteredProducts(filteredProducts.filter(item => item.key !== key));
-    message.success('删除成功');
-  };
-
-  const handleEditOk = async () => {
-    try {
-      const values = await form.validateFields();
-      setProducts(products.map(item => 
-        item.key === editingProduct.key 
-          ? { ...item, ...values }
-          : item
-      ));
-      setFilteredProducts(filteredProducts.map(item => 
-        item.key === editingProduct.key 
-          ? { ...item, ...values }
-          : item
-      ));
-      setEditModalVisible(false);
-      message.success('修改成功');
-    } catch (error) {
-      console.log('Failed:', error);
-    }
-  };
-
-  const handleAddOk = async () => {
-    try {
-      const values = await addForm.validateFields();
-      const newProduct = {
-        key: Date.now().toString(),
-        ...values
-      };
-      setProducts([...products, newProduct]);
-      setFilteredProducts([...filteredProducts, newProduct]);
-      setAddModalVisible(false);
-      addForm.resetFields();
-      message.success('新增成功');
-    } catch (error) {
-      console.log('Failed:', error);
-    }
-  };
-
-  // 查询处理函数
-  const handleSearch = () => {
-    let filteredData = products;
-
-    // 按物资编码筛选
-    if (searchParams.materialCode) {
-      filteredData = filteredData.filter(item => 
-        item.materialCode.toLowerCase().includes(searchParams.materialCode.toLowerCase())
-      );
-    }
-
-    // 按物资名称筛选
-    if (searchParams.name) {
-      filteredData = filteredData.filter(item => 
-        item.name.toLowerCase().includes(searchParams.name.toLowerCase())
-      );
-    }
-
-    // 按供应商筛选
-    if (searchParams.supplier) {
-      filteredData = filteredData.filter(item => 
-        item.supplier.toLowerCase().includes(searchParams.supplier.toLowerCase())
-      );
-    }
-
-    // 按生产厂家筛选
-    if (searchParams.manufacturer) {
-      filteredData = filteredData.filter(item => 
-        item.manufacturer.toLowerCase().includes(searchParams.manufacturer.toLowerCase())
-      );
-    }
-
-    return filteredData;
-  };
-
-  const [filteredProducts, setFilteredProducts] = useState(products);
-
-  // 执行搜索
-  const executeSearch = () => {
-    const result = handleSearch();
-    setFilteredProducts(result);
-  };
-
-  // 重置搜索
-  const handleReset = () => {
-    setSearchParams({
-      materialCode: '',
-      name: '',
-      supplier: '',
-      manufacturer: ''
-    });
-    setFilteredProducts(products);
-  };
 
   return (
     <div style={FORM_STYLES.page}>
@@ -282,7 +311,7 @@ const ProductCatalog = () => {
                 value={searchParams.materialCode}
                 allowClear
                 style={{ width: 200 }}
-                onChange={(e) => setSearchParams({...searchParams, materialCode: e.target.value})}
+                onChange={(e) => handleSearchChange('materialCode', e.target.value)}
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -292,7 +321,7 @@ const ProductCatalog = () => {
                 value={searchParams.name}
                 allowClear
                 style={{ width: 200 }}
-                onChange={(e) => setSearchParams({...searchParams, name: e.target.value})}
+                onChange={(e) => handleSearchChange('name', e.target.value)}
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -302,7 +331,7 @@ const ProductCatalog = () => {
                 value={searchParams.supplier}
                 allowClear
                 style={{ width: 200 }}
-                onChange={(e) => setSearchParams({...searchParams, supplier: e.target.value})}
+                onChange={(e) => handleSearchChange('supplier', e.target.value)}
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -312,15 +341,22 @@ const ProductCatalog = () => {
                 value={searchParams.manufacturer}
                 allowClear
                 style={{ width: 200 }}
-                onChange={(e) => setSearchParams({...searchParams, manufacturer: e.target.value})}
+                onChange={(e) => handleSearchChange('manufacturer', e.target.value)}
               />
             </div>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <Button type="primary" icon={<SearchOutlined />} onClick={executeSearch}>
+            <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
               查询
             </Button>
-            <Button onClick={handleReset}>
+            <Button onClick={() => {
+              setSearchParams({
+                materialCode: '',
+                name: '',
+                supplier: '',
+                manufacturer: ''
+              });
+            }}>
               重置
             </Button>
             <Button icon={<ExportOutlined />}>
@@ -339,27 +375,34 @@ const ProductCatalog = () => {
       <Card style={{ marginTop: FORM_STYLES.spacing.cardBottom }}>
         <div style={{ marginBottom: FORM_STYLES.spacing.cardBottom, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <span>共 {filteredProducts.length} 条商品记录</span>
+            <span>共 {products.length} 条商品记录</span>
             <span style={{ marginLeft: 16 }}>
-              启用商品: {filteredProducts.filter(item => item.status === 'active').length} 种
+              启用商品: {products.filter(item => item.status === 'active').length} 种
             </span>
             <span style={{ marginLeft: 16, color: '#faad14' }}>
-              停用商品: {filteredProducts.filter(item => item.status === 'inactive').length} 种
+              停用商品: {products.filter(item => item.status === 'inactive').length} 种
             </span>
           </div>
         </div>
         <Table 
           columns={columns} 
-          dataSource={filteredProducts} 
+          dataSource={products} 
+          loading={loading}
           rowSelection={{
             selectedRowKeys,
             onChange: (keys) => setSelectedRowKeys(keys),
           }}
           pagination={{
-            pageSize: 10,
+            current: currentPage,
+            pageSize: pageSize,
+            total: total,
+            onChange: (page, size) => {
+              setCurrentPage(page);
+              setPageSize(size);
+            },
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
+            showTotal: (t) => `共 ${t} 条记录`,
             style: FORM_STYLES.table.pagination.style
           }}
           scroll={{ x: 1600 }}
@@ -370,11 +413,19 @@ const ProductCatalog = () => {
       <Modal
         title="编辑字典"
         open={editModalVisible}
-        onOk={handleEditOk}
-        onCancel={() => setEditModalVisible(false)}
+        onOk={() => {
+          editForm.validateFields().then((values) => {
+            handleEditProduct(values);
+          });
+        }}
+        onCancel={() => {
+          setEditModalVisible(false);
+          editForm.resetFields();
+          setEditingProduct(null);
+        }}
         {...getModalConfig()}
       >
-        <Form form={form} {...getFormLayoutStyle('edit')}>
+        <Form form={editForm} {...getFormLayoutStyle('edit')}>
           <Row gutter={FORM_STYLES.form.edit.rowGutter}>
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
@@ -469,33 +520,35 @@ const ProductCatalog = () => {
           <Row gutter={FORM_STYLES.form.edit.rowGutter}>
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
-                name="purchasePrice"
-                label="采购价格"
-                rules={[{ required: true, message: '请输入采购价格' }]}
+                name="supplierId"
+                label="供应商"
+                rules={[{ required: true, message: '请选择供应商' }]}
               >
-                <Input placeholder="请输入采购价格" prefix="¥" />
+                <Select 
+                  placeholder="请选择供应商"
+                  options={suppliers}
+                  onChange={(value) => {
+                    loadQualifications(value);
+                    addForm.setFieldsValue({ qualificationId: undefined });
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
-                name="registrationNumber"
-                label="注册证号"
-                rules={[{ required: true, message: '请输入注册证号' }]}
+                name="qualificationId"
+                label="注册证"
+                rules={[{ required: true, message: '请选择注册证' }]}
               >
-                <Input placeholder="请输入注册证号" />
+                <Select 
+                  placeholder="请先选择供应商"
+                  options={qualifications}
+                  disabled={!editForm.getFieldValue('supplierId')}
+                />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={FORM_STYLES.form.edit.rowGutter}>
-            <Col span={FORM_STYLES.form.edit.colSpan}>
-              <Form.Item
-                name="supplier"
-                label="供应商"
-                rules={[{ required: true, message: '请输入供应商' }]}
-              >
-                <Input placeholder="请输入供应商" />
-              </Form.Item>
-            </Col>
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
                 name="manufacturer"
@@ -505,8 +558,6 @@ const ProductCatalog = () => {
                 <Input placeholder="请输入生产厂家" />
               </Form.Item>
             </Col>
-          </Row>
-          <Row gutter={FORM_STYLES.form.edit.rowGutter}>
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
                 name="storageCondition"
@@ -516,6 +567,8 @@ const ProductCatalog = () => {
                 <Input placeholder="请输入储存条件" />
               </Form.Item>
             </Col>
+          </Row>
+          <Row gutter={FORM_STYLES.form.edit.rowGutter}>
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
                 name="status"
@@ -535,8 +588,15 @@ const ProductCatalog = () => {
       <Modal
         title="新增字典"
         open={addModalVisible}
-        onOk={handleAddOk}
-        onCancel={() => setAddModalVisible(false)}
+        onOk={() => {
+          addForm.validateFields().then((values) => {
+            handleAddProduct(values);
+          });
+        }}
+        onCancel={() => {
+          setAddModalVisible(false);
+          addForm.resetFields();
+        }}
         {...getModalConfig()}
       >
         <Form form={addForm} {...getFormLayoutStyle('edit')}>
@@ -634,20 +694,31 @@ const ProductCatalog = () => {
           <Row gutter={FORM_STYLES.form.edit.rowGutter}>
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
-                name="registrationNumber"
-                label="注册证号"
-                rules={[{ required: true, message: '请输入注册证号' }]}
+                name="supplierId"
+                label="供应商"
+                rules={[{ required: true, message: '请选择供应商' }]}
               >
-                <Input placeholder="请输入注册证号" />
+                <Select 
+                  placeholder="请选择供应商"
+                  options={suppliers}
+                  onChange={(value) => {
+                    loadQualifications(value);
+                    addForm.setFieldsValue({ qualificationId: undefined });
+                  }}
+                />
               </Form.Item>
             </Col>
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
-                name="supplier"
-                label="供应商"
-                rules={[{ required: true, message: '请输入供应商' }]}
+                name="qualificationId"
+                label="注册证"
+                rules={[{ required: true, message: '请选择注册证' }]}
               >
-                <Input placeholder="请输入供应商" />
+                <Select
+                  placeholder="请先选择供应商"
+                  options={qualifications}
+                  disabled={!addForm.getFieldValue('supplierId')}
+                />
               </Form.Item>
             </Col>
           </Row>

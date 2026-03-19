@@ -8,7 +8,7 @@ public class ClassCastUtil {
 
     public static <T> PageOutputDto<T> pageInfoToPageOutputDto(PageInfo<T> pageInfo) {
 
-        PageOutputDto dto = new PageOutputDto();
+        PageOutputDto<T> dto = new PageOutputDto<>();
         dto.setHasNext(pageInfo.isHasNextPage());
         dto.setList(pageInfo.getList());
         dto.setPage(pageInfo.getPages());
@@ -19,7 +19,7 @@ public class ClassCastUtil {
     }
     public static <T> PageOutputDto<T> pageInfoToPageOutputDto1(PageInfo<T> pageInfo,Long updateTime) {
 
-        PageOutputDto dto = new PageOutputDto();
+        PageOutputDto<T> dto = new PageOutputDto<>();
         dto.setHasNext(pageInfo.isHasNextPage());
         dto.setList(pageInfo.getList());
         dto.setPage(pageInfo.getPages());

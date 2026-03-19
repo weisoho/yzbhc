@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import moment from 'moment';
 import {
   Card,
   Form,
@@ -23,6 +24,7 @@ import {
   EyeOutlined
 } from '@ant-design/icons';
 import zhCN from 'antd/es/locale/zh_CN';
+import api from '../utils/api';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -54,117 +56,74 @@ const PurchaseReceipt = () => {
   // 备注
   const [remarks, setRemarks] = useState('');
 
-  // 模拟数据
+  // 从API获取采购订单数据
+  const loadPurchaseOrders = async () => {
+    try {
+      setLoading(true);
+      const searchValues = form.getFieldsValue();
+      const response = await api.get('/api/scm/purchases/orders/pending-receive', {
+        pageNum: pagination.current,
+        pageSize: pagination.pageSize,
+        orderNumber: searchValues.purchaseOrderNo,
+        supplierName: searchValues.supplierName,
+        productCode: searchValues.productCode,
+        productName: searchValues.productName
+      });
+      if (response.code === 1 && response.data) {
+        const orderList = response.data.records.map(order => ({
+          key: order.id,
+          orderNumber: order.orderNumber,
+          supplierName: order.supplierName,
+          supplierCode: order.supplierCode,
+          department: order.departmentName,
+          buyer: order.operatorName,
+          contactPerson: order.contactPerson,
+          contactPhone: order.contactPhone,
+          orderDate: moment(order.createTime).format('YYYY-MM-DD HH:mm:ss'),
+          expectedDeliveryDate: order.expectedDeliveryDate,
+          actualDeliveryDate: order.actualDeliveryDate,
+          status: order.status,
+          itemCount: order.itemCount,
+          totalAmount: order.totalAmount,
+          items: order.items ? order.items.map((item) => ({
+            key: item.id,
+            id: item.id,
+            productCode: item.materialCode,
+            productName: item.materialName,
+            specification: item.specification,
+            model: item.model,
+            batchNumber: item.batchNumber,
+            productionDate: item.productionDate,
+            expiryDate: item.expiryDate,
+            unit: item.unit,
+            price: item.unitPrice,
+            quantity: item.quantity,
+            amount: item.amount,
+            status: item.status
+          })) : []
+        }));
+        setData(orderList);
+        setFilteredData(orderList);
+        setPagination(prev => ({ ...prev, total: response.data.total }));
+      } else {
+        message.error(response.message || '加载采购订单失败');
+      }
+    } catch (error) {
+      console.error('加载采购订单失败:', error);
+      message.error('加载采购订单失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const mockData = [
-      {
-        key: '1',
-        orderNumber: 'PO-20260110-001',
-        supplierName: '医疗用品供应商A',
-        supplierCode: 'SUP001',
-        department: '采购部',
-        buyer: '张三',
-        contactPerson: '李经理',
-        contactPhone: '13800138001',
-        orderDate: '2026-01-10',
-        expectedDeliveryDate: '2026-01-15',
-        actualDeliveryDate: '2026-01-14',
-        status: '待验收',
-        itemCount: 3,
-        totalAmount: 15000,
-        items: [
-          { key: '1-1', productCode: 'P001', productName: '医用口罩', specification: '三层防护', model: 'M-001', batchNumber: '20260101', productionDate: '2026-01-01', expiryDate: '2027-01-01', unit: '盒', price: 50, quantity: 100, amount: 5000, status: '待验收' },
-          { key: '1-2', productCode: 'P002', productName: '医用手套', specification: '乳胶', model: 'L-001', batchNumber: '20260102', productionDate: '2026-01-02', expiryDate: '2027-01-02', unit: '盒', price: 30, quantity: 200, amount: 6000, status: '待验收' },
-          { key: '1-3', productCode: 'P003', productName: '消毒液', specification: '500ml', model: 'D-001', batchNumber: '20260103', productionDate: '2026-01-03', expiryDate: '2027-01-03', unit: '瓶', price: 40, quantity: 100, amount: 4000, status: '待验收' },
-        ]
-      },
-      {
-        key: '2',
-        orderNumber: 'PO-20260109-002',
-        supplierName: '医疗器械供应商B',
-        supplierCode: 'SUP002',
-        department: '采购部',
-        buyer: '李四',
-        contactPerson: '王经理',
-        contactPhone: '13800138002',
-        orderDate: '2026-01-09',
-        expectedDeliveryDate: '2026-01-14',
-        actualDeliveryDate: '2026-01-13',
-        status: '待验收',
-        itemCount: 2,
-        totalAmount: 8000,
-        items: [
-          { key: '2-1', productCode: 'P004', productName: '体温计', specification: '电子', model: 'T-001', batchNumber: '20260104', productionDate: '2026-01-04', expiryDate: '2027-01-04', unit: '支', price: 100, quantity: 50, amount: 5000, status: '待验收' },
-          { key: '2-2', productCode: 'P005', productName: '血压计', specification: '上臂式', model: 'B-001', batchNumber: '20260105', productionDate: '2026-01-05', expiryDate: '2027-01-05', unit: '台', price: 150, quantity: 20, amount: 3000, status: '待验收' },
-        ]
-      },
-      {
-        key: '3',
-        orderNumber: 'PO-20260108-003',
-        supplierName: '消毒用品供应商C',
-        supplierCode: 'SUP003',
-        department: '采购部',
-        buyer: '王五',
-        contactPerson: '张经理',
-        contactPhone: '13800138003',
-        orderDate: '2026-01-08',
-        expectedDeliveryDate: '2026-01-13',
-        actualDeliveryDate: '2026-01-20',
-        status: '待验收',
-        itemCount: 1,
-        totalAmount: 6000,
-        items: [
-          { key: '3-1', productCode: 'P006', productName: '酒精', specification: '75%', model: 'A-001', batchNumber: '20260106', productionDate: '2026-01-06', expiryDate: '2027-01-06', unit: '瓶', price: 60, quantity: 100, amount: 6000, status: '待验收' },
-        ]
-      },
-      {
-        key: '4',
-        orderNumber: 'PO-20260107-004',
-        supplierName: '医疗耗材供应商D',
-        supplierCode: 'SUP004',
-        department: '采购部',
-        buyer: '赵六',
-        contactPerson: '刘经理',
-        contactPhone: '13800138004',
-        orderDate: '2026-01-07',
-        expectedDeliveryDate: '2026-01-12',
-        actualDeliveryDate: null,
-        status: '待验收',
-        itemCount: 2,
-        totalAmount: 12000,
-        items: [
-          { key: '4-1', productCode: 'P007', productName: '纱布', specification: '无菌', model: 'G-001', batchNumber: '20260107', productionDate: '2026-01-07', expiryDate: '2027-01-07', unit: '包', price: 20, quantity: 300, amount: 6000, status: '待验收' },
-          { key: '4-2', productCode: 'P008', productName: '棉签', specification: '无菌', model: 'Q-001', batchNumber: '20260108', productionDate: '2026-01-08', expiryDate: '2027-01-08', unit: '包', price: 15, quantity: 400, amount: 6000, status: '待验收' },
-        ]
-      },
-      {
-        key: '5',
-        orderNumber: 'PO-20260106-005',
-        supplierName: '医疗设备供应商E',
-        supplierCode: 'SUP005',
-        department: '采购部',
-        buyer: '钱七',
-        contactPerson: '陈经理',
-        contactPhone: '13800138005',
-        orderDate: '2026-01-06',
-        expectedDeliveryDate: '2026-01-11',
-        actualDeliveryDate: '2026-01-10',
-        status: '待验收',
-        itemCount: 1,
-        totalAmount: 25000,
-        items: [
-          { key: '5-1', productCode: 'P009', productName: '监护仪', specification: '多参数', model: 'J-001', batchNumber: '20260109', productionDate: '2026-01-09', expiryDate: '2027-01-09', unit: '台', price: 25000, quantity: 1, amount: 25000, status: '待验收' },
-        ]
-      },
-    ];
-    setData(mockData);
-    setFilteredData(mockData);
-    setPagination(prev => ({ ...prev, total: mockData.length }));
-  }, []);
+    loadPurchaseOrders();
+  }, [pagination.current, pagination.pageSize]);
 
   // 状态标签渲染
   const getStatusTag = (status) => {
     const statusMap = {
+      '待收货': { color: 'orange', text: '待收货' },
       '待验收': { color: 'orange', text: '待验收' },
       '已验收': { color: 'green', text: '已验收' },
       '已拒收': { color: 'red', text: '已拒收' },
@@ -175,51 +134,15 @@ const PurchaseReceipt = () => {
   };
 
   // 搜索处理
-  const handleSearch = (values) => {
-    let result = [...data];
-    
-    // 采购单号搜索
-    if (values.purchaseOrderNo) {
-      const purchaseOrderNo = values.purchaseOrderNo.toLowerCase();
-      result = result.filter(item => 
-        item.orderNumber.toLowerCase().includes(purchaseOrderNo)
-      );
-    }
-    
-    // 供应商搜索
-    if (values.supplierName) {
-      result = result.filter(item => item.supplierName.includes(values.supplierName));
-    }
-    
-    // 物资编码搜索
-    if (values.productCode) {
-      const productCode = values.productCode.toLowerCase();
-      result = result.filter(item => 
-        item.items.some(subItem => 
-          subItem.productCode.toLowerCase().includes(productCode)
-        )
-      );
-    }
-    
-    // 物资名称搜索
-    if (values.productName) {
-      const productName = values.productName.toLowerCase();
-      result = result.filter(item => 
-        item.items.some(subItem => 
-          subItem.productName.toLowerCase().includes(productName)
-        )
-      );
-    }
-    
-    setFilteredData(result);
-    setPagination(prev => ({ ...prev, current: 1, total: result.length }));
+  const handleSearch = () => {
+    setPagination(prev => ({ ...prev, current: 1 }));
+    loadPurchaseOrders();
   };
 
   // 重置搜索
   const handleReset = () => {
     form.resetFields();
-    setFilteredData(data);
-    setPagination(prev => ({ ...prev, current: 1, total: data.length }));
+    setPagination(prev => ({ ...prev, current: 1 }));
   };
 
   // 导出数据
@@ -237,7 +160,11 @@ const PurchaseReceipt = () => {
 
   // 分页处理
   const handleTableChange = (newPagination) => {
-    setPagination(newPagination);
+    setPagination({
+      ...pagination,
+      current: newPagination.current,
+      pageSize: newPagination.pageSize
+    });
   };
 
   // 处理确认验收选中的商品
@@ -272,83 +199,37 @@ const PurchaseReceipt = () => {
       content: `确定要验收选中的 ${selectedItemKeys.length} 项商品吗？`,
       okText: '确认',
       cancelText: '取消',
-      onOk: () => {
-        // 更新数据中选中商品的状态
-        const updatedData = data.map(order => {
-          if (order.key === selectedOrder.key) {
-            let updatedItems = [];
-            
-            order.items.forEach(item => {
-              if (selectedItemKeys.includes(item.key)) {
-                const receivedQty = receivedQuantities[item.key] || item.quantity;
-                const itemBatchInfo = batchInfo[item.key] || {};
-                
-                if (receivedQty >= item.quantity) {
-                  // 全部验收
-                  updatedItems.push({
-                    ...item,
-                    ...itemBatchInfo,
-                    status: '已验收'
-                  });
-                } else {
-                  // 部分验收
-                  // 添加已验收的部分
-                  updatedItems.push({
-                    ...item,
-                    ...itemBatchInfo,
-                    quantity: receivedQty,
-                    amount: item.price * receivedQty,
-                    status: '已验收',
-                    key: `${item.key}-accepted`
-                  });
-                  // 保留剩余的部分
-                  updatedItems.push({
-                    ...item,
-                    quantity: item.quantity - receivedQty,
-                    amount: item.price * (item.quantity - receivedQty),
-                    status: '待验收',
-                    key: `${item.key}-remaining`
-                  });
-                }
-              } else {
-                updatedItems.push(item);
-              }
-            });
-
-            // 检查订单状态
-            const allAccepted = updatedItems.every(item => item.status === '已验收');
-            const allRejected = updatedItems.every(item => item.status === '已拒收');
-            const hasPending = updatedItems.some(item => item.status === '待验收');
-
-            let newStatus = order.status;
-            if (allAccepted) {
-              newStatus = '已验收';
-            } else if (allRejected) {
-              newStatus = '已拒收';
-            } else if (!hasPending) {
-              newStatus = '部分验收';
-            }
-
-            return {
-              ...order,
-              status: newStatus,
-              items: updatedItems
-            };
+      onOk: async () => {
+        try {
+          setLoading(true);
+          const receiveData = {
+            receiverName: '管理员',
+            remark: remarks,
+            items: selectedItemKeys.map(key => {
+              const item = selectedOrder.items.find(i => i.key === key);
+              return {
+                purchaseOrderItemId: item.id,
+                quantity: receivedQuantities[key] || item.quantity,
+                batchNumber: batchInfo[key]?.batchNumber || '',
+                productionDate: batchInfo[key]?.productionDate || null,
+                expiryDate: batchInfo[key]?.expiryDate || null
+              };
+            })
+          };
+          const response = await api.post(`/api/scm/purchases/orders/${selectedOrder.key}/receive`, receiveData);
+          if (response.code === 1) {
+            message.success(`成功验收 ${selectedItemKeys.length} 项商品`);
+            loadPurchaseOrders();
+            setIsModalVisible(false);
+          } else {
+            message.error(response.message || '验收失败');
           }
-          return order;
-        });
-
-        setData(updatedData);
-        setFilteredData(updatedData);
-        
-        // 更新当前选中的订单
-        const updatedSelectedOrder = updatedData.find(order => order.key === selectedOrder.key);
-        setSelectedOrder(updatedSelectedOrder);
-        
-        // 清空选择状态
-        setSelectedItemKeys([]);
-        
-        message.success(`成功验收 ${selectedItemKeys.length} 项商品`);
+        } catch (error) {
+          console.error('验收失败:', error);
+          message.error('验收失败，请检查网络连接或联系管理员');
+        } finally {
+          setLoading(false);
+        }
       }
     });
   };
@@ -599,6 +480,13 @@ const PurchaseReceipt = () => {
                   <span style={{ whiteSpace: 'nowrap' }}>采购单号：</span>
                   <Form.Item name="purchaseOrderNo" noStyle>
                     <Input placeholder="请输入采购单号" allowClear style={{ width: 180 }} size="middle" />
+                  </Form.Item>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ whiteSpace: 'nowrap' }}>供应商：</span>
+                  <Form.Item name="supplierName" noStyle>
+                    <Input placeholder="请输入供应商" allowClear style={{ width: 180 }} size="middle" />
                   </Form.Item>
                 </div>
 

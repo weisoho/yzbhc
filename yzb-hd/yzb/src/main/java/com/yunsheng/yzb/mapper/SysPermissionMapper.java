@@ -1,14 +1,12 @@
 package com.yunsheng.yzb.mapper;
 
 import com.yunsheng.yzb.model.SysPermission;
-import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 /**
  * 权限Mapper接口
  */
-@Mapper
 public interface SysPermissionMapper {
 
     /**

@@ -1,54 +1,120 @@
-import { useState } from 'react';
-import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message } from 'antd';
+import { useState, useEffect } from 'react';
+import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message, Select } from 'antd';
+import { useParams } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import moment from 'moment';
+import api from '../utils/api';
 
 const SupplierBusinessCertificate = () => {
+  const { supplierId } = useParams();
   const [visible, setVisible] = useState(false);
   const [editVisible, setEditVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
+  const [fileList, setFileList] = useState([]);
+  const [editFileList, setEditFileList] = useState([]);
+  const [businessCertificates, setBusinessCertificates] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [searchParams, setSearchParams] = useState({
+    supplierName: '',
+    unifiedSocialCreditCode: '',
+    legalRepresentative: ''
+  });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [suppliers, setSuppliers] = useState([]);
 
-  const [businessCertificates, setBusinessCertificates] = useState([
-    { 
-      key: '1', 
-      name: '北京医疗科技有限公司',
-      unifiedSocialCreditCode: '91110000MA12345678',
-      legalRepresentative: '张三',
-      registeredCapital: '1000万元',
-      establishmentDate: '2020-01-15',
-      address: '北京市朝阳区建国路88号',
-      registrationAuthority: '北京市工商局',
-      attachment: '营业执照_北京医疗科技有限公司.pdf'
-    },
-    { 
-      key: '2', 
-      name: '上海医疗设备有限公司',
-      unifiedSocialCreditCode: '91310000MA87654321',
-      legalRepresentative: '李四',
-      registeredCapital: '2000万元',
-      establishmentDate: '2019-06-20',
-      address: '上海市浦东新区张江高科技园区',
-      registrationAuthority: '上海市工商局',
-      attachment: '营业执照_上海医疗设备有限公司.pdf'
-    },
-    { 
-      key: '3', 
-      name: '广东医疗器械股份有限公司',
-      unifiedSocialCreditCode: '91440000MA13579246',
-      legalRepresentative: '王五',
-      registeredCapital: '5000万元',
-      establishmentDate: '2018-12-10',
-      address: '广州市天河区珠江新城',
-      registrationAuthority: '广东省工商局',
-      attachment: '营业执照_广东医疗器械股份有限公司.pdf'
-    },
-  ]);
+  // 加载供应商列表
+  const loadSuppliers = async () => {
+    try {
+      const response = await api.get('/api/scm/suppliers');
+      if (response.code === 1 && response.data) {
+        setSuppliers(response.data.records);
+      }
+    } catch (error) {
+      console.error('获取供应商列表失败:', error);
+    }
+  };
+
+  // 加载营业执照列表
+  const loadBusinessCertificates = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        supplierId: supplierId,
+        certificateName: searchParams.supplierName,
+        creditCode: searchParams.unifiedSocialCreditCode,
+        legalRepresentative: searchParams.legalRepresentative,
+        pageNum: currentPage,
+        pageSize: pageSize,
+        type: 'BUSINESS_CERTIFICATE'  // 添加type参数，查询营业执照类型
+      };
+      
+      const response = await api.get('/api/scm/suppliers/qualifications', params);
+      if (response.code === 1 && response.data) {
+        const { records, total: totalCount } = response.data;
+        if (Array.isArray(records)) {
+          const certificateList = records.map(item => ({
+            key: item.id,
+            name: item.supplierName,
+            unifiedSocialCreditCode: item.creditCode,
+            legalRepresentative: item.legalRepresentative,
+            registeredCapital: item.registeredCapital,
+            establishmentDate: item.registrationDate,
+            address: item.address,
+            registrationAuthority: item.issuingAuthority,
+            attachment: item.attachmentName
+          }));
+          setBusinessCertificates(certificateList);
+          setTotal(totalCount);
+        } else {
+          setBusinessCertificates([]);
+          setTotal(0);
+        }
+      } else {
+        message.error('加载营业执照列表失败');
+        setBusinessCertificates([]);
+        setTotal(0);
+      }
+    } catch (error) {
+      console.error('加载营业执照列表失败:', error);
+      message.error('加载营业执照列表失败');
+      setBusinessCertificates([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 组件加载时获取供应商列表和营业执照列表
+  useEffect(() => {
+    const loadData = async () => {
+      await loadSuppliers();
+      await loadBusinessCertificates();
+    };
+    loadData();
+  }, [currentPage, pageSize, supplierId]);
+
+  // 处理搜索输入变化
+  const handleSearchChange = (field, value) => {
+    setSearchParams(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // 处理查询按钮点击
+  const handleSearch = () => {
+    setCurrentPage(1); // 重置为第一页
+    loadBusinessCertificates();
+  };
 
   // 编辑处理函数
   const handleEdit = (record) => {
     setEditingRecord(record);
+    // 设置编辑表单数据
     editForm.setFieldsValue({
       name: record.name,
       unifiedSocialCreditCode: record.unifiedSocialCreditCode,
@@ -56,69 +122,95 @@ const SupplierBusinessCertificate = () => {
       registeredCapital: record.registeredCapital,
       establishmentDate: record.establishmentDate ? moment(record.establishmentDate) : null,
       address: record.address,
-      registrationAuthority: record.registrationAuthority,
-      attachment: []
+      registrationAuthority: record.registrationAuthority
     });
+    // 重置编辑文件列表
+    setEditFileList([]);
     setEditVisible(true);
   };
 
   // 保存编辑
-  const handleEditSave = () => {
-    editForm.validateFields().then(values => {
-      const updatedCertificates = businessCertificates.map(certificate => {
-        if (certificate.key === editingRecord.key) {
-          // 处理附件
-          let attachment = editingRecord.attachment;
-          // 检查 values.attachment 是否存在且是数组
-          if (values.attachment && Array.isArray(values.attachment) && values.attachment.length > 0) {
-            // 取数组中的第一个文件
-            attachment = values.attachment[0].name;
-          }
-          
-          return {
-            ...certificate,
-            name: values.name,
-            unifiedSocialCreditCode: values.unifiedSocialCreditCode,
-            legalRepresentative: values.legalRepresentative,
-            registeredCapital: values.registeredCapital,
-            establishmentDate: values.establishmentDate ? values.establishmentDate.format('YYYY-MM-DD') : '',
-            address: values.address,
-            registrationAuthority: values.registrationAuthority,
-            attachment: attachment
-          };
-        }
-        return certificate;
-      });
+  const handleEditSave = async () => {
+    try {
+      setLoading(true);
+      const values = await editForm.validateFields();
       
-      setBusinessCertificates(updatedCertificates);
+      // 从选择的供应商名称查找供应商ID
+      const selectedSupplier = suppliers.find(s => s.name === values.name);
+      if (!selectedSupplier) {
+        message.error('未找到选中的供应商信息');
+        return;
+      }
+      
+      // 构建营业执照数据
+      const certificateData = {
+        type: 'BUSINESS_CERTIFICATE',  // 资质类型
+        certificateName: values.name,  // 资质名称
+        licenseNumber: values.unifiedSocialCreditCode,  // 证件编号
+        licenseType: '营业执照',  // 证件类别
+        issueDate: values.establishmentDate ? values.establishmentDate.format('YYYY-MM-DD') : null,  // 发证日期
+        expiryDate: '2030-01-01',  // 有效期（默认10年）
+        issuingAuthority: values.registrationAuthority,  // 发证机构
+        unifiedSocialCreditCode: values.unifiedSocialCreditCode,  // 统一社会信用代码
+        legalRepresentative: values.legalRepresentative,  // 法定代表人
+        registeredCapital: values.registeredCapital,  // 注册资本
+        address: values.address,  // 住所
+        supplierId: selectedSupplier.id,  // 供应商ID
+        attachmentName: editFileList.length > 0 ? editFileList[editFileList.length - 1].name : editingRecord.attachment,  // 附件名称
+        licenseFile: ''  // 附件地址
+      };
+      
+      // 编辑营业执照
+      const response = await api.put(`/api/scm/suppliers/qualifications/${editingRecord.key}`, certificateData);
+      if (response.code === 1) {
+        message.success('营业执照更新成功');
+        await loadBusinessCertificates();
+      } else {
+        message.error('营业执照更新失败');
+      }
+      
       setEditVisible(false);
       setEditingRecord(null);
       editForm.resetFields();
-      message.success('营业执照更新成功');
-    }).catch(() => {
-      // 表单验证失败
-    });
+      setEditFileList([]);
+    } catch (error) {
+      console.error('编辑营业执照失败:', error);
+      message.error('操作失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 删除处理函数
-  const handleDelete = (key) => {
+  const handleDelete = async (key) => {
     Modal.confirm({
       title: '确认删除',
       content: '确定要删除这条营业执照吗？',
       okText: '确定',
       okType: 'danger',
       cancelText: '取消',
-      onOk() {
-        const updatedCertificates = businessCertificates.filter(certificate => certificate.key !== key);
-        setBusinessCertificates(updatedCertificates);
-        message.success('营业执照删除成功');
+      onOk: async () => {
+        try {
+          setLoading(true);
+          const response = await api.delete(`/api/scm/suppliers/qualifications/${key}`);
+          if (response.code === 1) {
+            message.success('营业执照删除成功');
+            await loadBusinessCertificates();
+          } else {
+            message.error('营业执照删除失败');
+          }
+        } catch (error) {
+          message.error('营业执照删除失败');
+        } finally {
+          setLoading(false);
+        }
       }
     });
   };
 
   const columns = [
     { 
-      title: '名称', 
+      title: '供应商名称', 
       dataIndex: 'name', 
       key: 'name',
       width: 200,
@@ -301,7 +393,26 @@ const SupplierBusinessCertificate = () => {
     headers: {
       authorization: 'authorization-text',
     },
+    fileList: fileList,
     onChange(info) {
+      setFileList(info.fileList);
+      if (info.file.status === 'done') {
+        // 文件上传成功
+      } else if (info.file.status === 'error') {
+        // 文件上传失败
+      }
+    },
+  };
+
+  const editUploadProps = {
+    name: 'file',
+    action: '/api/upload',
+    headers: {
+      authorization: 'authorization-text',
+    },
+    fileList: editFileList,
+    onChange(info) {
+      setEditFileList(info.fileList);
       if (info.file.status === 'done') {
         // 文件上传成功
       } else if (info.file.status === 'error') {
@@ -318,20 +429,35 @@ const SupplierBusinessCertificate = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ whiteSpace: 'nowrap' }}>名称：</span>
-              <Input placeholder="请输入名称" style={{ width: 200 }} />
+              <span style={{ whiteSpace: 'nowrap' }}>供应商名称：</span>
+              <Input 
+                placeholder="请输入供应商名称" 
+                style={{ width: 200 }} 
+                value={searchParams.supplierName}
+                onChange={(e) => handleSearchChange('supplierName', e.target.value)}
+              />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ whiteSpace: 'nowrap' }}>统一社会信用代码：</span>
-              <Input placeholder="请输入统一社会信用代码" style={{ width: 200 }} />
+              <Input 
+                placeholder="请输入统一社会信用代码" 
+                style={{ width: 200 }} 
+                value={searchParams.unifiedSocialCreditCode}
+                onChange={(e) => handleSearchChange('unifiedSocialCreditCode', e.target.value)}
+              />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ whiteSpace: 'nowrap' }}>法定代表人：</span>
-              <Input placeholder="请输入法定代表人" style={{ width: 200 }} />
+              <Input 
+                placeholder="请输入法定代表人" 
+                style={{ width: 200 }} 
+                value={searchParams.legalRepresentative}
+                onChange={(e) => handleSearchChange('legalRepresentative', e.target.value)}
+              />
             </div>
           </div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-            <Button type="primary" icon={<SearchOutlined />}>查询</Button>
+            <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => setVisible(true)}>
               新增营业执照
             </Button>
@@ -343,8 +469,17 @@ const SupplierBusinessCertificate = () => {
         <Table 
           columns={columns} 
           dataSource={businessCertificates} 
-          pagination={{
-            pageSize: 10,
+          loading={loading}
+          pagination={{ 
+            total: total,
+            pageSize: pageSize,
+            current: currentPage,
+            onChange: async (page, size) => {
+              setCurrentPage(page);
+              setPageSize(size);
+              // 注意：loadBusinessCertificates 依赖于 currentPage 和 pageSize
+              // 在 useEffect 中已经处理了加载逻辑
+            },
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条记录`,
@@ -353,7 +488,7 @@ const SupplierBusinessCertificate = () => {
               justifyContent: 'center',
               marginTop: '16px'
             }
-          }}
+          }} 
           scroll={{ x: 1600 }}
         />
       </div>
@@ -361,35 +496,59 @@ const SupplierBusinessCertificate = () => {
       <Modal
         title="新增营业执照"
         open={visible}
-        onOk={() => {
-          form.validateFields().then(values => {
-            let attachment = '';
-            // 检查 values.attachment 是否存在且是数组
-            if (values.attachment && Array.isArray(values.attachment) && values.attachment.length > 0) {
-              attachment = values.attachment[0].name;
+        onOk={async () => {
+          try {
+            setLoading(true);
+            const values = await form.validateFields();
+            
+            // 从选择的供应商名称查找供应商ID
+            const selectedSupplier = suppliers.find(s => s.name === values.name);
+            if (!selectedSupplier) {
+              message.error('未找到选中的供应商信息');
+              return;
             }
-            const newCertificate = {
-              key: (businessCertificates.length + 1).toString(),
-              name: values.name,
-              unifiedSocialCreditCode: values.unifiedSocialCreditCode,
-              legalRepresentative: values.legalRepresentative,
-              registeredCapital: values.registeredCapital,
-              establishmentDate: values.establishmentDate ? values.establishmentDate.format('YYYY-MM-DD') : '',
-              address: values.address,
-              registrationAuthority: values.registrationAuthority,
-              attachment: attachment
+            
+            // 构建营业执照数据
+            const certificateData = {
+              type: 'BUSINESS_CERTIFICATE',  // 资质类型
+              certificateName: values.name,  // 资质名称
+              licenseNumber: values.unifiedSocialCreditCode,  // 证件编号
+              licenseType: '营业执照',  // 证件类别
+              issueDate: values.establishmentDate ? values.establishmentDate.format('YYYY-MM-DD') : null,  // 发证日期
+              expiryDate: '2030-01-01',  // 有效期（默认10年）
+              issuingAuthority: values.registrationAuthority,  // 发证机构
+              unifiedSocialCreditCode: values.unifiedSocialCreditCode,  // 统一社会信用代码
+              legalRepresentative: values.legalRepresentative,  // 法定代表人
+              registeredCapital: values.registeredCapital,  // 注册资本
+              address: values.address,  // 住所
+              attachmentName: fileList.length > 0 ? fileList[fileList.length - 1].name : '',  // 附件名称
+              licenseFile: ''  // 附件地址
             };
-            setBusinessCertificates([...businessCertificates, newCertificate]);
+            
+            // 新增营业执照
+            const targetSupplierId = selectedSupplier.id;
+            const response = await api.post(`/api/scm/suppliers/${targetSupplierId}/qualifications`, certificateData);
+            if (response.code === 1) {
+              message.success('营业执照新增成功');
+              await loadBusinessCertificates();
+            } else {
+              message.error('营业执照新增失败');
+            }
+            
             setVisible(false);
             form.resetFields();
-            message.success('营业执照新增成功');
-          }).catch(() => {
-            // 表单验证失败
-          });
+            setFileList([]);
+          } catch (error) {
+            console.error('新增营业执照失败:', error);
+            message.error('操作失败');
+          } finally {
+            setLoading(false);
+          }
         }}
         onCancel={() => {
           setVisible(false);
           form.resetFields();
+          setFileList([]);
         }}
         okText="确定"
         cancelText="取消"
@@ -398,10 +557,34 @@ const SupplierBusinessCertificate = () => {
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="名称"
-            rules={[{ required: true, message: '请输入名称' }]}
+            label="供应商名称"
+            rules={[{ required: true, message: '请选择供应商名称' }]}
           >
-            <Input placeholder="请输入名称" />
+            <Select 
+              placeholder="请选择供应商名称" 
+              style={{ width: '100%' }}
+              onChange={(value) => {
+                // 查找选择的供应商
+                const selectedSupplier = suppliers.find(s => s.name === value);
+                if (selectedSupplier) {
+                  // 尝试不同的字段名称，确保能够获取到统一社会信用代码
+                  const creditCode = selectedSupplier.registrationNumber || selectedSupplier.registration_number || selectedSupplier.creditCode || selectedSupplier.credit_code || '';
+                  // 尝试不同的字段名称，确保能够获取到法定代表人
+                  const legalRep = selectedSupplier.legalRepresentative || selectedSupplier.legal_representative || '';
+                  // 自动填充统一社会信用代码和法定代表人
+                  form.setFieldsValue({
+                    unifiedSocialCreditCode: creditCode,
+                    legalRepresentative: legalRep
+                  });
+                }
+              }}
+            >
+              {suppliers.map(supplier => (
+                <Select.Option key={supplier.id} value={supplier.name}>
+                  {supplier.name}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
           
           <Form.Item
@@ -453,10 +636,8 @@ const SupplierBusinessCertificate = () => {
           </Form.Item>
           
           <Form.Item
-            name="attachment"
             label="附件"
             rules={[{ required: true, message: '请上传附件' }]}
-            valuePropName="fileList"
           >
             <Upload {...uploadProps}>
               <Button icon={<UploadOutlined />}>上传附件</Button>
@@ -474,6 +655,7 @@ const SupplierBusinessCertificate = () => {
           setEditVisible(false);
           setEditingRecord(null);
           editForm.resetFields();
+          setEditFileList([]);
         }}
         okText="保存"
         cancelText="取消"
@@ -482,10 +664,34 @@ const SupplierBusinessCertificate = () => {
         <Form form={editForm} layout="vertical">
           <Form.Item
             name="name"
-            label="名称"
-            rules={[{ required: true, message: '请输入名称' }]}
+            label="供应商名称"
+            rules={[{ required: true, message: '请选择供应商名称' }]}
           >
-            <Input placeholder="请输入名称" />
+            <Select 
+              placeholder="请选择供应商名称" 
+              style={{ width: '100%' }}
+              onChange={(value) => {
+                // 查找选择的供应商
+                const selectedSupplier = suppliers.find(s => s.name === value);
+                if (selectedSupplier) {
+                  // 尝试不同的字段名称，确保能够获取到统一社会信用代码
+                  const creditCode = selectedSupplier.registrationNumber || selectedSupplier.registration_number || selectedSupplier.creditCode || selectedSupplier.credit_code || '';
+                  // 尝试不同的字段名称，确保能够获取到法定代表人
+                  const legalRep = selectedSupplier.legalRepresentative || selectedSupplier.legal_representative || '';
+                  // 自动填充统一社会信用代码和法定代表人
+                  editForm.setFieldsValue({
+                    unifiedSocialCreditCode: creditCode,
+                    legalRepresentative: legalRep
+                  });
+                }
+              }}
+            >
+              {suppliers.map(supplier => (
+                <Select.Option key={supplier.id} value={supplier.name}>
+                  {supplier.name}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
           
           <Form.Item
@@ -537,11 +743,9 @@ const SupplierBusinessCertificate = () => {
           </Form.Item>
           
           <Form.Item
-            name="attachment"
             label="附件"
-            valuePropName="fileList"
           >
-            <Upload {...uploadProps}>
+            <Upload {...editUploadProps}>
               <Button icon={<UploadOutlined />}>重新上传附件</Button>
             </Upload>
           </Form.Item>

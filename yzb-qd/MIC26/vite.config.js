@@ -6,8 +6,20 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: '127.0.0.1',
-    port: 5175,
+    port: 5173,
     strictPort: true,
-    allowedHosts: ['s5.gnip.vip']
+    allowedHosts: ['s5.gnip.vip'],
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8088',
+        changeOrigin: true,
+        secure: false
+      },
+      '/public': {
+        target: 'http://localhost:8088',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   }
 })

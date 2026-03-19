@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Card, Input, Select, DatePicker, Button, Space, Row, Col, Tag, Badge, Modal, Form, InputNumber, message } from 'antd';
 import { SearchOutlined, ExportOutlined, EditOutlined, WarningOutlined, AlertOutlined } from '@ant-design/icons';
+import api from '../utils/api';
 
 const { RangePicker } = DatePicker;
 
@@ -100,364 +101,63 @@ const InventoryDetail = () => {
     },
   ];
 
-  // 库存明细数据
-  const inventoryDetailsData = [
-    {
-      key: '1',
-      materialCode: 'YZS-001',
-      materialName: '一次性注射器',
-      category: '医疗器械',
-      specification: '10ml',
-      model: '标准型',
-      minPackage: '100支/箱',
-      unit: '支',
-      purchasePrice: 2.50,
-      currentStock: 750,
-      registrationNumber: '国械注准20203150001',
-      supplier: '山东威高集团',
-      manufacturer: '山东威高集团医用高分子制品股份有限公司',
-      stockStatus: 'normal',
-      lastInbound: '2024-01-15',
-      warning: null,
-      expiryWarningDays: 30,
-      // 不同入库时间的批次信息
-      batches: [
-        {
-          batchKey: '1-1',
-          materialCode: 'YZS-001-01',
-          batchNumber: '20240101',
-          productionDate: '2024-01-01',
-          expiryDate: '2025-01-01',
-          inboundDate: '2024-01-15',
-          quantity: 300,
-          status: 'normal'
-        },
-        {
-          batchKey: '1-2',
-          materialCode: 'YZS-001-02',
-          batchNumber: '20240102',
-          productionDate: '2024-01-02',
-          expiryDate: '2025-01-02',
-          inboundDate: '2024-01-20',
-          quantity: 200,
-          status: 'normal'
-        },
-        {
-          batchKey: '1-3',
-          materialCode: 'YZS-001-03',
-          batchNumber: '20240103',
-          productionDate: '2024-01-03',
-          expiryDate: '2025-01-03',
-          inboundDate: '2024-01-25',
-          quantity: 150,
-          status: 'normal'
-        },
-        {
-          batchKey: '1-4',
-          materialCode: 'YZS-001-04',
-          batchNumber: '20240104',
-          productionDate: '2024-01-04',
-          expiryDate: '2025-01-04',
-          inboundDate: '2024-01-30',
-          quantity: 100,
-          status: 'normal'
-        }
-      ]
-    },
-    {
-      key: '2',
-      materialCode: 'YZS-002',
-      materialName: '输液器',
-      category: '医疗器械',
-      specification: '500ml',
-      model: '普通型',
-      minPackage: '50支/箱',
-      unit: '支',
-      purchasePrice: 3.00,
-      currentStock: 300,
-      registrationNumber: '国械注准20203150002',
-      supplier: '山东威高集团',
-      manufacturer: '山东威高集团医用高分子制品股份有限公司',
-      stockStatus: 'normal',
-      lastInbound: '2024-01-20',
-      warning: null,
-      batches: [
-        {
-          batchKey: '2-1',
-          materialCode: 'YZS-002-01',
-          batchNumber: '20240102',
-          productionDate: '2024-01-02',
-          expiryDate: '2025-01-02',
-          inboundDate: '2024-01-20',
-          quantity: 200,
-          status: 'normal'
-        },
-        {
-          batchKey: '2-2',
-          materialCode: 'YZS-002-02',
-          batchNumber: '20240103',
-          productionDate: '2024-01-03',
-          expiryDate: '2025-01-03',
-          inboundDate: '2024-01-25',
-          quantity: 100,
-          status: 'normal'
-        }
-      ]
-    },
-    {
-      key: '3',
-      materialCode: 'YZS-003',
-      materialName: '医用棉签',
-      category: '医疗用品',
-      specification: '100支/包',
-      model: '无菌型',
-      minPackage: '50包/箱',
-      unit: '包',
-      purchasePrice: 1.50,
-      currentStock: 50,
-      registrationNumber: '国械注准20201410003',
-      supplier: '稳健医疗用品',
-      manufacturer: '稳健医疗用品股份有限公司',
-      stockStatus: 'low',
-      lastInbound: '2024-01-25',
-      warning: 'low_stock',
-      batches: [
-        {
-          batchKey: '3-1',
-          materialCode: 'YZS-003-01',
-          batchNumber: '20240103',
-          productionDate: '2024-01-03',
-          expiryDate: '2025-01-03',
-          inboundDate: '2024-01-25',
-          quantity: 50,
-          status: 'low'
-        }
-      ]
-    },
-    {
-      key: '4',
-      materialCode: 'YZS-004',
-      materialName: '酒精棉球',
-      category: '医疗用品',
-      specification: '50g/瓶',
-      model: '75%',
-      batchNumber: '20240104',
-      productionDate: '2024-01-04',
-      expiryDate: '2024-07-04',
-      minPackage: '20瓶/箱',
-      unit: '瓶',
-      purchasePrice: 2.00,
-      currentStock: 200,
-      registrationNumber: '鲁卫消证字2020第0004号',
-      supplier: '稳健医疗用品',
-      manufacturer: '稳健医疗用品股份有限公司',
-      stockStatus: 'normal',
-      lastInbound: '2024-02-01',
-      warning: null
-    },
-    {
-      key: '5',
-      materialCode: 'YZS-005',
-      materialName: '碘伏消毒液',
-      category: '消毒用品',
-      specification: '500ml',
-      model: '10%',
-      batchNumber: '20240105',
-      productionDate: '2024-01-05',
-      expiryDate: '2024-07-05',
-      minPackage: '12瓶/箱',
-      unit: '瓶',
-      purchasePrice: 5.00,
-      currentStock: 100,
-      registrationNumber: '鲁卫消证字2020第0005号',
-      supplier: '利尔康消毒科技',
-      manufacturer: '山东利尔康消毒科技股份有限公司',
-      stockStatus: 'normal',
-      lastInbound: '2024-02-05',
-      warning: null
-    },
-    {
-      key: '6',
-      materialCode: 'YLQ-001',
-      materialName: '血压计',
-      category: '医疗设备',
-      specification: '台式水银',
-      model: '汞柱式',
-      batchNumber: '20240106',
-      productionDate: '2024-01-06',
-      expiryDate: '2027-01-06',
-      minPackage: '1台/箱',
-      unit: '台',
-      purchasePrice: 200.00,
-      currentStock: 50,
-      registrationNumber: '国械注准20202070006',
-      supplier: '鱼跃医疗设备',
-      manufacturer: '江苏鱼跃医疗设备股份有限公司',
-      stockStatus: 'normal',
-      lastInbound: '2024-01-10',
-      warning: null
-    },
-    {
-      key: '7',
-      materialCode: 'YLQ-002',
-      materialName: '体温计',
-      category: '医疗设备',
-      specification: '电子式',
-      model: '数字显示',
-      batchNumber: '20240107',
-      productionDate: '2024-01-07',
-      expiryDate: '2027-01-07',
-      minPackage: '10支/盒',
-      unit: '支',
-      purchasePrice: 30.00,
-      currentStock: 80,
-      registrationNumber: '国械注准20202070007',
-      supplier: '可孚医疗科技',
-      manufacturer: '可孚医疗科技股份有限公司',
-      stockStatus: 'normal',
-      lastInbound: '2024-01-15',
-      warning: null
-    },
-    {
-      key: '8',
-      materialCode: 'YHP-001',
-      materialName: '一次性手套',
-      category: '防护用品',
-      specification: '乳胶，M码',
-      model: '无菌型',
-      batchNumber: '20240108',
-      productionDate: '2024-01-08',
-      expiryDate: '2025-01-08',
-      minPackage: '100双/盒',
-      unit: '双',
-      purchasePrice: 0.50,
-      currentStock: 1500,
-      registrationNumber: '国械注准20203140008',
-      supplier: '蓝帆医疗股份',
-      manufacturer: '蓝帆医疗股份有限公司',
-      stockStatus: 'high',
-      lastInbound: '2024-02-10',
-      warning: 'overstock'
-    },
-    {
-      key: '9',
-      materialCode: 'YHP-002',
-      materialName: '医用口罩',
-      category: '防护用品',
-      specification: 'N95',
-      model: '头戴式',
-      batchNumber: '20240109',
-      productionDate: '2024-01-09',
-      expiryDate: '2025-01-09',
-      minPackage: '20个/盒',
-      unit: '个',
-      purchasePrice: 3.00,
-      currentStock: 300,
-      registrationNumber: '国械注准20203140009',
-      supplier: '稳健医疗用品',
-      manufacturer: '稳健医疗用品股份有限公司',
-      stockStatus: 'normal',
-      lastInbound: '2024-02-12',
-      warning: null
-    },
-    {
-      key: '10',
-      materialCode: 'YBF-001',
-      materialName: '纱布绷带',
-      category: '医用材料',
-      specification: '7.5cm×600cm',
-      model: '无菌型',
-      batchNumber: '20240110',
-      productionDate: '2024-01-10',
-      expiryDate: '2025-01-10',
-      minPackage: '10卷/盒',
-      unit: '卷',
-      purchasePrice: 5.00,
-      currentStock: 300,
-      registrationNumber: '国械注准20201410010',
-      supplier: '振德医疗用品',
-      manufacturer: '振德医疗用品股份有限公司',
-      stockStatus: 'normal',
-      lastInbound: '2024-02-15',
-      warning: null
-    },
-    {
-      key: '11',
-      materialCode: 'YDQ-001',
-      materialName: '胰岛素注射器',
-      category: '医疗器械',
-      specification: '1ml',
-      model: 'BD型',
-      batchNumber: '20240111',
-      productionDate: '2024-01-11',
-      expiryDate: '2025-01-11',
-      minPackage: '100支/盒',
-      unit: '支',
-      purchasePrice: 2.00,
-      currentStock: 20,
-      registrationNumber: '国械注准20203150011',
-      supplier: '山东威高集团',
-      manufacturer: '山东威高集团医用高分子制品股份有限公司',
-      stockStatus: 'low',
-      lastInbound: '2023-12-20',
-      warning: 'low_stock'
-    },
-    {
-      key: '12',
-      materialCode: 'YXP-001',
-      materialName: '创可贴',
-      category: '医疗用品',
-      specification: '透气型',
-      model: '标准型',
-      batchNumber: '20240112',
-      productionDate: '2024-01-12',
-      expiryDate: '2025-01-12',
-      minPackage: '100片/盒',
-      unit: '盒',
-      purchasePrice: 10.00,
-      currentStock: 800,
-      registrationNumber: '国械注准20201410012',
-      supplier: '云南白药集团',
-      manufacturer: '云南白药集团股份有限公司',
-      stockStatus: 'high',
-      lastInbound: '2024-01-30',
-      warning: 'overstock'
-    }
-  ];
+  // 加载状态
+  const [loading, setLoading] = useState(false);
+
+  // 分页状态
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // 查询处理函数
-  const handleSearch = () => {
-    let filteredData = inventoryDetailsData;
-
-    // 按物资编码筛选
-    if (searchParams.materialCode) {
-      filteredData = filteredData.filter(item => 
-        item.materialCode.toLowerCase().includes(searchParams.materialCode.toLowerCase())
-      );
+  const handleSearch = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        pageNum: 1,
+        pageSize: pageSize,
+        materialCode: searchParams.materialCode,
+        materialName: searchParams.materialName,
+        supplierName: searchParams.supplier,
+        manufacturer: searchParams.manufacturer
+      };
+      const response = await api.get('/api/scm/inventory', params);
+      if (response.code === 1 && response.data) {
+        const inventoryList = response.data.records.map(item => ({
+          key: item.id,
+          materialCode: item.materialCode,
+          materialName: item.materialName,
+          category: item.materialType,
+          specification: item.specification,
+          model: item.model,
+          batchNumber: item.batchNumber,
+          productionDate: item.productionDate,
+          expiryDate: item.expiryDate,
+          minPackage: item.minPackage,
+          unit: item.unit,
+          purchasePrice: item.purchasePrice,
+          currentStock: item.stockQuantity,
+          registrationNumber: item.registrationNumber,
+          supplier: item.supplierName,
+          manufacturer: item.manufacturer,
+          stockStatus: item.status,
+          lastInbound: item.lastInboundDate,
+          warning: item.warning,
+          minStock: item.minStock,
+          maxStock: item.maxStock,
+          expiryWarningDays: item.expiryWarningDays,
+          batches: item.batches || []
+        }));
+        setInventoryDetails(inventoryList);
+        setCurrentPage(1);
+      } else {
+        message.error('查询库存数据失败');
+      }
+    } catch (error) {
+      console.error('查询库存数据失败:', error);
+      message.error('查询库存数据失败');
+    } finally {
+      setLoading(false);
     }
-
-    // 按物资名称筛选
-    if (searchParams.materialName) {
-      filteredData = filteredData.filter(item => 
-        item.materialName.toLowerCase().includes(searchParams.materialName.toLowerCase())
-      );
-    }
-
-    // 按供应商筛选
-    if (searchParams.supplier) {
-      filteredData = filteredData.filter(item => 
-        item.supplier.toLowerCase().includes(searchParams.supplier.toLowerCase())
-      );
-    }
-
-    // 按生产厂家筛选
-    if (searchParams.manufacturer) {
-      filteredData = filteredData.filter(item => 
-        item.manufacturer.toLowerCase().includes(searchParams.manufacturer.toLowerCase())
-      );
-    }
-
-    setInventoryDetails(filteredData);
   };
 
   // 重置查询条件
@@ -468,7 +168,7 @@ const InventoryDetail = () => {
       supplier: '',
       manufacturer: ''
     });
-    setInventoryDetails(inventoryDetailsData);
+    loadInventoryDetails();
   };
 
   // 导出功能
@@ -506,8 +206,9 @@ const InventoryDetail = () => {
   // 提交设置调整
   const handleAdjustSubmit = async () => {
     try {
+      setLoading(true);
       const values = await adjustForm.validateFields();
-      const { minStock, maxStock, packageQuantity, packageUnit, expiryWarningDays, reason } = values;
+      const { minStock, maxStock, expiryWarningDays, reason } = values;
       
       // 验证最高库存预警值必须大于或等于最低库存预警值
       if (maxStock < minStock) {
@@ -515,31 +216,28 @@ const InventoryDetail = () => {
         return;
       }
 
-      // 合并打包规格：内含数量 + 打包单位
-      const unit = `${packageQuantity}${packageUnit}`;
-
-      // 更新库存数据
-      const updatedDetails = inventoryDetails.map(item => {
-        if (item.key === currentRecord.key) {
-          return {
-            ...item,
-            minStock: minStock,
-            maxStock: maxStock,
-            unit: unit,
-            expiryWarningDays: expiryWarningDays,
-            stockStatus: getStockStatus(item.currentStock, minStock, maxStock),
-            warning: getStockWarning(item.currentStock, minStock, maxStock)
-          };
-        }
-        return item;
-      });
-
-      setInventoryDetails(updatedDetails);
-      message.success('设置调整成功');
-      setAdjustModalVisible(false);
-      adjustForm.resetFields();
+      // 调用后端API调整库存阈值
+      const adjustData = {
+        minStock: minStock,
+        maxStock: maxStock,
+        expiryWarningDays: expiryWarningDays,
+        reason: reason
+      };
+      
+      const response = await api.put(`/api/scm/inventory/${currentRecord.key}/adjust`, adjustData);
+      if (response.code === 1) {
+        message.success('设置调整成功');
+        setAdjustModalVisible(false);
+        adjustForm.resetFields();
+        loadInventoryDetails(); // 重新加载库存数据
+      } else {
+        message.error(response.message || '设置调整失败');
+      }
     } catch (error) {
       console.error('设置调整失败:', error);
+      message.error('设置调整失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -563,9 +261,56 @@ const InventoryDetail = () => {
     adjustForm.resetFields();
   };
 
+  // 加载库存数据
+  const loadInventoryDetails = async () => {
+    try {
+      setLoading(true);
+      const params = {
+        pageNum: currentPage,
+        pageSize: pageSize
+      };
+      const response = await api.get('/api/scm/inventory', params);
+      if (response.code === 1 && response.data) {
+        const inventoryList = response.data.records.map(item => ({
+          key: item.id,
+          materialCode: item.materialCode,
+          materialName: item.materialName,
+          category: item.materialType,
+          specification: item.specification,
+          model: item.model,
+          batchNumber: item.batchNumber,
+          productionDate: item.productionDate,
+          expiryDate: item.expiryDate,
+          minPackage: item.minPackage,
+          unit: item.unit,
+          purchasePrice: item.purchasePrice,
+          currentStock: item.stockQuantity,
+          registrationNumber: item.registrationNumber,
+          supplier: item.supplierName,
+          manufacturer: item.manufacturer,
+          stockStatus: item.status,
+          lastInbound: item.lastInboundDate,
+          warning: item.warning,
+          minStock: item.minStock,
+          maxStock: item.maxStock,
+          expiryWarningDays: item.expiryWarningDays,
+          batches: item.batches || []
+        }));
+        setInventoryDetails(inventoryList);
+      } else {
+        message.error('加载库存数据失败');
+      }
+    } catch (error) {
+      console.error('加载库存数据失败:', error);
+      message.error('加载库存数据失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 组件加载时生成初始数据
   useEffect(() => {
-    setInventoryDetails(inventoryDetailsData);
+    loadInventoryDetails();
   }, []);
 
   return (
@@ -636,8 +381,10 @@ const InventoryDetail = () => {
         <Table 
           columns={columns} 
           dataSource={inventoryDetails} 
+          loading={loading}
           pagination={{ 
-            pageSize: 10,
+            current: currentPage,
+            pageSize: pageSize,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条记录`,
@@ -645,11 +392,16 @@ const InventoryDetail = () => {
               display: 'flex',
               justifyContent: 'center',
               marginTop: '16px'
+            },
+            onChange: (page, size) => {
+              setCurrentPage(page);
+              setPageSize(size);
+              loadInventoryDetails();
             }
           }}
           scroll={{ x: 1400 }}
           size="small"
-          rowKey="materialCode"
+          rowKey="key"
         />
       </Card>
 

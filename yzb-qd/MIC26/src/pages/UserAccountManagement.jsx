@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, Table, Form, Input, Select, Button, Space, Modal, Popconfirm, Switch, message, Tooltip } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import api from '../utils/api';
 
 const { Option } = Select;
 
@@ -24,15 +25,24 @@ const UserAccountManagement = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      // 这里应该调用实际的API
-      // const response = await api.get('/users');
-      // 模拟数据
-      const mockUsers = [
-        { key: '1', username: 'admin', name: '管理员', department: '运营组', role: '超级管理员', accountType: '管理员', status: '启用', warehouse: '全部仓库' },
-        { key: '2', username: 'user1', name: '张三', department: '内科', role: '仓库管理员', accountType: '操作员', status: '启用', warehouse: '仓库1' },
-        { key: '3', username: 'user2', name: '李四', department: '外科', role: '科室操作员', accountType: '操作员', status: '禁用', warehouse: '仓库2' },
-      ];
-      setUsers(mockUsers);
+      // 调用实际的API
+      const response = await api.get('/api/user/list');
+      if (response.code === 1 && response.data) {
+        // 转换数据格式以匹配前端需求
+        const users = response.data.map(user => ({
+          key: user.id,
+          username: user.userName,
+          name: user.realName,
+          department: user.userDep || '未知部门',
+          role: '普通用户', // 从角色表获取，暂时默认
+          accountType: user.accountType || '操作员',
+          status: user.status === 1 ? '启用' : '禁用',
+          warehouse: user.warehouseScope || '全部仓库'
+        }));
+        setUsers(users);
+      } else {
+        message.error('加载用户列表失败');
+      }
     } catch (error) {
       message.error('加载用户列表失败');
     } finally {
@@ -43,11 +53,9 @@ const UserAccountManagement = () => {
   // 检查用户名是否已存在
   const checkUsernameExists = async (username) => {
     try {
-      // 这里应该调用实际的API检查用户名
-      // const response = await api.get(`/users/check-username?username=${username}`);
-      // 模拟检查逻辑
-      const existingUsers = users.filter(user => user.username === username);
-      return existingUsers.length > 0;
+      // 调用实际的API检查用户名
+      const response = await api.get(`/api/user/check-username?username=${username}`);
+      return response.code === 1 && response.data;
     } catch (error) {
       return false;
     }
@@ -82,21 +90,26 @@ const UserAccountManagement = () => {
   // 切换用户状态
   const handleToggleStatus = async (record) => {
     try {
-      const newStatus = record.status === '启用' ? '禁用' : '启用';
+      const newStatus = record.status === '启用' ? 0 : 1;
+      const newStatusText = record.status === '启用' ? '禁用' : '启用';
       
-      // 这里应该调用实际的API
-      // await api.put(`/users/${record.key}/status`, { status: newStatus });
+      // 调用实际的API
+      const response = await api.put(`/api/user/${record.key}/status`, newStatus);
       
-      // 更新本地状态
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.key === record.key 
-            ? { ...user, status: newStatus }
-            : user
-        )
-      );
-      
-      message.success(`用户已${newStatus}`);
+      if (response.code === 1) {
+        // 更新本地状态
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.key === record.key 
+              ? { ...user, status: newStatusText }
+              : user
+          )
+        );
+        
+        message.success(`用户已${newStatusText}`);
+      } else {
+        message.error('状态切换失败');
+      }
     } catch (error) {
       message.error('状态切换失败');
     }
@@ -105,11 +118,15 @@ const UserAccountManagement = () => {
   // 删除用户
   const handleDeleteUser = async (record) => {
     try {
-      // 这里应该调用实际的API
-      // await api.delete(`/users/${record.key}`);
+      // 调用实际的API
+      const response = await api.delete(`/api/user/${record.key}`);
       
-      setUsers(prevUsers => prevUsers.filter(user => user.key !== record.key));
-      message.success('用户删除成功');
+      if (response.code === 1) {
+        setUsers(prevUsers => prevUsers.filter(user => user.key !== record.key));
+        message.success('用户删除成功');
+      } else {
+        message.error('用户删除失败');
+      }
     } catch (error) {
       message.error('用户删除失败');
     }
@@ -139,35 +156,42 @@ const UserAccountManagement = () => {
 
       // 构建更新的用户数据
       const updateData = {
-        username: values.username,
-        name: values.name,
-        department: values.department,
-        role: values.role,
+        userName: values.username,
+        realName: values.name,
+        userDep: values.department,
         accountType: values.accountType,
-        warehouse: values.warehouse,
-        status: values.status
+        warehouseScope: values.warehouse,
+        status: values.status === '启用' ? 1 : 0
       };
 
-      // 这里应该调用实际的API
-      // const response = await api.put(`/users/${currentUser.key}`, updateData);
+      // 调用实际的API
+      const response = await api.put(`/api/user/${currentUser.key}`, updateData);
 
-      // 模拟API调用延迟
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (response.code === 1) {
+        // 更新用户列表
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.key === currentUser.key 
+              ? { 
+                  ...user, 
+                  username: values.username,
+                  name: values.name,
+                  department: values.department,
+                  accountType: values.accountType,
+                  warehouse: values.warehouse,
+                  status: values.status
+                }
+              : user
+          )
+        );
 
-      // 更新用户列表
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.key === currentUser.key 
-            ? { ...user, ...updateData }
-            : user
-        )
-      );
-
-      message.success('用户信息更新成功');
-      setEditVisible(false);
-      form.resetFields();
-      setCurrentUser(null);
-
+        message.success('用户信息更新成功');
+        setEditVisible(false);
+        form.resetFields();
+        setCurrentUser(null);
+      } else {
+        message.error('更新用户信息失败');
+      }
     } catch (error) {
       message.error('更新用户信息失败');
     } finally {
@@ -194,29 +218,18 @@ const UserAccountManagement = () => {
     try {
       setLoading(true);
 
-      // 这里应该调用实际的API
-      // const response = await api.put(`/users/${currentUser.key}/password`, {
-      //   newPassword: values.newPassword
-      // });
+      // 调用实际的API
+      const response = await api.put(`/api/user/${currentUser.key}/password`, values.newPassword);
 
-      // 模拟API调用延迟
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // 更新本地密码
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.key === currentUser.key 
-            ? { ...user, password: values.newPassword }
-            : user
-        )
-      );
-
-      message.success('密码修改成功');
-      setPasswordVisible(false);
-      passwordForm.resetFields();
-      setCurrentUser(null);
-      setCurrentPassword('');
-
+      if (response.code === 1) {
+        message.success('密码修改成功');
+        setPasswordVisible(false);
+        passwordForm.resetFields();
+        setCurrentUser(null);
+        setCurrentPassword('');
+      } else {
+        message.error('密码修改失败');
+      }
     } catch (error) {
       message.error('密码修改失败');
     } finally {
@@ -230,27 +243,18 @@ const UserAccountManagement = () => {
       setLoading(true);
       const defaultPassword = '000000';
 
-      // 这里应该调用实际的API
-      // const response = await api.put(`/users/${currentUser.key}/password/reset`);
+      // 调用实际的API
+      const response = await api.put(`/api/user/${currentUser.key}/password/reset`);
 
-      // 模拟API调用延迟
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // 更新本地密码
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.key === currentUser.key 
-            ? { ...user, password: defaultPassword }
-            : user
-        )
-      );
-
-      message.success(`密码已重置为：${defaultPassword}`);
-      setPasswordVisible(false);
-      passwordForm.resetFields();
-      setCurrentUser(null);
-      setCurrentPassword('');
-
+      if (response.code === 1) {
+        message.success(`密码已重置为：${defaultPassword}`);
+        setPasswordVisible(false);
+        passwordForm.resetFields();
+        setCurrentUser(null);
+        setCurrentPassword('');
+      } else {
+        message.error('密码重置失败');
+      }
     } catch (error) {
       message.error('密码重置失败');
     } finally {
@@ -272,33 +276,27 @@ const UserAccountManagement = () => {
 
       // 构建用户数据
       const userData = {
-        username: values.username,
-        name: values.name,
+        userName: values.username,
+        realName: values.name,
         password: values.password,
-        department: values.department,
-        role: values.role,
+        userDep: values.department,
         accountType: values.accountType,
-        warehouse: values.warehouse,
-        status: '启用'
+        warehouseScope: values.warehouse,
+        status: 1 // 启用状态
       };
 
-      // 这里应该调用实际的API
-      // const response = await api.post('/users', userData);
+      // 调用实际的API
+      const response = await api.post('/api/user', userData);
       
-      // 模拟API调用延迟
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // 更新用户列表
-      const newUser = {
-        key: Date.now().toString(),
-        ...userData
-      };
-      setUsers(prevUsers => [...prevUsers, newUser]);
-      
-      message.success('用户创建成功');
-      setVisible(false);
-      form.resetFields();
-      
+      if (response.code === 1) {
+        // 重新加载用户列表以获取新用户
+        await loadUsers();
+        message.success('用户创建成功');
+        setVisible(false);
+        form.resetFields();
+      } else {
+        message.error('创建用户失败');
+      }
     } catch (error) {
       message.error('创建用户失败');
     } finally {

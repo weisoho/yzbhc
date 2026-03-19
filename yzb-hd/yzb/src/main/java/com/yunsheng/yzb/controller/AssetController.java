@@ -6,6 +6,7 @@ import com.yunsheng.yzb.mapper.AssetMapper;
 import com.yunsheng.yzb.model.Asset;
 import com.yunsheng.yzb.utils.AjaxResult;
 import com.yunsheng.yzb.utils.ClassCastUtil;
+import com.yunsheng.yzb.vo.PageOutputDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,7 +29,7 @@ public class AssetController {
      * 新增资产
      */
     @PostMapping("/addAsset")
-    public AjaxResult addAsset(@RequestBody Asset asset){
+    public AjaxResult<Asset> addAsset(@RequestBody Asset asset){
         asset.setCdate(new Date());
         asset.setUdate(new Date());
         assetMapper.insertSelective(asset);
@@ -39,7 +40,7 @@ public class AssetController {
      * 编辑资产
      */
     @PostMapping("/updateAsset")
-    public AjaxResult updateAsset(@RequestBody Asset asset){
+    public AjaxResult<Asset> updateAsset(@RequestBody Asset asset){
         asset.setUdate(new Date());
         assetMapper.updateByPrimaryKeySelective(asset);
         return AjaxResult.res(1,"修改成功",asset);
@@ -49,11 +50,11 @@ public class AssetController {
      * 资产明细查询
      */
     @PostMapping("/selectAsset")
-    public AjaxResult selectAsset(String assetCode , String assetName,Integer pageNum,Integer pageSize,
+    public AjaxResult<PageOutputDto<Asset>> selectAsset(String assetCode , String assetName,Integer pageNum,Integer pageSize,
                                   Integer assetState,Integer depId,Integer assetTypeid, Date purchaseStart, Date purchaseEnd){
         PageHelper.startPage(pageNum, pageSize);
         List<Asset> list = assetMapper.selectAsset(assetCode, assetName,assetState,depId,assetTypeid,purchaseStart,purchaseEnd);
-        PageInfo pageInfo = new PageInfo(list);
+        PageInfo<Asset> pageInfo = new PageInfo<>(list);
         return AjaxResult.res(1,"成功", ClassCastUtil.pageInfoToPageOutputDto(pageInfo));
     }
     /**

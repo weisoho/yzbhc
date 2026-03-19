@@ -851,7 +851,7 @@ const AppContent = () => {
                         alignItems: 'center',
                         height: '200px'
                       }}>
-                        <Spin tip="加载菜单中..." />
+                        <Spin />
                       </div>
                     );
                   }
@@ -967,9 +967,9 @@ const AppContent = () => {
                     <Route path="/reports-consumption-summary" element={<ReportsConsumptionSummary />} />
                     <Route path="/reports-loss-summary" element={<ReportsLossSummary />} />
                     <Route path="/supplier-maintenance" element={<SupplierMaintenance />} />
-                    <Route path="/supplier-inspection-report" element={<SupplierInspectionReport />} />
-                    <Route path="/supplier-business-license" element={<SupplierBusinessLicense />} />
-                    <Route path="/supplier-business-certificate" element={<SupplierBusinessCertificate />} />
+                    <Route path="/supplier-inspection-report/:supplierId?" element={<SupplierInspectionReport />} />
+                    <Route path="/supplier-business-license/:supplierId?" element={<SupplierBusinessLicense />} />
+                    <Route path="/supplier-business-certificate/:supplierId?" element={<SupplierBusinessCertificate />} />
                     <Route path="/supplier-qualification-warning" element={<SupplierQualificationWarning />} />
                     <Route path="/product-catalog" element={<ProductCatalog />} />
                     <Route path="/product-price-adjustment" element={<ProductPriceAdjustment />} />
