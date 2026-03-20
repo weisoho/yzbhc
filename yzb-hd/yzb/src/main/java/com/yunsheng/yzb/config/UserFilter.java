@@ -36,7 +36,10 @@ public class UserFilter implements Filter {
     @Override
     public void init(FilterConfig filterConfig) {
         excludePaths = Arrays.asList(
-                "/public/login"
+                "/public/login",
+                "/yzb/selectRepairList",
+                "/yzb/addRepair",
+                "/yzb/updateRepair"
         ).stream().collect(Collectors.toSet());
     }
 
@@ -44,6 +47,13 @@ public class UserFilter implements Filter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
         String requestURI = req.getRequestURI();
+        String method = req.getMethod();
+
+        // 处理OPTIONS请求，直接通过
+        if ("OPTIONS".equals(method)) {
+            chain.doFilter(request, response);
+            return;
+        }
 
         if (excludePaths.contains(requestURI)) {
             chain.doFilter(request, response);

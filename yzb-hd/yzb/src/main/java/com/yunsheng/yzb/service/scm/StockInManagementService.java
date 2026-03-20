@@ -4,6 +4,7 @@ import com.yunsheng.yzb.vo.scm.PageResult;
 import com.yunsheng.yzb.vo.scm.ScmRequest;
 import com.yunsheng.yzb.vo.scm.ScmView;
 import com.yunsheng.yzb.model.scm.StockInOrderEntity;
+import com.yunsheng.yzb.model.scm.StockInItemEntity;
 
 /**
  * 入库管理服务。
@@ -17,6 +18,14 @@ public interface StockInManagementService {
      * @return 入库单分页结果
      */
     PageResult<StockInOrderEntity> queryStockInOrders(ScmRequest.StockInQuery query);
+
+    /**
+     * 分页查询入库明细。
+     *
+     * @param query 查询条件
+     * @return 入库明细分页结果
+     */
+    PageResult<StockInItemEntity> queryStockInItems(ScmRequest.StockInQuery query);
 
     /**
      * 查询入库单详情。
@@ -34,6 +43,14 @@ public interface StockInManagementService {
      * @return 新增后的入库单信息
      */
     StockInOrderEntity createStockIn(Long receiptId, ScmRequest.StockInSave request);
+
+    /**
+     * 创建手动入库单（初始化入库）。
+     *
+     * @param request 入库保存参数
+     * @return 新增后的入库单信息
+     */
+    StockInOrderEntity createManualStockIn(ScmRequest.StockInSave request);
 
     /**
      * 更新入库单。

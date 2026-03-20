@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Tabs, Table, Card, Input, Select, DatePicker, Button, Space, Tag, Row, Col } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Tabs, Table, Card, Input, Select, DatePicker, Button, Space, Tag, Row, Col, message, Form } from 'antd';
 import { SearchOutlined, EditOutlined, DeleteOutlined, ExportOutlined } from '@ant-design/icons';
+import api from '../utils/api';
 
 
 const { RangePicker } = DatePicker;
@@ -8,13 +9,58 @@ const { RangePicker } = DatePicker;
 const Inventory = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  // 库存明细数据
-  const inventoryDetails = [
-    { key: '1', materialName: '一次性注射器', specification: '10ml', warehouse: '仓库1', shelf: 'A1-01', batchNumber: '20240201', quantity: 500, unit: '支', productionDate: '2024-01-15', expirationDate: '2024-12-31' },
-    { key: '2', materialName: '输液器', specification: '500ml', warehouse: '仓库2', shelf: 'B2-03', batchNumber: '20240202', quantity: 300, unit: '个', productionDate: '2024-01-20', expirationDate: '2024-11-30' },
-    { key: '3', materialName: '医用棉签', specification: '100支/包', warehouse: '仓库1', shelf: 'C3-05', batchNumber: '20240203', quantity: 150, unit: '包', productionDate: '2024-02-01', expirationDate: '2024-10-31' },
-    { key: '4', materialName: '酒精棉球', specification: '50g/瓶', warehouse: '仓库3', shelf: 'D4-02', batchNumber: '20231201', quantity: 80, unit: '瓶', productionDate: '2023-12-15', expirationDate: '2024-06-30' },
-  ];
+  const [loading, setLoading] = useState(false);
+  const [inventoryDetails, setInventoryDetails] = useState([]);
+  const [inventoryForm] = Form.useForm();
+
+  // 获取库存明细数据
+  const fetchInventoryDetails = async (params = {}) => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/scm/inventory', params);
+      if (response.code === 1 && response.data) {
+        const inventoryList = response.data.records.map(item => ({
+          key: item.id,
+          materialName: item.materialName,
+          specification: item.specification,
+          warehouse: item.warehouse || '未知',
+          shelf: item.location || '未知',
+          batchNumber: item.batchNumber,
+          quantity: item.quantity,
+          unit: item.unit,
+          productionDate: item.productionDate,
+          expirationDate: item.expiryDate
+        }));
+        setInventoryDetails(inventoryList);
+      } else {
+        message.error(response.message || '获取库存明细失败');
+        setInventoryDetails([]);
+      }
+    } catch (error) {
+      console.error('获取库存明细失败:', error);
+      message.error(`获取库存明细失败: ${error.message || '未知错误'}`);
+      setInventoryDetails([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 初始化数据
+  useEffect(() => {
+    fetchInventoryDetails();
+  }, []);
+
+  // 库存明细搜索处理函数
+  const handleInventorySearch = async (values) => {
+    const searchParams = {
+      materialName: values.materialName,
+      warehouse: values.warehouse,
+      batchNumber: values.batchNumber,
+      startDate: values.dateRange ? values.dateRange[0].format('YYYY-MM-DD') : undefined,
+      endDate: values.dateRange ? values.dateRange[1].format('YYYY-MM-DD') : undefined
+    };
+    await fetchInventoryDetails(searchParams);
+  };
 
   // 库存明细列
   const inventoryColumns = [
@@ -110,12 +156,44 @@ const Inventory = () => {
   ];
 
   // 历史库存查询数据
-  const historicalInventoryData = [
-    { key: '1', recordDate: '2024-06-01', materialName: '一次性注射器', specification: '10ml', warehouse: '仓库1', quantity: 800, unit: '支', operationType: 'stockIn', operator: '张三', remark: '采购入库' },
-    { key: '2', recordDate: '2024-05-31', materialName: '一次性注射器', specification: '10ml', warehouse: '仓库1', quantity: 600, unit: '支', operationType: 'stockOut', operator: '李四', remark: '销售出库' },
-    { key: '3', recordDate: '2024-05-30', materialName: '输液器', specification: '500ml', warehouse: '仓库2', quantity: 500, unit: '个', operationType: 'stockIn', operator: '王五', remark: '采购入库' },
-    { key: '4', recordDate: '2024-05-29', materialName: '医用棉签', specification: '100支/包', warehouse: '仓库1', quantity: 300, unit: '包', operationType: 'adjustment', operator: '赵六', remark: '库存调整' },
-  ];
+  const [historicalInventoryData, setHistoricalInventoryData] = useState([]);
+
+  // 获取库存流水数据
+  const fetchHistoricalInventoryData = async (params = {}) => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/scm/inventory/transactions', params);
+      if (response.code === 1 && response.data) {
+        const transactionList = response.data.records.map(item => ({
+          key: item.id,
+          recordDate: item.transactionDate,
+          materialName: item.materialName,
+          specification: item.specification,
+          warehouse: item.warehouse || '未知',
+          quantity: item.quantity,
+          unit: item.unit,
+          operationType: item.transactionType,
+          operator: item.operatorName,
+          remark: item.remark
+        }));
+        setHistoricalInventoryData(transactionList);
+      } else {
+        message.error(response.message || '获取库存流水数据失败');
+        setHistoricalInventoryData([]);
+      }
+    } catch (error) {
+      console.error('获取库存流水数据失败:', error);
+      message.error(`获取库存流水数据失败: ${error.message || '未知错误'}`);
+      setHistoricalInventoryData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 初始化时获取库存流水数据
+  useEffect(() => {
+    fetchHistoricalInventoryData();
+  }, []);
 
   // 商品调拨列
   const transferColumns = [
@@ -288,53 +366,69 @@ const Inventory = () => {
       children: (
         <>
           <Card style={{ marginBottom: 16, padding: '16px' }}>
-            <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>商品名称：</span>
-                <Input placeholder="请输入商品名称" style={{ width: '200px' }} />
+            <Form form={inventoryForm} layout="vertical" onFinish={handleInventorySearch}>
+              <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+                <Form.Item name="materialName" style={{ marginBottom: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>商品名称：</span>
+                    <Input placeholder="请输入商品名称" style={{ width: '200px' }} />
+                  </div>
+                </Form.Item>
+                <Form.Item name="warehouse" style={{ marginBottom: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>所属仓库：</span>
+                    <Select placeholder="请选择仓库" style={{ width: '200px' }}>
+                      <Select.Option value="all">全部仓库</Select.Option>
+                      <Select.Option value="warehouse1">仓库1</Select.Option>
+                      <Select.Option value="warehouse2">仓库2</Select.Option>
+                      <Select.Option value="warehouse3">仓库3</Select.Option>
+                    </Select>
+                  </div>
+                </Form.Item>
+                <Form.Item name="batchNumber" style={{ marginBottom: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>批号：</span>
+                    <Input placeholder="请输入批号" style={{ width: '200px' }} />
+                  </div>
+                </Form.Item>
+                <Form.Item name="dateRange" style={{ marginBottom: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>日期范围：</span>
+                    <RangePicker placeholder={['开始日期', '结束日期']} style={{ width: '300px' }} />
+                  </div>
+                </Form.Item>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>所属仓库：</span>
-                <Select placeholder="请选择仓库" style={{ width: '200px' }}>
-                  <Select.Option value="all">全部仓库</Select.Option>
-                  <Select.Option value="warehouse1">仓库1</Select.Option>
-                  <Select.Option value="warehouse2">仓库2</Select.Option>
-                  <Select.Option value="warehouse3">仓库3</Select.Option>
-                </Select>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <Button type="primary" icon={<SearchOutlined />} htmlType="submit">查询</Button>
+                <Button icon={<ExportOutlined />}>导出</Button>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>批号：</span>
-                <Input placeholder="请输入批号" style={{ width: '200px' }} />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>日期范围：</span>
-                <RangePicker placeholder={['开始日期', '结束日期']} style={{ width: '300px' }} />
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-              <Button icon={<ExportOutlined />}>导出</Button>
-            </div>
+            </Form>
           </Card>
           
           <div style={{ overflowX: 'auto' }}>
-            <Table columns={inventoryColumns} dataSource={inventoryDetails} pagination={{ 
-              current: currentPage,
-              pageSize: pageSize,
-              onChange: (page, size) => {
-                setCurrentPage(page);
-                setPageSize(size);
-              },
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total) => `共 ${total} 条记录`,
-              size: "small",
-              style: {
-                display: "flex",
-                justifyContent: "center",
-                marginTop: "16px"
-              }
-            }} size="small" />
+            <Table 
+              columns={inventoryColumns} 
+              dataSource={inventoryDetails} 
+              pagination={{ 
+                current: currentPage,
+                pageSize: pageSize,
+                onChange: (page, size) => {
+                  setCurrentPage(page);
+                  setPageSize(size);
+                },
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total) => `共 ${total} 条记录`,
+                size: "small",
+                style: {
+                  display: "flex",
+                  justifyContent: "center",
+                  marginTop: "16px"
+                }
+              }} 
+              size="small"
+              loading={loading}
+            />
           </div>
         </>
       ),

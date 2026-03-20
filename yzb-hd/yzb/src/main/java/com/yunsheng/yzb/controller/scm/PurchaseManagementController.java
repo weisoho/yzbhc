@@ -3,17 +3,20 @@ package com.yunsheng.yzb.controller.scm;
 import com.yunsheng.yzb.vo.scm.PageResult;
 import com.yunsheng.yzb.vo.scm.ScmRequest;
 import com.yunsheng.yzb.vo.scm.ScmView;
+import com.yunsheng.yzb.vo.scm.ExceptionOrderDetailView;
 import com.yunsheng.yzb.model.scm.ExceptionOrderEntity;
 import com.yunsheng.yzb.model.scm.PurchaseOrderEntity;
 import com.yunsheng.yzb.model.scm.PurchaseReceiveEntity;
 import com.yunsheng.yzb.service.scm.PurchaseManagementService;
 import com.yunsheng.yzb.utils.AjaxResult;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.validation.Valid;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 采购管理控制器。
@@ -37,7 +40,7 @@ public class PurchaseManagementController {
      * @return 采购单分页结果
      */
     @GetMapping("/orders")
-    public AjaxResult<PageResult<PurchaseOrderEntity>> orderPage(ScmRequest.PurchaseQuery query) {
+    public AjaxResult<PageResult<ScmView.PurchaseOrderDetail>> orderPage(ScmRequest.PurchaseQuery query) {
         return AjaxResult.success(purchaseManagementService.queryOrders(query));
     }
 
@@ -122,7 +125,7 @@ public class PurchaseManagementController {
      * @return 待收货采购单分页结果
      */
     @GetMapping("/orders/pending-receive")
-    public AjaxResult<PageResult<PurchaseOrderEntity>> pendingReceiveOrders(ScmRequest.PurchaseQuery query) {
+    public AjaxResult<PageResult<ScmView.PurchaseOrderDetail>> pendingReceiveOrders(ScmRequest.PurchaseQuery query) {
         return AjaxResult.success(purchaseManagementService.queryPendingReceiveOrders(query));
     }
 
@@ -182,6 +185,24 @@ public class PurchaseManagementController {
         return AjaxResult.success(purchaseManagementService.queryExceptionOrders(query));
     }
 
+    @GetMapping("/exceptions/{exceptionOrderId}")
+    public AjaxResult<ExceptionOrderDetailView> exceptionDetail(@PathVariable Long exceptionOrderId) {
+        return AjaxResult.success(purchaseManagementService.getExceptionOrderDetail(exceptionOrderId));
+    }
+
+    @PutMapping("/exceptions/{exceptionOrderId}")
+    public AjaxResult<ExceptionOrderEntity> updateException(@PathVariable Long exceptionOrderId,
+                                                            @RequestBody ScmRequest.ExceptionOrderUpdate request) {
+        return AjaxResult.success(purchaseManagementService.updateExceptionOrder(exceptionOrderId, request));
+    }
+
+    @DeleteMapping("/exceptions/{exceptionOrderId}")
+    public AjaxResult<Boolean> deleteException(@PathVariable Long exceptionOrderId,
+                                               @RequestParam(required = false) String operatorName) {
+        String name = StringUtils.hasText(operatorName) ? operatorName : "系统";
+        return AjaxResult.success(purchaseManagementService.deleteExceptionOrder(exceptionOrderId, name));
+    }
+
     /**
      * 重新提交异常订单。
      *
@@ -191,7 +212,15 @@ public class PurchaseManagementController {
      */
     @PostMapping("/exceptions/{exceptionOrderId}/resubmit")
     public AjaxResult<ExceptionOrderEntity> resubmitException(@PathVariable Long exceptionOrderId,
-                                                              @RequestParam String operatorName) {
-        return AjaxResult.success(purchaseManagementService.resubmitExceptionOrder(exceptionOrderId, operatorName));
+                                                              @RequestParam(required = false) String operatorName,
+                                                              @RequestBody(required = false) Map<String, Object> body) {
+        String name = operatorName;
+        if (!StringUtils.hasText(name) && body != null && body.get("operatorName") != null) {
+            name = String.valueOf(body.get("operatorName"));
+        }
+        if (!StringUtils.hasText(name)) {
+            name = "系统";
+        }
+        return AjaxResult.success(purchaseManagementService.resubmitExceptionOrder(exceptionOrderId, name));
     }
 }

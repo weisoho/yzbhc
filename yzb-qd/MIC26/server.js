@@ -36,12 +36,12 @@ async function extractAndStart() {
     console.log(`启动脚本: npm run dev`);
     console.log('');
     console.log('服务启动中，请稍候...');
-    console.log('访问地址: http://127.0.0.1:5176');
+    console.log('访问地址: http://127.0.0.1:5173');
     console.log('');
     console.log('提示: 关闭此窗口将停止服务器');
     console.log('--------------------------------------------');
 
-    const child = spawn('npm', ['run', 'dev', '--', '--port', '5176'], {
+    const child = spawn('npm', ['run', 'dev', '--', '--port', '5173'], {
       cwd: workingDir,
       stdio: ['pipe', 'pipe', 'pipe'],
       shell: true,

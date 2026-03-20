@@ -133,8 +133,38 @@ public class StockOutManagementServiceImpl implements StockOutManagementService 
                 .like(StringUtils.hasText(query.getSupplier()), StockOutItemEntity::getSupplier, query.getSupplier())
                 .like(StringUtils.hasText(query.getManufacturer()), StockOutItemEntity::getManufacturer, query.getManufacturer())
                 .eq(StringUtils.hasText(query.getUndoStatus()), StockOutItemEntity::getUndoStatus, query.getUndoStatus())
-                .orderByDesc(StockOutItemEntity::getCreateTime);
+                .ge(StringUtils.hasText(query.getStartDate()), StockOutItemEntity::getOutboundDate, query.getStartDate())
+                .le(StringUtils.hasText(query.getEndDate()), StockOutItemEntity::getOutboundDate, query.getEndDate());
+        
+        // 过滤领用科室（需要先查订单表拿到订单ID）
+        if (StringUtils.hasText(query.getDepartmentName())) {
+            List<StockOutOrderEntity> orders = stockOutOrderMapper.selectList(new LambdaQueryWrapper<StockOutOrderEntity>()
+                    .like(StockOutOrderEntity::getDepartmentName, query.getDepartmentName()));
+            if (orders.isEmpty()) {
+                return ScmPageHelper.of(new Page<>(query.getPageNum(), query.getPageSize()));
+            }
+            List<Long> orderIds = orders.stream().map(StockOutOrderEntity::getId).collect(java.util.stream.Collectors.toList());
+            wrapper.in(StockOutItemEntity::getStockOutOrderId, orderIds);
+        }
+
+        wrapper.orderByDesc(StockOutItemEntity::getCreateTime);
         Page<StockOutItemEntity> page = stockOutItemMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
+        
+        // 填充科室和操作人信息
+        List<StockOutItemEntity> records = page.getRecords();
+        if (!records.isEmpty()) {
+            java.util.Set<Long> orderIds = records.stream().map(StockOutItemEntity::getStockOutOrderId).collect(java.util.stream.Collectors.toSet());
+            List<StockOutOrderEntity> orders = stockOutOrderMapper.selectBatchIds(orderIds);
+            java.util.Map<Long, StockOutOrderEntity> orderMap = orders.stream().collect(java.util.stream.Collectors.toMap(StockOutOrderEntity::getId, o -> o));
+            records.forEach(item -> {
+                StockOutOrderEntity order = orderMap.get(item.getStockOutOrderId());
+                if (order != null) {
+                    item.setDepartmentName(order.getDepartmentName());
+                    item.setOperatorName(order.getOperatorName());
+                }
+            });
+        }
+
         return ScmPageHelper.of(page);
     }
 

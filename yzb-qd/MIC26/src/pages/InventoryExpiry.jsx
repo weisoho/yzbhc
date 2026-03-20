@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Table, Card, Input, Select, Button, Space, Row, Col } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Table, Card, Input, Select, Button, Space, Row, Col, message } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
+import api from '../utils/api';
 
 const { Option } = Select;
 
@@ -8,13 +9,94 @@ const InventoryExpiry = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
-  
-  const expiryData = [
-    { key: '1', materialCode: 'YZS-001', materialName: '阿莫西林胶囊', category: '药品', specification: '0.25g*24粒', model: '标准型', batchNumber: '20230601', minPackage: '100盒/箱', unit: '盒', purchasePrice: 15.50, currentStock: 150, productionDate: '2023-06-01', expiryDate: '2024-06-01', remainingDays: 30, registrationNumber: '国药准字H19993636', supplier: 'XX医药公司', manufacturer: 'XX制药厂' },
-    { key: '2', materialCode: 'YZS-002', materialName: '头孢拉定片', category: '药品', specification: '0.25g*24片', model: '普通型', batchNumber: '20230501', minPackage: '50盒/箱', unit: '盒', purchasePrice: 20.00, currentStock: 200, productionDate: '2023-05-01', expiryDate: '2024-08-01', remainingDays: 90, registrationNumber: '国药准字H19993637', supplier: 'YY医药公司', manufacturer: 'YY制药厂' },
-    { key: '3', materialCode: 'YZS-003', materialName: '布洛芬缓释胶囊', category: '药品', specification: '0.3g*12粒', model: '缓释型', batchNumber: '20230701', minPackage: '80盒/箱', unit: '盒', purchasePrice: 25.80, currentStock: 180, productionDate: '2023-07-01', expiryDate: '2024-07-01', remainingDays: 60, registrationNumber: '国药准字H19993638', supplier: 'ZZ医药公司', manufacturer: 'ZZ制药厂' },
-    { key: '4', materialCode: 'YZS-004', materialName: '左氧氟沙星片', category: '药品', specification: '0.1g*12片', model: '薄膜衣', batchNumber: '20230401', minPackage: '60盒/箱', unit: '盒', purchasePrice: 30.50, currentStock: 120, productionDate: '2023-04-01', expiryDate: '2024-06-15', remainingDays: 45, registrationNumber: '国药准字H19993639', supplier: 'AA医药公司', manufacturer: 'AA制药厂' },
-  ];
+  const [expiryData, setExpiryData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchParams, setSearchParams] = useState({
+    materialCode: '',
+    materialName: '',
+    supplier: '',
+    manufacturer: '',
+    remainingDays: ''
+  });
+
+  // 计算剩余天数
+  const calculateRemainingDays = (expiryDate) => {
+    const today = new Date();
+    const expiry = new Date(expiryDate);
+    const diffTime = expiry - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  // 加载近效期数据
+  const loadExpiryData = async (params = {}) => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/scm/inventory');
+      if (response.code === 1 && response.data) {
+        const expiryList = response.data.records
+          .filter(item => item.expiryDate) // 只处理有有效期的记录
+          .map(item => {
+            const remainingDays = calculateRemainingDays(item.expiryDate);
+            return {
+              key: item.id,
+              materialCode: item.materialCode,
+              materialName: item.materialName,
+              category: item.materialType,
+              specification: item.specification,
+              model: item.model,
+              batchNumber: item.batchNumber,
+              minPackage: item.minPackage,
+              unit: item.unit,
+              purchasePrice: item.purchasePrice,
+              currentStock: item.quantity,
+              productionDate: item.productionDate,
+              expiryDate: item.expiryDate,
+              remainingDays: remainingDays,
+              registrationNumber: item.registrationNumber,
+              supplier: item.supplierName,
+              manufacturer: item.manufacturer
+            };
+          })
+          .filter(item => {
+            // 根据剩余天数筛选
+            if (params.remainingDays) {
+              const days = parseInt(params.remainingDays);
+              return item.remainingDays <= days;
+            }
+            return true;
+          });
+        setExpiryData(expiryList);
+      } else {
+        message.error(response.message || '加载近效期数据失败');
+        setExpiryData([]);
+      }
+    } catch (error) {
+      console.error('加载近效期数据失败:', error);
+      message.error(`加载近效期数据失败: ${error.message || '未知错误'}`);
+      setExpiryData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 处理搜索
+  const handleSearch = () => {
+    loadExpiryData(searchParams);
+  };
+
+  // 处理搜索参数变化
+  const handleSearchParamChange = (field, value) => {
+    setSearchParams(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // 组件加载时获取数据
+  useEffect(() => {
+    loadExpiryData();
+  }, []);
 
   const expiryColumns = [
     {
@@ -81,23 +163,48 @@ const InventoryExpiry = () => {
         <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>物资编码：</span>
-            <Input placeholder="请输入物资编码" style={{ width: '180px' }} />
+            <Input 
+              placeholder="请输入物资编码" 
+              style={{ width: '180px' }}
+              value={searchParams.materialCode}
+              onChange={(e) => handleSearchParamChange('materialCode', e.target.value)}
+            />
           </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>物资名称：</span>
-            <Input placeholder="请输入物资名称" style={{ width: '180px' }} />
+            <Input 
+              placeholder="请输入物资名称" 
+              style={{ width: '180px' }}
+              value={searchParams.materialName}
+              onChange={(e) => handleSearchParamChange('materialName', e.target.value)}
+            />
           </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>供应商：</span>
-            <Input placeholder="请输入供应商" style={{ width: '180px' }} />
+            <Input 
+              placeholder="请输入供应商" 
+              style={{ width: '180px' }}
+              value={searchParams.supplier}
+              onChange={(e) => handleSearchParamChange('supplier', e.target.value)}
+            />
           </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>生产厂家：</span>
-            <Input placeholder="请输入生产厂家" style={{ width: '180px' }} />
+            <Input 
+              placeholder="请输入生产厂家" 
+              style={{ width: '180px' }}
+              value={searchParams.manufacturer}
+              onChange={(e) => handleSearchParamChange('manufacturer', e.target.value)}
+            />
           </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>剩余天数：</span>
-            <Select placeholder="请选择天数" style={{ width: '180px' }}>
+            <Select 
+              placeholder="请选择天数" 
+              style={{ width: '180px' }}
+              value={searchParams.remainingDays}
+              onChange={(value) => handleSearchParamChange('remainingDays', value)}
+            >
               <Option value="30">30天内</Option>
               <Option value="60">60天内</Option>
               <Option value="90">90天内</Option>
@@ -106,8 +213,8 @@ const InventoryExpiry = () => {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-          <Button type="primary">导出报表</Button>
+          <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
+          <Button type="primary" onClick={() => message.success('报表导出成功')}>导出报表</Button>
         </div>
       </Card>
       
@@ -129,6 +236,7 @@ const InventoryExpiry = () => {
             })
           }))} 
           dataSource={expiryData} 
+          loading={loading}
           pagination={{ 
             current: currentPage,
             pageSize: pageSize,

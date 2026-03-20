@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Form, Input, Button, Card, Typography, message, Checkbox } from 'antd';
 import { UserOutlined, LockOutlined, DatabaseOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import api from '../utils/api';
 
 const { Title, Text } = Typography;
 
@@ -9,18 +10,23 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const onFinish = (values) => {
+  const onFinish = async (values) => {
     setLoading(true);
     
-    // 模拟登录验证
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // 调用后端登录API
+      const response = await fetch(`/public/login?userName=${values.username}&password=${values.password}`);
+      const data = await response.json();
       
-      // 简单的模拟验证：用户名admin，密码000000
-      if (values.username === 'admin' && values.password === '000000') {
+      if (data.code === 1) {
         // 保存登录状态
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('username', values.username);
+        localStorage.setItem('token', data.data.userToken);
+        localStorage.setItem('userInfo', JSON.stringify(data.data));
+        
+        // 设置token到api实例
+        api.setToken(data.data.userToken);
         
         // 清除之前的院区选择状态，强制显示院区选择弹窗
         localStorage.removeItem('hasSelectedCampus');
@@ -28,9 +34,14 @@ const Login = () => {
         message.success('登录成功');
         navigate('/');
       } else {
-        message.error('用户名或密码错误');
+        message.error(data.msg || '登录失败');
       }
-    }, 1000);
+    } catch (error) {
+      console.error('登录错误:', error);
+      message.error('登录失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

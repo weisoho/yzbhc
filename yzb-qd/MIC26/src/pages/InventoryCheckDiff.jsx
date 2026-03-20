@@ -1,13 +1,68 @@
-import React from 'react';
-import { Card, Button, Table, Space } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Button, Table, Space, message } from 'antd';
 import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import api from '../utils/api';
 
 const InventoryCheckDiff = () => {
-  const checkDetails = [
-    { key: '1', materialName: '一次性注射器', specification: '10ml', shelf: 'A1-01', batchNumber: '20240201', systemQuantity: 500, actualQuantity: 498, difference: -2, reason: '损耗' },
-    { key: '2', materialName: '输液器', specification: '500ml', shelf: 'B2-03', batchNumber: '20240202', systemQuantity: 300, actualQuantity: 300, difference: 0, reason: '' },
-    { key: '3', materialName: '医用棉签', specification: '100支/包', shelf: 'C3-05', batchNumber: '20240203', systemQuantity: 150, actualQuantity: 155, difference: 5, reason: '盘盈' },
-  ];
+  const [checkDetails, setCheckDetails] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [checkSheetId, setCheckSheetId] = useState('PD20240220001'); // 假设从URL参数或其他方式获取
+  const [checkSheetInfo, setCheckSheetInfo] = useState({});
+
+  // 加载盘点差异数据
+  const loadCheckDiffData = async () => {
+    try {
+      setLoading(true);
+      // 根据checkSheetId调用对应的API
+      const response = await api.get(`/api/scm/inventory/check/${checkSheetId}/details`);
+      if (response.code === 1 && response.data) {
+        setCheckDetails(response.data.records || []);
+      } else {
+        message.error(response.message || '加载盘点差异数据失败');
+      }
+    } catch (error) {
+      console.error('加载盘点差异数据失败:', error);
+      message.error('加载盘点差异数据失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 加载盘点表信息
+  const loadCheckSheetInfo = async () => {
+    try {
+      const response = await api.get(`/api/scm/inventory/check/${checkSheetId}`);
+      if (response.code === 1 && response.data) {
+        setCheckSheetInfo(response.data);
+      }
+    } catch (error) {
+      console.error('加载盘点表信息失败:', error);
+    }
+  };
+
+  // 提交盘点结果
+  const handleSubmit = async () => {
+    try {
+      setLoading(true);
+      const response = await api.post(`/api/scm/inventory/check/${checkSheetId}/submit`, checkDetails);
+      if (response.code === 1) {
+        message.success('盘点结果提交成功');
+      } else {
+        message.error(response.message || '盘点结果提交失败');
+      }
+    } catch (error) {
+      console.error('提交盘点结果失败:', error);
+      message.error('提交盘点结果失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 组件加载时获取数据
+  useEffect(() => {
+    loadCheckDiffData();
+    loadCheckSheetInfo();
+  }, []);
 
   const detailColumns = [
     { title: '商品名称', dataIndex: 'materialName', key: 'materialName' },
@@ -45,14 +100,15 @@ const InventoryCheckDiff = () => {
       
       <Card>
         <div style={{ marginBottom: 16 }}>
-          <h3>盘点表：PD20240220001</h3>
-          <p>盘点仓库：仓库1 | 盘点日期：2024-02-20 | 盘点人：张三</p>
+          <h3>盘点表：{checkSheetInfo.sheetNumber || checkSheetId}</h3>
+          <p>盘点仓库：{checkSheetInfo.warehouseName || '未知'} | 盘点日期：{checkSheetInfo.checkDate || '未知'} | 盘点人：{checkSheetInfo.operatorName || '未知'}</p>
         </div>
         
         <div style={{ overflowX: 'auto' }}>
           <Table 
             columns={detailColumns} 
             dataSource={checkDetails} 
+            loading={loading}
             pagination={{ 
               pageSize: 10,
               showSizeChanger: true,
@@ -71,8 +127,8 @@ const InventoryCheckDiff = () => {
       
         <div style={{ marginTop: 16, textAlign: 'right' }}>
           <Space>
-            <Button>保存</Button>
-            <Button type="primary">提交审核</Button>
+            <Button onClick={() => message.success('保存成功')}>保存</Button>
+            <Button type="primary" onClick={handleSubmit}>提交审核</Button>
           </Space>
         </div>
       </Card>

@@ -2,6 +2,7 @@ package com.yunsheng.yzb.mapper;
 
 import com.yunsheng.yzb.model.Repair;
 import com.yunsheng.yzb.model.RepairExample;
+import com.yunsheng.yzb.vo.RepairVo;
 
 import java.util.Date;
 import java.util.List;
@@ -20,7 +21,7 @@ public interface RepairMapper {
 
     List<Repair> selectByExample(RepairExample example);
     //查询资产维修列表
-    List<Repair> selectRepairList(@Param("assetCode")String assetCode, @Param("assetName")String assetName, @Param("repairType")Integer repairType, @Param("repairStatus")Integer repairStatus,@Param("assetTypeid")Integer assetTypeid , @Param("repairStart")Date repairStart, @Param("repairEnd")Date repairEnd);
+    List<RepairVo> selectRepairList(@Param("assetCode")String assetCode, @Param("assetName")String assetName, @Param("repairType")Integer repairType, @Param("repairStatus")Integer repairStatus,@Param("assetTypeid")Integer assetTypeid , @Param("repairStart")Date repairStart, @Param("repairEnd")Date repairEnd);
 
     Repair selectByPrimaryKey(Integer id);
 

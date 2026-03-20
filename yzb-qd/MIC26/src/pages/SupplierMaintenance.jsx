@@ -1,23 +1,86 @@
-import { useState } from 'react';
-import { Card, Button, Table, Form, Input, Space, Modal, Popconfirm, Checkbox, Radio, Row, Col } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, DownloadOutlined } from '@ant-design/icons';
+import { useState, useEffect } from 'react';
+import { Card, Button, Table, Form, Input, Space, Modal, Popconfirm, Checkbox, Radio, Row, Col, message, DatePicker } from 'antd';
+import moment from 'moment';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, DownloadOutlined, EyeOutlined } from '@ant-design/icons';
 import { FORM_STYLES, getFormLayoutStyle, getModalConfig } from '../utils/formStyles';
+import api from '../utils/api';
 
 
 
 const SupplierMaintenance = () => {
   const [visible, setVisible] = useState(false);
+  const [viewVisible, setViewVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
+  const [viewingRecord, setViewingRecord] = useState(null);
   const [form] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [suppliers, setSuppliers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchParams, setSearchParams] = useState({
+    name: '',
+    legalRepresentative: '',
+    phone: ''
+  });
 
-  const suppliers = [
-    { key: '1', name: '供应商A', enterpriseType: '经营企业', creditCode: '123456789012345678', legalRepresentative: '张三', registeredCapital: '1000万', registrationDate: '2020-01-01', phone: '13800138001', address: '北京市朝阳区' },
-    { key: '2', name: '供应商B', enterpriseType: '生产企业', creditCode: '876543210987654321', legalRepresentative: '李四', registeredCapital: '5000万', registrationDate: '2019-03-15', phone: '13900139001', address: '上海市浦东新区' },
-    { key: '3', name: '供应商C', enterpriseType: '医疗机构', creditCode: '112233445566778899', legalRepresentative: '王五', registeredCapital: '2000万', registrationDate: '2021-06-10', phone: '13700137001', address: '广州市天河区' },
-  ];
+  // 加载供应商列表
+  const loadSuppliers = async () => {
+    try {
+      setLoading(true);
+      // 构建查询参数
+      const params = {
+        name: searchParams.name,
+        legalRepresentative: searchParams.legalRepresentative,
+        contactPhone: searchParams.phone,
+        pageNum: currentPage,
+        pageSize: pageSize
+      };
+      console.log('查询参数:', params);
+      const response = await api.get('/api/scm/suppliers', params);
+      if (response.code === 1 && response.data) {
+        // 转换数据格式以匹配前端需求
+        const supplierList = response.data.records.map(supplier => ({
+          key: supplier.id,
+          name: supplier.name,
+          enterpriseType: supplier.enterpriseType,
+          creditCode: supplier.creditCode,
+          legalRepresentative: supplier.legalRepresentative,
+          registeredCapital: supplier.registeredCapital,
+          registrationDate: supplier.registrationDate,
+          phone: supplier.contactPhone, // 后端返回的是contactPhone，前端期望的是phone
+          address: supplier.address
+        }));
+        setSuppliers(supplierList);
+      } else {
+        message.error(response.message || '加载供应商列表失败');
+      }
+    } catch (error) {
+      console.error('加载供应商列表失败:', error);
+      message.error('加载供应商列表失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 组件加载时获取供应商列表
+  useEffect(() => {
+    loadSuppliers();
+  }, [currentPage, pageSize]);
+
+  // 处理搜索输入变化
+  const handleSearchChange = (field, value) => {
+    setSearchParams(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // 处理查询按钮点击
+  const handleSearch = () => {
+    setCurrentPage(1); // 重置为第一页
+    loadSuppliers();
+  };
 
   const handleEdit = (record) => {
     setEditingRecord(record);
@@ -27,30 +90,150 @@ const SupplierMaintenance = () => {
       creditCode: record.creditCode,
       legalRepresentative: record.legalRepresentative,
       registeredCapital: record.registeredCapital,
-      registrationDate: record.registrationDate,
+      registrationDate: record.registrationDate ? moment(record.registrationDate) : null,
       phone: record.phone,
       address: record.address
     });
     setVisible(true);
   };
 
-  const handleModalOk = () => {
-    form.validateFields().then(() => {
+  const handleModalOk = async () => {
+    try {
+      setLoading(true);
+      const values = await form.validateFields();
+      
+      // 构建供应商数据
+      const supplierData = {
+        name: values.name,
+        enterpriseType: values.enterpriseType,
+        contactPerson: values.legalRepresentative, // 使用法定代表人作为联系人
+        contactPhone: values.phone,
+        address: values.address,
+        creditCode: values.creditCode,
+        legalRepresentative: values.legalRepresentative,
+        registeredCapital: values.registeredCapital,
+        registrationDate: values.registrationDate ? values.registrationDate.format('YYYY-MM-DD') : null
+      };
+      
       if (editingRecord) {
         // 编辑供应商
+        const response = await api.put(`/api/scm/suppliers/${editingRecord.key}`, supplierData);
+        if (response.code === 1) {
+          message.success('供应商编辑成功');
+          await loadSuppliers();
+        } else {
+          message.error(response.message || '供应商编辑失败');
+        }
       } else {
         // 新增供应商
+        const response = await api.post('/api/scm/suppliers', supplierData);
+        if (response.code === 1) {
+          message.success('供应商新增成功');
+          await loadSuppliers();
+        } else {
+          message.error(response.message || '供应商新增失败');
+        }
       }
+      
       setVisible(false);
       setEditingRecord(null);
       form.resetFields();
-    });
+    } catch (error) {
+      console.error('操作失败:', error);
+      message.error('操作失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleModalCancel = () => {
     setVisible(false);
     setEditingRecord(null);
     form.resetFields();
+  };
+
+  const handleView = async (record) => {
+    try {
+      setLoading(true);
+      // 调用供应商详情接口
+      const response = await api.get(`/api/scm/suppliers/${record.key}`);
+      if (response.code === 1 && response.data) {
+        setViewingRecord({
+          ...response.data,
+          phone: response.data.contactPhone // 后端返回的是contactPhone，前端期望的是phone
+        });
+        setViewVisible(true);
+      } else {
+        message.error('加载供应商详情失败');
+      }
+    } catch (error) {
+      message.error('加载供应商详情失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewCancel = () => {
+    setViewVisible(false);
+    setViewingRecord(null);
+  };
+
+  // 处理导出
+  const handleExport = async () => {
+    if (!selectedRowKeys.length) {
+      message.warning('请先勾选要导出的供应商');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // 调用后端按选中主键导出接口
+      const response = await fetch(`${import.meta.env.VITE_REACT_APP_API_URL || ''}/api/scm/suppliers/export/selected`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'token': localStorage.getItem('token') || ''
+        },
+        body: JSON.stringify({ ids: selectedRowKeys }),
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('导出失败');
+      }
+      
+      // 获取文件名
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = '供应商数据.xlsx';
+      if (contentDisposition) {
+        const utf8FileNameMatch = /filename\*=UTF-8''([^;]+)/i.exec(contentDisposition);
+        const normalFileNameMatch = /filename="?([^";]+)"?/i.exec(contentDisposition);
+        if (utf8FileNameMatch && utf8FileNameMatch[1]) {
+          filename = decodeURIComponent(utf8FileNameMatch[1]);
+        } else if (normalFileNameMatch && normalFileNameMatch[1]) {
+          filename = decodeURIComponent(normalFileNameMatch[1]);
+        }
+      }
+      
+      // 创建下载链接
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+      
+      message.success(`导出成功，共 ${selectedRowKeys.length} 条`);
+    } catch (error) {
+      console.error('导出失败:', error);
+      message.error('导出失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const columns = [
@@ -171,9 +354,25 @@ const SupplierMaintenance = () => {
       render: (_, record) => (
         <Space size="middle">
           <a onClick={() => handleEdit(record)}><EditOutlined />编辑</a>
+          <a onClick={() => handleView(record)}><EyeOutlined />详情</a>
           <Popconfirm
             title="确定要删除这个供应商吗？"
-            onConfirm={() => { /* 删除供应商处理 */ }}
+            onConfirm={async () => {
+              try {
+                setLoading(true);
+                const response = await api.delete(`/api/scm/suppliers/${record.key}`);
+                if (response.code === 1) {
+                  message.success('供应商删除成功');
+                  await loadSuppliers();
+                } else {
+                  message.error('供应商删除失败');
+                }
+              } catch (error) {
+                message.error('供应商删除失败');
+              } finally {
+                setLoading(false);
+              }
+            }}
             okText="确定"
             cancelText="取消"
           >
@@ -191,18 +390,27 @@ const SupplierMaintenance = () => {
       <Card style={FORM_STYLES.card}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
-            <Form.Item name="name" label="名称" style={{ marginBottom: 0 }}>
-              <Input placeholder="请输入名称" style={{ width: 200 }} />
-            </Form.Item>
-            <Form.Item name="legalRepresentative" label="法定代表人" style={{ marginBottom: 0 }}>
-              <Input placeholder="请输入法定代表人" style={{ width: 200 }} />
-            </Form.Item>
-            <Form.Item name="phone" label="联系电话" style={{ marginBottom: 0 }}>
-              <Input placeholder="请输入联系电话" style={{ width: 200 }} />
-            </Form.Item>
+            <Input 
+              placeholder="请输入名称" 
+              style={{ width: 200 }} 
+              value={searchParams.name}
+              onChange={(e) => handleSearchChange('name', e.target.value)}
+            />
+            <Input 
+              placeholder="请输入法定代表人" 
+              style={{ width: 200 }} 
+              value={searchParams.legalRepresentative}
+              onChange={(e) => handleSearchChange('legalRepresentative', e.target.value)}
+            />
+            <Input 
+              placeholder="请输入联系电话" 
+              style={{ width: 200 }} 
+              value={searchParams.phone}
+              onChange={(e) => handleSearchChange('phone', e.target.value)}
+            />
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
-            <Button type="primary" icon={<SearchOutlined />}>查询</Button>
+            <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
             <Button type="primary" icon={<PlusOutlined />} onClick={() => {
               setEditingRecord(null);
               form.resetFields();
@@ -213,10 +421,7 @@ const SupplierMaintenance = () => {
             <Button 
               type="primary" 
               icon={<DownloadOutlined />}
-              onClick={() => {
-                // 批量导出选中的供应商
-                alert(`已导出 ${selectedRowKeys.length} 条供应商记录`);
-              }}
+              onClick={handleExport}
             >
               批量导出
             </Button>
@@ -228,13 +433,15 @@ const SupplierMaintenance = () => {
         <Table 
           columns={columns} 
           dataSource={suppliers} 
+          loading={loading}
           pagination={{ 
             pageSize: pageSize,
             current: currentPage,
-            onChange: (page, size) => {
+            onChange: async (page, size) => {
               setCurrentPage(page);
               setPageSize(size);
               setSelectedRowKeys([]);
+              await loadSuppliers();
             },
             showSizeChanger: true,
             showQuickJumper: true,
@@ -321,9 +528,9 @@ const SupplierMaintenance = () => {
               <Form.Item
                 name="registrationDate"
                 label="注册时间"
-                rules={[{ required: true, message: '请输入注册时间' }]}
+                rules={[{ required: true, message: '请选择注册时间' }]}
               >
-                <Input placeholder="请输入注册时间" />
+                <DatePicker style={{ width: '100%' }} placeholder="请选择注册时间" />
               </Form.Item>
             </Col>
             <Col span={FORM_STYLES.form.edit.colSpan}>
@@ -349,6 +556,91 @@ const SupplierMaintenance = () => {
             </Col>
           </Row>
         </Form>
+      </Modal>
+
+      {/* 供应商详情模态框 */}
+      <Modal
+        title="供应商详情"
+        open={viewVisible}
+        onCancel={handleViewCancel}
+        okText="关闭"
+        onOk={handleViewCancel}
+        {...getModalConfig()}
+      >
+        {viewingRecord && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <Row gutter={FORM_STYLES.form.edit.rowGutter}>
+              <Col span={FORM_STYLES.form.edit.colSpan}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold' }}>企业类型：</span>
+                  <span>{viewingRecord.enterpriseType}</span>
+                </div>
+              </Col>
+              <Col span={FORM_STYLES.form.edit.colSpan}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold' }}>名称：</span>
+                  <span>{viewingRecord.name}</span>
+                </div>
+              </Col>
+            </Row>
+            <Row gutter={FORM_STYLES.form.edit.rowGutter}>
+              <Col span={FORM_STYLES.form.edit.colSpan}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold' }}>统一社会信用代码：</span>
+                  <span>{viewingRecord.creditCode}</span>
+                </div>
+              </Col>
+              <Col span={FORM_STYLES.form.edit.colSpan}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold' }}>法定代表人：</span>
+                  <span>{viewingRecord.legalRepresentative}</span>
+                </div>
+              </Col>
+            </Row>
+            <Row gutter={FORM_STYLES.form.edit.rowGutter}>
+              <Col span={FORM_STYLES.form.edit.colSpan}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold' }}>注册资本：</span>
+                  <span>{viewingRecord.registeredCapital}</span>
+                </div>
+              </Col>
+              <Col span={FORM_STYLES.form.edit.colSpan}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold' }}>注册时间：</span>
+                  <span>{viewingRecord.registrationDate}</span>
+                </div>
+              </Col>
+            </Row>
+            <Row gutter={FORM_STYLES.form.edit.rowGutter}>
+              <Col span={FORM_STYLES.form.edit.colSpan}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold' }}>联系电话：</span>
+                  <span>{viewingRecord.phone || viewingRecord.contactPhone}</span>
+                </div>
+              </Col>
+              <Col span={FORM_STYLES.form.edit.colSpan}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold' }}>联系地址：</span>
+                  <span>{viewingRecord.address}</span>
+                </div>
+              </Col>
+            </Row>
+            <Row gutter={FORM_STYLES.form.edit.rowGutter}>
+              <Col span={FORM_STYLES.form.edit.colSpan}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold' }}>联系人：</span>
+                  <span>{viewingRecord.contactPerson}</span>
+                </div>
+              </Col>
+              <Col span={FORM_STYLES.form.edit.colSpan}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold' }}>状态：</span>
+                  <span>{viewingRecord.status === 1 ? '可用' : '不可用'}</span>
+                </div>
+              </Col>
+            </Row>
+          </div>
+        )}
       </Modal>
     </div>
   );

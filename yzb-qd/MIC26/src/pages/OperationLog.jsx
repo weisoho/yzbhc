@@ -1,119 +1,98 @@
-import React, { useState } from 'react';
-import { Card, Table, DatePicker, Select, Input, Button, Row, Col, Tag } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Card, Table, DatePicker, Select, Input, Button, Row, Col, Tag, message } from 'antd';
 import { SearchOutlined, FilterOutlined, ClearOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import api from '../utils/api';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 const { Search } = Input;
 
 const OperationLog = () => {
-  // 模拟操作日志数据
-  const mockLogs = [
-    { 
-      key: '1', 
-      time: '2024-01-15 10:30:25', 
-      user: '张三', 
-      type: '入库', 
-      content: '验收入库：一次性注射器 10ml，数量 1000', 
-      status: 'success',
-      ip: '192.168.1.101'
-    },
-    { 
-      key: '2', 
-      time: '2024-01-15 09:15:42', 
-      user: '李四', 
-      type: '出库', 
-      content: '消耗出库：输液器 500ml，数量 500', 
-      status: 'success',
-      ip: '192.168.1.102'
-    },
-    { 
-      key: '3', 
-      time: '2024-01-14 16:45:18', 
-      user: '王五', 
-      type: '盘点', 
-      content: '生成盘点表：仓库1 - A区', 
-      status: 'success',
-      ip: '192.168.1.103'
-    },
-    { 
-      key: '4', 
-      time: '2024-01-14 14:20:33', 
-      user: '赵六', 
-      type: '调整', 
-      content: '商品价格调整：一次性注射器 10ml，单价从 1.5 元调整为 1.8 元', 
-      status: 'success',
-      ip: '192.168.1.104'
-    },
-    { 
-      key: '5', 
-      time: '2024-01-13 11:50:05', 
-      user: '张三', 
-      type: '入库', 
-      content: '验收入库：医用棉签 100支/包，数量 2000', 
-      status: 'success',
-      ip: '192.168.1.101'
-    },
-    { 
-      key: '6', 
-      time: '2024-01-13 10:15:22', 
-      user: '李四', 
-      type: '出库', 
-      content: '消耗出库：酒精棉球 50g/瓶，数量 300', 
-      status: 'success',
-      ip: '192.168.1.102'
-    },
-    { 
-      key: '7', 
-      time: '2024-01-12 15:30:40', 
-      user: '王五', 
-      type: '调拨', 
-      content: '商品调拨：仓库1 → 仓库2，一次性注射器 10ml，数量 500', 
-      status: 'success',
-      ip: '192.168.1.103'
-    },
-    { 
-      key: '8', 
-      time: '2024-01-12 09:45:55', 
-      user: '赵六', 
-      type: '维护', 
-      content: '供应商维护：新增供应商 "医疗器械有限公司"', 
-      status: 'success',
-      ip: '192.168.1.104'
-    },
-    { 
-      key: '9', 
-      time: '2024-01-11 14:20:10', 
-      user: '张三', 
-      type: '盘点', 
-      content: '盘点损溢录入：仓库1 - B区，损耗一次性注射器 10ml，数量 10', 
-      status: 'warning',
-      ip: '192.168.1.101'
-    },
-    { 
-      key: '10', 
-      time: '2024-01-11 11:30:35', 
-      user: '李四', 
-      type: '入库', 
-      content: '验收入库：输液器 500ml，数量 1000', 
-      status: 'success',
-      ip: '192.168.1.102'
-    },
-  ];
-
-  const [logs, setLogs] = useState(mockLogs);
-  const [filteredLogs, setFilteredLogs] = useState(mockLogs);
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0
+  });
   const [searchText, setSearchText] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [dateRange, setDateRange] = useState([]);
 
-  // 操作类型选项
-  const operationTypes = ['入库', '出库', '盘点', '调整', '调拨', '维护', '删除', '新增'];
+  // 从后端获取操作日志数据
+  const fetchOperationLogs = async (page = pagination.current, size = pagination.pageSize) => {
+    setLoading(true);
+    try {
+      const params = {
+        pageNum: page,
+        pageSize: size,
+        searchText: searchText,
+        operationType: selectedType,
+        status: selectedStatus,
+        startDate: dateRange && dateRange[0] ? dayjs(dateRange[0]).format('YYYY-MM-DD') : undefined,
+        endDate: dateRange && dateRange[1] ? dayjs(dateRange[1]).format('YYYY-MM-DD') : undefined
+      };
+      
+      const response = await api.get('/api/scm/operation-logs', params);
+      if (response.code === 1 && response.data) {
+        const records = response.data.records.map((item, index) => ({
+          ...item,
+          key: item.id || index.toString(),
+          time: item.operationTime,
+          user: item.userName || item.operatorName || '未知',
+          type: item.operationType,
+          content: item.operationContent || item.content,
+          status: item.status,
+          ip: item.ipAddress || item.ip
+        }));
+        setLogs(records);
+        setPagination({
+          ...pagination,
+          current: page,
+          pageSize: size,
+          total: response.data.total
+        });
+      } else {
+        message.error(response.message || '获取操作日志失败');
+      }
+    } catch (error) {
+      console.error('获取操作日志失败:', error);
+      message.error('获取操作日志失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // 状态选项
-  const statusOptions = ['success', 'warning', 'error'];
+  useEffect(() => {
+    fetchOperationLogs();
+  }, []);
+
+  // 搜索和筛选功能
+  const handleSearch = () => {
+    fetchOperationLogs(1); // 搜索时回到第一页
+  };
+
+  // 重置筛选条件
+  const handleReset = () => {
+    setSearchText('');
+    setSelectedType('');
+    setSelectedStatus('');
+    setDateRange([]);
+    // 重置后立即执行一次查询（回到第一页）
+    setTimeout(() => {
+      fetchOperationLogs(1);
+    }, 0);
+  };
+
+  // 处理分页切换
+  const handleTableChange = (newPagination) => {
+    fetchOperationLogs(newPagination.current, newPagination.pageSize);
+  };
+
+  // 操作类型选项
+  const operationTypes = ['新增', '修改', '删除', '审核', '提交', '入库', '出库', '盘点', '调整', '调拨', '维护'];
 
   // 表格列定义
   const columns = [
@@ -157,14 +136,18 @@ const OperationLog = () => {
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      render: (status) => (
-        <Tag 
-          color={status === 'success' ? 'green' : status === 'warning' ? 'orange' : 'red'} 
-          style={{ borderRadius: 12, padding: '2px 8px', fontSize: 12 }}
-        >
-          {status === 'success' ? '成功' : status === 'warning' ? '警告' : '失败'}
-        </Tag>
-      )
+      render: (status) => {
+        const isSuccess = status === 'success' || status === '1' || status === true;
+        const isWarning = status === 'warning';
+        return (
+          <Tag 
+            color={isSuccess ? 'green' : isWarning ? 'orange' : 'red'} 
+            style={{ borderRadius: 12, padding: '2px 8px', fontSize: 12 }}
+          >
+            {isSuccess ? '成功' : isWarning ? '警告' : '失败'}
+          </Tag>
+        );
+      }
     },
     {
       title: 'IP地址',
@@ -184,54 +167,12 @@ const OperationLog = () => {
       '调拨': 'cyan',
       '维护': 'magenta',
       '删除': 'red',
-      '新增': 'lime'
+      '新增': 'lime',
+      '修改': 'gold',
+      '审核': 'geekblue',
+      '提交': 'volcano'
     };
     return colorMap[type] || 'default';
-  };
-
-  // 搜索和筛选功能
-  const handleSearch = () => {
-    let result = logs;
-
-    // 按搜索文本筛选
-    if (searchText) {
-      result = result.filter(log => 
-        log.content.includes(searchText) || 
-        log.user.includes(searchText) || 
-        log.ip.includes(searchText)
-      );
-    }
-
-    // 按操作类型筛选
-    if (selectedType) {
-      result = result.filter(log => log.type === selectedType);
-    }
-
-    // 按状态筛选
-    if (selectedStatus) {
-      result = result.filter(log => log.status === selectedStatus);
-    }
-
-    // 按日期范围筛选
-    if (dateRange.length === 2) {
-      const startDate = dayjs(dateRange[0]).startOf('day');
-      const endDate = dayjs(dateRange[1]).endOf('day');
-      result = result.filter(log => {
-        const logDate = dayjs(log.time);
-        return logDate.isAfter(startDate) && logDate.isBefore(endDate);
-      });
-    }
-
-    setFilteredLogs(result);
-  };
-
-  // 重置筛选条件
-  const handleReset = () => {
-    setSearchText('');
-    setSelectedType('');
-    setSelectedStatus('');
-    setDateRange([]);
-    setFilteredLogs(logs);
   };
 
   return (
@@ -347,18 +288,20 @@ const OperationLog = () => {
       >
         <Table
           columns={columns}
-          dataSource={filteredLogs}
+          dataSource={logs}
           rowKey="key"
           pagination={{
-            pageSize: 10,
+            ...pagination,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条记录`,
             style: { marginBottom: 0 }
           }}
+          onChange={handleTableChange}
           size="middle"
           bordered={false}
           scroll={{ x: 1000 }}
+          loading={loading}
           components={{
             Header: (props) => (
               <thead {...props} style={{ 

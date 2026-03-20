@@ -87,9 +87,36 @@ public class StockInManagementServiceImpl implements StockInManagementService {
         wrapper.like(StringUtils.hasText(query.getStockInNumber()), StockInOrderEntity::getStockInNumber, query.getStockInNumber())
                 .like(StringUtils.hasText(query.getOrderNumber()), StockInOrderEntity::getOrderNumber, query.getOrderNumber())
                 .like(StringUtils.hasText(query.getSupplier()), StockInOrderEntity::getSupplierName, query.getSupplier())
-                .eq(StringUtils.hasText(query.getStatus()), StockInOrderEntity::getStatus, query.getStatus())
-                .orderByDesc(StockInOrderEntity::getCreateTime);
+                .eq(StringUtils.hasText(query.getStatus()), StockInOrderEntity::getStatus, query.getStatus());
+
+        // 按物资编码、物资名称或厂家进行过滤
+        boolean hasItemFilter = StringUtils.hasText(query.getProductCode()) 
+                || StringUtils.hasText(query.getProductName())
+                || StringUtils.hasText(query.getManufacturer());
+        
+        if (hasItemFilter) {
+            wrapper.and(w -> w.exists("SELECT 1 FROM scm_stock_in_item sii WHERE sii.stock_in_order_id = scm_stock_in_order.id " +
+                    (StringUtils.hasText(query.getProductCode()) ? "AND sii.material_code LIKE CONCAT('%', '" + query.getProductCode() + "', '%') " : "") +
+                    (StringUtils.hasText(query.getProductName()) ? "AND sii.material_name LIKE CONCAT('%', '" + query.getProductName() + "', '%') " : "") +
+                    (StringUtils.hasText(query.getManufacturer()) ? "AND sii.manufacturer LIKE CONCAT('%', '" + query.getManufacturer() + "', '%') " : "")
+            ));
+        }
+
+        wrapper.orderByDesc(StockInOrderEntity::getCreateTime);
         Page<StockInOrderEntity> page = stockInOrderMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
+        return ScmPageHelper.of(page);
+    }
+
+    @Override
+    public PageResult<StockInItemEntity> queryStockInItems(ScmRequest.StockInQuery query) {
+        LambdaQueryWrapper<StockInItemEntity> wrapper = new LambdaQueryWrapper<>();
+        wrapper.like(StringUtils.hasText(query.getProductCode()), StockInItemEntity::getMaterialCode, query.getProductCode())
+                .like(StringUtils.hasText(query.getProductName()), StockInItemEntity::getMaterialName, query.getProductName())
+                .like(StringUtils.hasText(query.getSupplier()), StockInItemEntity::getSupplierName, query.getSupplier())
+                .like(StringUtils.hasText(query.getManufacturer()), StockInItemEntity::getManufacturer, query.getManufacturer());
+        
+        wrapper.orderByDesc(StockInItemEntity::getCreateTime);
+        Page<StockInItemEntity> page = stockInItemMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         return ScmPageHelper.of(page);
     }
 
@@ -176,6 +203,52 @@ public class StockInManagementServiceImpl implements StockInManagementService {
         purchaseReceiveMapper.updateById(receipt);
         refreshPurchaseOrderAfterStockIn(receipt.getPurchaseOrderId());
         operationLogService.save(request.getOperatorName(), "入库", "完成入库: " + order.getStockInNumber(),
+                ScmConstants.LOG_SUCCESS, "入库管理", order.getStockInNumber());
+        return order;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public StockInOrderEntity createManualStockIn(ScmRequest.StockInSave request) {
+        StockInOrderEntity order = new StockInOrderEntity();
+        order.setStockInNumber(ScmCodeGenerator.nextCode(stockInOrderMapper, "SI", "stock_in_number"));
+        order.setStockInType(request.getStockInType());
+        order.setOperatorName(request.getOperatorName());
+        order.setStockInDate(LocalDate.now());
+        order.setStatus(ScmConstants.STOCK_IN_COMPLETED);
+        order.setRemark(request.getRemark());
+        order.setCreateTime(LocalDateTime.now());
+        order.setUpdateTime(LocalDateTime.now());
+        
+        // 假设手动入库时，第一个条目的供应商作为订单供应商
+        if (!request.getItems().isEmpty()) {
+            order.setSupplierName(request.getItems().get(0).getSupplierName());
+        }
+        
+        stockInOrderMapper.insert(order);
+
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        int materialCount = 0;
+        for (ScmRequest.StockInItemSave itemRequest : request.getItems()) {
+            StockInItemEntity itemEntity = new StockInItemEntity();
+            BeanUtils.copyProperties(itemRequest, itemEntity);
+            itemEntity.setStockInOrderId(order.getId());
+            itemEntity.setPurchaseAmount(itemRequest.getPurchasePrice().multiply(BigDecimal.valueOf(itemRequest.getStockInQuantity())));
+            itemEntity.setStatus(ScmConstants.STOCK_IN_COMPLETED);
+            itemEntity.setCreateTime(LocalDateTime.now());
+            itemEntity.setUpdateTime(LocalDateTime.now());
+            stockInItemMapper.insert(itemEntity);
+            
+            totalAmount = totalAmount.add(itemEntity.getPurchaseAmount());
+            materialCount++;
+            syncInventory(itemEntity, order);
+        }
+
+        order.setTotalAmount(totalAmount);
+        order.setMaterialCount(materialCount);
+        stockInOrderMapper.updateById(order);
+        
+        operationLogService.save(request.getOperatorName(), "初始化入库", "完成手动入库: " + order.getStockInNumber(),
                 ScmConstants.LOG_SUCCESS, "入库管理", order.getStockInNumber());
         return order;
     }

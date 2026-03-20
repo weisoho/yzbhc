@@ -9,6 +9,7 @@ import {
   ReloadOutlined, SearchOutlined, RedoOutlined 
 } from '@ant-design/icons';
 import moment from 'moment';
+import api from '../utils/api';
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -17,247 +18,57 @@ const AbnormalOrderManagement = () => {
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const [abnormalOrders, setAbnormalOrders] = useState([]);
-  const [filteredOrders, setFilteredOrders] = useState([]);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchForm] = Form.useForm();
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
 
-  // 模拟异常订单数据 - 包含已拒收、超时未验收、已终止的订单
-  useEffect(() => {
-    const mockData = [
-      {
-        id: 1,
-        orderNo: 'PO-20260110-001',
-        supplierName: '医疗用品供应商A',
-        supplierCode: 'SUP-A001',
-        department: '采购部',
-        buyer: '张三',
-        contactPerson: '李四',
-        contactPhone: '13800138000',
-        orderDate: '2026-01-10',
-        expectedDeliveryDate: '2026-01-15',
-        actualDeliveryDate: '2026-01-15',
-        status: '已拒收',
-        rejectReason: '产品质量不符合要求，包装破损',
-        totalAmount: 15000.00,
-        createdAt: '2026-01-16 10:30:00',
-        items: [
-          {
-            key: '1-1',
-            productCode: 'PROD011',
-            productName: '医用手套',
-            specification: '乳胶 100只/盒',
-            model: 'GLOVE-100',
-            manufacturer: '手套制造厂A',
-            registrationNumber: 'REG-2024-011',
-            unit: '盒',
-            quantity: 500,
-            price: 30.00,
-            amount: 15000.00,
-            status: '已拒收',
-            rejectReason: '包装破损，部分产品受潮'
-          }
-        ]
-      },
-      {
-        id: 2,
-        orderNo: 'PO-20260109-002',
-        supplierName: '医疗器械供应商B',
-        supplierCode: 'SUP-B002',
-        department: '采购部',
-        buyer: '李四',
-        contactPerson: '王五',
-        contactPhone: '13900139000',
-        orderDate: '2026-01-09',
-        expectedDeliveryDate: '2026-01-14',
-        actualDeliveryDate: null,
-        status: '超时未验收',
-        timeoutReason: '供应商未按时送货，已超过约定时间3天',
-        totalAmount: 8000.00,
-        createdAt: '2026-01-17 14:20:00',
-        items: [
-          {
-            key: '2-1',
-            productCode: 'PROD012',
-            productName: '血压计',
-            specification: '电子血压计',
-            model: 'BP-001',
-            manufacturer: '血压计制造厂B',
-            registrationNumber: 'REG-2024-012',
-            unit: '台',
-            quantity: 10,
-            price: 800.00,
-            amount: 8000.00,
-            status: '超时未验收',
-            timeoutReason: '供应商生产延误'
-          }
-        ]
-      },
-      {
-        id: 3,
-        orderNo: 'PO-20260108-003',
-        supplierName: '消毒用品供应商C',
-        supplierCode: 'SUP-C003',
-        department: '采购部',
-        buyer: '王五',
-        contactPerson: '赵六',
-        contactPhone: '13700137000',
-        orderDate: '2026-01-08',
-        expectedDeliveryDate: '2026-01-13',
-        actualDeliveryDate: '2026-01-13',
-        status: '已拒收',
-        rejectReason: '供应商无法提供合格的产品注册证',
-        totalAmount: 6000.00,
-        createdAt: '2026-01-14 09:15:00',
-        items: [
-          {
-            key: '3-1',
-            productCode: 'PROD013',
-            productName: '消毒湿巾',
-            specification: '100片/包',
-            model: 'WIPE-100',
-            manufacturer: '湿巾制造厂C',
-            registrationNumber: 'REG-2024-013',
-            unit: '包',
-            quantity: 200,
-            price: 30.00,
-            amount: 6000.00,
-            status: '已拒收',
-            rejectReason: '产品注册证已过期'
-          }
-        ]
-      },
-      {
-        id: 4,
-        orderNo: 'PO-20260107-004',
-        supplierName: '医疗耗材供应商D',
-        supplierCode: 'SUP-D004',
-        department: '采购部',
-        buyer: '赵六',
-        contactPerson: '钱七',
-        contactPhone: '13600136000',
-        orderDate: '2026-01-07',
-        expectedDeliveryDate: '2026-01-12',
-        actualDeliveryDate: '2026-01-12',
-        status: '已拒收',
-        rejectReason: '产品规格与订单要求不符',
-        totalAmount: 12000.00,
-        createdAt: '2026-01-13 11:45:00',
-        items: [
-          {
-            key: '4-1',
-            productCode: 'PROD014',
-            productName: '手术手套',
-            specification: '无菌',
-            model: 'SURGICAL-100',
-            manufacturer: '手套制造厂D',
-            registrationNumber: 'REG-2024-014',
-            unit: '盒',
-            quantity: 500,
-            price: 15.00,
-            amount: 7500.00,
-            status: '已拒收',
-            rejectReason: '规格应为中号，实际收到小号'
-          },
-          {
-            key: '4-2',
-            productCode: 'PROD015',
-            productName: '一次性口罩',
-            specification: 'N95',
-            model: 'MASK-N95',
-            manufacturer: '口罩制造厂D',
-            registrationNumber: 'REG-2024-015',
-            unit: '个',
-            quantity: 1500,
-            price: 3.00,
-            amount: 4500.00,
-            status: '已拒收',
-            rejectReason: '过滤效率不达标'
-          }
-        ]
-      },
-      {
-        id: 5,
-        orderNo: 'PO-20260106-005',
-        supplierName: '医疗设备供应商E',
-        supplierCode: 'SUP-E005',
-        department: '采购部',
-        buyer: '钱七',
-        contactPerson: '孙八',
-        contactPhone: '13500135000',
-        orderDate: '2026-01-06',
-        expectedDeliveryDate: '2026-01-11',
-        actualDeliveryDate: null,
-        status: '超时未验收',
-        timeoutReason: '供应商内部问题，无法确定交货时间',
-        totalAmount: 25000.00,
-        createdAt: '2026-01-12 16:30:00',
-        items: [
-          {
-            key: '5-1',
-            productCode: 'PROD016',
-            productName: '心电图机',
-            specification: '十二导联',
-            model: 'ECG-12',
-            manufacturer: '设备制造厂E',
-            registrationNumber: 'REG-2024-016',
-            unit: '台',
-            quantity: 1,
-            price: 25000.00,
-            amount: 25000.00,
-            status: '超时未验收',
-            timeoutReason: '供应商生产线故障'
-          }
-        ]
+  // 从API获取异常订单数据
+  const loadAbnormalOrders = async (page = pagination.current, pageSize = pagination.pageSize) => {
+    try {
+      setLoading(true);
+      const values = searchForm.getFieldsValue();
+      const response = await api.get('/api/scm/purchases/exceptions', {
+        pageNum: page,
+        pageSize: pageSize,
+        orderNumber: values.orderNo,
+        supplierName: values.supplierName,
+        status: values.status && values.status !== 'all' ? values.status : undefined,
+        department: values.department
+      });
+      if (response.code === 1 && response.data) {
+        setAbnormalOrders((response.data.records || []).map(item => ({ ...item })));
+        setPagination({
+          current: response.data.pageNum || page,
+          pageSize: response.data.pageSize || pageSize,
+          total: response.data.total || 0
+        });
+      } else {
+        message.error(response.message || '加载异常订单失败');
       }
-    ];
+    } catch (error) {
+      console.error('加载异常订单失败:', error);
+      message.error('加载异常订单失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    setAbnormalOrders(mockData);
-    setFilteredOrders(mockData);
+  useEffect(() => {
+    loadAbnormalOrders();
   }, []);
 
   // 处理搜索
-  const handleSearch = (values) => {
-    let filtered = [...abnormalOrders];
-    
-    if (values.orderNo) {
-      filtered = filtered.filter(order => 
-        order.orderNo.toLowerCase().includes(values.orderNo.toLowerCase())
-      );
-    }
-    
-    if (values.supplierName) {
-      filtered = filtered.filter(order => 
-        order.supplierName.toLowerCase().includes(values.supplierName.toLowerCase())
-      );
-    }
-    
-    if (values.status && values.status !== 'all') {
-      filtered = filtered.filter(order => order.status === values.status);
-    }
-    
-    if (values.department) {
-      filtered = filtered.filter(order => order.department === values.department);
-    }
-    
-    setFilteredOrders(filtered);
-    message.success(`找到 ${filtered.length} 条异常订单`);
+  const handleSearch = async () => {
+    await loadAbnormalOrders(1, pagination.pageSize);
   };
 
   // 重置搜索
   const handleReset = () => {
     searchForm.resetFields();
-    setFilteredOrders(abnormalOrders);
-    message.success('搜索条件已重置');
-  };
-
-  // 处理删除异常订单
-  const handleDeleteOrder = (orderId) => {
-    setAbnormalOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
-    setFilteredOrders(prevOrders => prevOrders.filter(order => order.id !== orderId));
-    message.success('异常订单已删除');
+    loadAbnormalOrders(1, pagination.pageSize);
   };
 
   // 处理编辑异常订单
@@ -271,8 +82,8 @@ const AbnormalOrderManagement = () => {
       buyer: order.buyer,
       contactPerson: order.contactPerson,
       contactPhone: order.contactPhone,
-      orderDate: moment(order.orderDate),
-      expectedDeliveryDate: moment(order.expectedDeliveryDate),
+      orderDate: order.orderDate ? moment(order.orderDate) : null,
+      expectedDeliveryDate: order.expectedDeliveryDate ? moment(order.expectedDeliveryDate) : null,
       totalAmount: order.totalAmount,
       status: order.status,
       ...(order.status === '已拒收' && { rejectReason: order.rejectReason }),
@@ -282,32 +93,61 @@ const AbnormalOrderManagement = () => {
   };
 
   // 处理查看订单详情
-  const handleViewDetail = (order) => {
-    setSelectedOrder(order);
-    setIsDetailModalVisible(true);
+  const handleViewDetail = async (order) => {
+    try {
+      setLoading(true);
+      setIsDetailModalVisible(true);
+      const response = await api.get(`/api/scm/purchases/exceptions/${order.id}`);
+      if (response.code === 1 && response.data) {
+        setSelectedOrder({
+          ...response.data,
+          items: (response.data.items || []).map(item => ({ ...item, key: item.id }))
+        });
+      } else {
+        message.error(response.message || '加载异常订单详情失败');
+        setSelectedOrder(order);
+      }
+    } catch (error) {
+      console.error('加载异常订单详情失败:', error);
+      message.error('加载异常订单详情失败，请检查网络连接或联系管理员');
+      setSelectedOrder(order);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 处理保存编辑
   const handleSaveEdit = () => {
-    editForm.validateFields().then(values => {
-      const updatedOrder = {
-        ...selectedOrder,
-        ...values,
-        orderDate: moment(values.orderDate).format('YYYY-MM-DD'),
-        expectedDeliveryDate: moment(values.expectedDeliveryDate).format('YYYY-MM-DD'),
-        totalAmount: values.totalAmount || selectedOrder.totalAmount
-      };
-
-      setAbnormalOrders(prevOrders => prevOrders.map(order => 
-        order.id === updatedOrder.id ? updatedOrder : order
-      ));
-      
-      setFilteredOrders(prevOrders => prevOrders.map(order => 
-        order.id === updatedOrder.id ? updatedOrder : order
-      ));
-
-      setIsEditModalVisible(false);
-      message.success('异常订单已更新');
+    editForm.validateFields().then(async values => {
+      try {
+        setLoading(true);
+        const payload = {
+          supplierName: values.supplierName,
+          supplierCode: values.supplierCode,
+          department: values.department,
+          buyer: values.buyer,
+          contactPerson: values.contactPerson,
+          contactPhone: values.contactPhone,
+          orderDate: values.orderDate ? moment(values.orderDate).format('YYYY-MM-DD') : undefined,
+          expectedDeliveryDate: values.expectedDeliveryDate ? moment(values.expectedDeliveryDate).format('YYYY-MM-DD') : undefined,
+          totalAmount: values.totalAmount,
+          rejectReason: values.rejectReason,
+          timeoutReason: values.timeoutReason
+        };
+        const response = await api.put(`/api/scm/purchases/exceptions/${selectedOrder.id}`, payload);
+        if (response.code === 1) {
+          message.success('异常订单已更新');
+          setIsEditModalVisible(false);
+          await loadAbnormalOrders(pagination.current, pagination.pageSize);
+        } else {
+          message.error(response.message || '保存失败');
+        }
+      } catch (error) {
+        console.error('保存异常订单失败:', error);
+        message.error('保存失败，请检查网络连接或联系管理员');
+      } finally {
+        setLoading(false);
+      }
     }).catch(info => {
       console.log('验证失败:', info);
     });
@@ -320,23 +160,24 @@ const AbnormalOrderManagement = () => {
       content: `确定要重新提交订单 ${order.orderNo} 吗？重新提交后订单将进入待验收状态。`,
       okText: '确认',
       cancelText: '取消',
-      onOk: () => {
-        // 更新订单状态为待验收
-        const updatedOrder = {
-          ...order,
-          status: '待验收',
-          resubmittedAt: new Date().toISOString().replace('T', ' ').substring(0, 19)
-        };
-
-        setAbnormalOrders(prevOrders => prevOrders.map(o => 
-          o.id === updatedOrder.id ? updatedOrder : o
-        ));
-        
-        setFilteredOrders(prevOrders => prevOrders.map(o => 
-          o.id === updatedOrder.id ? updatedOrder : o
-        ));
-
-        message.success(`订单 ${order.orderNo} 已重新提交，状态已更新为待验收`);
+      onOk: async () => {
+        try {
+          setLoading(true);
+          const response = await api.post(`/api/scm/purchases/exceptions/${order.id}/resubmit`, null, {
+            params: { operatorName: '当前用户' }
+          });
+          if (response.code === 1) {
+            message.success(`订单 ${order.orderNo} 已重新提交，状态已更新为待验收`);
+            loadAbnormalOrders();
+          } else {
+            message.error(response.message || '重新提交订单失败');
+          }
+        } catch (error) {
+          console.error('重新提交订单失败:', error);
+          message.error('重新提交订单失败，请检查网络连接或联系管理员');
+        } finally {
+          setLoading(false);
+        }
       }
     });
   };
@@ -415,7 +256,11 @@ const AbnormalOrderManagement = () => {
       dataIndex: 'totalAmount',
       key: 'totalAmount',
       width: 120,
-      render: (amount) => <span style={{ fontWeight: '500' }}>¥{amount?.toFixed(2)}</span>
+      render: (amount) => (
+        <span style={{ fontWeight: '500' }}>
+          ¥{amount === undefined || amount === null ? '-' : Number(amount).toFixed(2)}
+        </span>
+      )
     },
     {
       title: '状态',
@@ -484,7 +329,23 @@ const AbnormalOrderManagement = () => {
           </Tooltip>
           <Popconfirm
             title="确定要删除此异常订单吗？"
-            onConfirm={() => handleDeleteOrder(record.id)}
+            onConfirm={async () => {
+              try {
+                setLoading(true);
+                const resp = await api.delete(`/api/scm/purchases/exceptions/${record.id}`, { operatorName: '当前用户' });
+                if (resp.code === 1) {
+                  message.success('异常订单已删除');
+                  await loadAbnormalOrders(1, pagination.pageSize);
+                } else {
+                  message.error(resp.message || '删除失败');
+                }
+              } catch (error) {
+                console.error('删除异常订单失败:', error);
+                message.error('删除失败，请检查网络连接或联系管理员');
+              } finally {
+                setLoading(false);
+              }
+            }}
             okText="确定"
             cancelText="取消"
           >
@@ -505,15 +366,15 @@ const AbnormalOrderManagement = () => {
   // 商品明细表格列配置
   const itemColumns = [
     {
-      title: '产品编码',
-      dataIndex: 'productCode',
-      key: 'productCode',
+      title: '物资编码',
+      dataIndex: 'materialCode',
+      key: 'materialCode',
       width: 120
     },
     {
-      title: '产品名称',
-      dataIndex: 'productName',
-      key: 'productName',
+      title: '物资名称',
+      dataIndex: 'materialName',
+      key: 'materialName',
       width: 150
     },
     {
@@ -554,44 +415,23 @@ const AbnormalOrderManagement = () => {
     },
     {
       title: '单价',
-      dataIndex: 'price',
-      key: 'price',
+      dataIndex: 'unitPrice',
+      key: 'unitPrice',
       width: 100,
-      render: (price) => `¥${price?.toFixed(2)}`
+      render: (price) => `¥${price === undefined || price === null ? '-' : Number(price).toFixed(2)}`
     },
     {
       title: '金额',
       dataIndex: 'amount',
       key: 'amount',
       width: 100,
-      render: (amount) => <strong>¥{amount?.toFixed(2)}</strong>
+      render: (amount) => <strong>¥{amount === undefined || amount === null ? '-' : Number(amount).toFixed(2)}</strong>
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
-      render: (status) => (
-        <Tag color={getStatusColor(status)}>
-          {status}
-        </Tag>
-      )
-    },
-    {
-      title: '异常原因',
-      dataIndex: 'status',
-      key: 'itemReason',
-      width: 200,
-      render: (status, record) => {
-        switch (status) {
-          case '已拒收':
-            return <span style={{ color: '#f5222d' }}>{record.rejectReason}</span>;
-          case '超时未验收':
-            return <span style={{ color: '#faad14' }}>{record.timeoutReason}</span>;
-          default:
-            return '-';
-        }
-      }
+      width: 120
     }
   ];
 
@@ -647,8 +487,8 @@ const AbnormalOrderManagement = () => {
                 重置
               </Button>
               <Button icon={<ReloadOutlined />} onClick={() => {
-                setFilteredOrders(abnormalOrders);
                 searchForm.resetFields();
+                loadAbnormalOrders(1, pagination.pageSize);
               }}>
                 刷新
               </Button>
@@ -661,14 +501,19 @@ const AbnormalOrderManagement = () => {
       <Card>
         <Table
           columns={columns}
-          dataSource={filteredOrders}
+          dataSource={abnormalOrders}
           rowKey="id"
           scroll={{ x: 1500 }}
           pagination={{
-            pageSize: 10,
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: pagination.total,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条异常订单`,
+            onChange: (page, pageSize) => {
+              loadAbnormalOrders(page, pageSize);
+            },
             style: {
               display: 'flex',
               justifyContent: 'center',
@@ -877,7 +722,7 @@ const AbnormalOrderManagement = () => {
               
               <Row gutter={16} style={{ marginTop: 12 }}>
                 <Col span={8}>
-                  <div><strong>总金额：</strong>¥{selectedOrder.totalAmount?.toFixed(2)}</div>
+                  <div><strong>总金额：</strong>¥{selectedOrder.totalAmount === undefined || selectedOrder.totalAmount === null ? '-' : Number(selectedOrder.totalAmount).toFixed(2)}</div>
                 </Col>
                 <Col span={16}>
                   <div>

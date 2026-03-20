@@ -3,6 +3,7 @@ package com.yunsheng.yzb.service.scm;
 import com.yunsheng.yzb.vo.scm.PageResult;
 import com.yunsheng.yzb.vo.scm.ScmRequest;
 import com.yunsheng.yzb.vo.scm.ScmView;
+import com.yunsheng.yzb.vo.scm.ExceptionOrderDetailView;
 import com.yunsheng.yzb.model.scm.ExceptionOrderEntity;
 import com.yunsheng.yzb.model.scm.PurchaseOrderEntity;
 import com.yunsheng.yzb.model.scm.PurchaseReceiveEntity;
@@ -20,7 +21,7 @@ public interface PurchaseManagementService {
      * @param query 查询条件
      * @return 采购单分页结果
      */
-    PageResult<PurchaseOrderEntity> queryOrders(ScmRequest.PurchaseQuery query);
+    PageResult<ScmView.PurchaseOrderDetail> queryOrders(ScmRequest.PurchaseQuery query);
 
     /**
      * 查询采购单详情。
@@ -80,7 +81,7 @@ public interface PurchaseManagementService {
      * @param query 查询条件
      * @return 待收货采购单分页结果
      */
-    PageResult<PurchaseOrderEntity> queryPendingReceiveOrders(ScmRequest.PurchaseQuery query);
+    PageResult<ScmView.PurchaseOrderDetail> queryPendingReceiveOrders(ScmRequest.PurchaseQuery query);
 
     /**
      * 执行采购收货。
@@ -114,6 +115,12 @@ public interface PurchaseManagementService {
      * @return 异常订单分页结果
      */
     PageResult<ExceptionOrderEntity> queryExceptionOrders(ScmRequest.PurchaseQuery query);
+
+    ExceptionOrderDetailView getExceptionOrderDetail(Long exceptionOrderId);
+
+    ExceptionOrderEntity updateExceptionOrder(Long exceptionOrderId, ScmRequest.ExceptionOrderUpdate request);
+
+    boolean deleteExceptionOrder(Long exceptionOrderId, String operatorName);
 
     /**
      * 重新提交异常订单。

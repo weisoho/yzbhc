@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Table, Card, Input, Select, Button, Space, Tag, Row, Col, Form, DatePicker, message, Modal, Checkbox, ConfigProvider } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Table, Card, Input, Select, Button, Space, Tag, Row, Col, Form, DatePicker, message, Modal, Checkbox, ConfigProvider, InputNumber } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import zhCN from 'antd/locale/zh_CN';
+import api from '../utils/api';
 
 const { Option } = Select;
 
@@ -11,6 +12,27 @@ const TransferAcceptance = () => {
   const [selectedTransfer, setSelectedTransfer] = useState(null);
   const [selectedItems, setSelectedItems] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [acceptLoading, setAcceptLoading] = useState(false);
+  const [transferAcceptanceData, setTransferAcceptanceData] = useState([]);
+  const [warehouseList, setWarehouseList] = useState([]);
+  const [searchParams, setSearchParams] = useState({
+    transferNumber: '',
+    fromWarehouse: 'all',
+    toWarehouse: 'all',
+    acceptanceStatus: 'all',
+    startDate: undefined,
+    endDate: undefined
+  });
+
+  const formatDate = (value) => {
+    if (!value) return '';
+    const s = typeof value === 'string' ? value : String(value);
+    return s.length >= 10 ? s.slice(0, 10) : s;
+  };
 
   const transferAcceptanceColumns = [
     { title: '调拨单号', dataIndex: 'transferNumber', key: 'transferNumber', width: 150, align: 'center' },
@@ -20,7 +42,7 @@ const TransferAcceptance = () => {
     { title: '调入仓库', dataIndex: 'toWarehouse', key: 'toWarehouse', width: 120, align: 'center' },
     { title: '调拨数量', dataIndex: 'quantity', key: 'quantity', width: 100, align: 'center' },
     { title: '单位', dataIndex: 'unit', key: 'unit', width: 80, align: 'center' },
-    { title: '调拨日期', dataIndex: 'transferDate', key: 'transferDate', width: 120, align: 'center' },
+    { title: '调拨日期', dataIndex: 'transferDate', key: 'transferDate', width: 120, align: 'center', render: (v) => formatDate(v) },
     { title: '调拨人', dataIndex: 'transferor', key: 'transferor', width: 100, align: 'center' },
     { title: '验收状态', dataIndex: 'acceptanceStatus', key: 'acceptanceStatus', width: 120, align: 'center', render: (status) => {
       const statusMap = {
@@ -33,7 +55,7 @@ const TransferAcceptance = () => {
     }},
     { title: '验收数量', dataIndex: 'acceptedQuantity', key: 'acceptedQuantity', width: 100, align: 'center' },
     { title: '验收人', dataIndex: 'acceptor', key: 'acceptor', width: 100, align: 'center' },
-    { title: '验收日期', dataIndex: 'acceptanceDate', key: 'acceptanceDate', width: 120, align: 'center' },
+    { title: '验收日期', dataIndex: 'acceptanceDate', key: 'acceptanceDate', width: 120, align: 'center', render: (v) => formatDate(v) },
     { 
       title: '操作', 
       key: 'action',
@@ -47,31 +69,120 @@ const TransferAcceptance = () => {
     },
   ];
 
-  const transferAcceptanceData = [
-    { key: '1', transferNumber: 'TF20240601001', materialName: '一次性注射器', specification: '10ml', fromWarehouse: '仓库1', toWarehouse: '仓库2', quantity: 200, unit: '支', transferDate: '2024-06-01', transferor: '张三', acceptanceStatus: 'pending', acceptedQuantity: 0, acceptor: '', acceptanceDate: '' },
-    { key: '2', transferNumber: 'TF20240601002', materialName: '输液器', specification: '500ml', fromWarehouse: '仓库2', toWarehouse: '仓库3', quantity: 100, unit: '个', transferDate: '2024-06-01', transferor: '李四', acceptanceStatus: 'accepted', acceptedQuantity: 100, acceptor: '王五', acceptanceDate: '2024-06-02' },
-    { key: '3', transferNumber: 'TF20240531001', materialName: '医用棉签', specification: '100支/包', fromWarehouse: '仓库1', toWarehouse: '仓库3', quantity: 50, unit: '包', transferDate: '2024-05-31', transferor: '王五', acceptanceStatus: 'rejected', acceptedQuantity: 0, acceptor: '赵六', acceptanceDate: '2024-06-01' },
-    { key: '4', transferNumber: 'TF20240530001', materialName: '酒精棉球', specification: '50g/瓶', fromWarehouse: '仓库3', toWarehouse: '仓库1', quantity: 30, unit: '瓶', transferDate: '2024-05-30', transferor: '赵六', acceptanceStatus: 'partially_accepted', acceptedQuantity: 25, acceptor: '张三', acceptanceDate: '2024-05-31' },
-  ];
+  const loadWarehouseList = async () => {
+    try {
+      const response = await api.get('/api/scm/transfer/warehouses');
+      if (response.code === 1 && response.data) {
+        setWarehouseList(response.data);
+      }
+    } catch (error) {
+      console.error('加载仓库列表失败:', error);
+    }
+  };
 
-  const handleSearch = () => {
-    message.success('查询成功');
+  // 获取调拨验收数据
+  const fetchTransferAcceptanceData = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/scm/transfer/acceptance', {
+        ...searchParams,
+        pageNum: currentPage,
+        pageSize: pageSize
+      });
+      if (response.code === 1 && response.data) {
+        const records = (response.data.records || []).map(item => ({
+          ...item,
+          key: item.id
+        }));
+        setTransferAcceptanceData(records);
+        setTotal(response.data.total || 0);
+      } else {
+        message.error(response.message || '获取调拨验收数据失败');
+        setTransferAcceptanceData([]);
+        setTotal(0);
+      }
+    } catch (error) {
+      message.error(`获取调拨验收数据失败: ${error.message || '未知错误'}`);
+      setTransferAcceptanceData([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 初始化数据
+  useEffect(() => {
+    loadWarehouseList();
+  }, []);
+
+  useEffect(() => {
+    fetchTransferAcceptanceData();
+  }, [currentPage, pageSize, searchParams]);
+
+  const handleSearch = async (values) => {
+    try {
+      const nextParams = {
+        transferNumber: values.transferNumber,
+        fromWarehouse: values.fromWarehouse || 'all',
+        toWarehouse: values.toWarehouse || 'all',
+        acceptanceStatus: values.acceptanceStatus || 'all',
+        startDate: values.dateRange ? values.dateRange[0].format('YYYY-MM-DD') : undefined,
+        endDate: values.dateRange ? values.dateRange[1].format('YYYY-MM-DD') : undefined
+      };
+      setCurrentPage(1);
+      setSearchParams(nextParams);
+    } catch (error) {
+      message.error(`查询失败: ${error.message || '未知错误'}`);
+    }
   };
 
   const handleReset = () => {
     form.resetFields();
+    setCurrentPage(1);
+    setPageSize(10);
+    setSearchParams({
+      transferNumber: '',
+      fromWarehouse: 'all',
+      toWarehouse: 'all',
+      acceptanceStatus: 'all',
+      startDate: undefined,
+      endDate: undefined
+    });
     message.success('已重置搜索条件');
   };
 
-  const handleViewDetail = (record) => {
-    setSelectedTransfer(record);
-    setDetailModalVisible(true);
-    // 模拟获取详细物资列表数据
-    setSelectedItems([
-      { key: '1', materialName: '一次性注射器', specification: '10ml', batchNumber: 'B20240601', quantity: 200, unit: '支', productionDate: '2024-05-01', expiryDate: '2025-05-01', selected: false },
-      { key: '2', materialName: '一次性注射器', specification: '5ml', batchNumber: 'B20240602', quantity: 150, unit: '支', productionDate: '2024-05-15', expiryDate: '2025-05-15', selected: false },
-      { key: '3', materialName: '一次性注射器', specification: '20ml', batchNumber: 'B20240603', quantity: 100, unit: '支', productionDate: '2024-05-20', expiryDate: '2025-05-20', selected: false },
-    ]);
+  const handleViewDetail = async (record) => {
+    try {
+      setDetailLoading(true);
+      setSelectedTransfer(record);
+      setDetailModalVisible(true);
+      const response = await api.get(`/api/scm/transfer/acceptance/detail/${record.transferNumber}`);
+      if (response.code === 1) {
+        const items = (response.data || []).map(item => {
+          const acceptedQuantity = item.acceptedQuantity || 0;
+          const quantity = item.quantity || 0;
+          const remainingQuantity = Math.max(0, quantity - acceptedQuantity);
+          const disabled = item.acceptanceStatus === 'accepted' || item.acceptanceStatus === 'rejected' || remainingQuantity <= 0;
+          return ({
+            ...item,
+            key: item.id,
+            selected: false,
+            remainingQuantity,
+            acceptQuantity: remainingQuantity,
+            disabled
+          });
+        });
+        setSelectedItems(items);
+      } else {
+        message.error(response.message || '获取详细数据失败');
+        setSelectedItems([]);
+      }
+    } catch (error) {
+      message.error(`获取详细数据失败: ${error.message || '未知错误'}`);
+      setSelectedItems([]);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const handleCloseDetailModal = () => {
@@ -82,26 +193,88 @@ const TransferAcceptance = () => {
 
   const handleItemSelect = (key, checked) => {
     const newItems = selectedItems.map(item => 
-      item.key === key ? { ...item, selected: checked } : item
+      item.key === key ? { ...item, selected: item.disabled ? false : checked } : item
     );
     setSelectedItems(newItems);
   };
 
   const handleSelectAll = (checked) => {
-    const newItems = selectedItems.map(item => ({ ...item, selected: checked }));
+    const newItems = selectedItems.map(item => ({ ...item, selected: item.disabled ? false : checked }));
     setSelectedItems(newItems);
   };
 
-  const handleAcceptInModal = () => {
-    const selectedCount = selectedItems.filter(item => item.selected).length;
-    message.success(`已入库 ${selectedCount} 项物资`);
-    handleCloseDetailModal();
+  const handleAcceptInModal = async () => {
+    try {
+      setAcceptLoading(true);
+      const selectedCount = selectedItems.filter(item => item.selected).length;
+      if (selectedCount === 0) {
+        message.warning('请选择要验收的物资');
+        return;
+      }
+      const invalidItem = selectedItems.filter(item => item.selected).find(item => !item.batchNumber || !item.acceptQuantity || item.acceptQuantity <= 0 || item.acceptQuantity > (item.remainingQuantity || 0));
+      if (invalidItem) {
+        message.error('所选物资存在批号为空或本次验收数量不合法的数据');
+        return;
+      }
+      
+      const acceptData = {
+        transferNumber: selectedTransfer.transferNumber,
+        items: selectedItems.filter(item => item.selected).map(item => ({ id: item.id, quantity: item.acceptQuantity })),
+        acceptor: '管理员',
+        acceptanceDate: new Date().toISOString().split('T')[0]
+      };
+      
+      const resp = await api.post('/api/scm/transfer/acceptance/accept', acceptData);
+      if (resp.code !== 1) {
+        message.error(resp.message || '验收失败');
+        return;
+      }
+      
+      message.success(`已入库 ${selectedCount} 项物资`);
+      await fetchTransferAcceptanceData();
+      handleCloseDetailModal();
+    } catch (error) {
+      message.error(`验收失败: ${error.message || '未知错误'}`);
+    } finally {
+      setAcceptLoading(false);
+    }
   };
 
-  const handleRejectInModal = () => {
-    const selectedCount = selectedItems.filter(item => item.selected).length;
-    message.warning(`已拒收 ${selectedCount} 项物资`);
-    handleCloseDetailModal();
+  const handleRejectInModal = async () => {
+    try {
+      setAcceptLoading(true);
+      const selectedCount = selectedItems.filter(item => item.selected).length;
+      if (selectedCount === 0) {
+        message.warning('请选择要拒收的物资');
+        return;
+      }
+      const invalidItem = selectedItems.filter(item => item.selected).find(item => !item.batchNumber);
+      if (invalidItem) {
+        message.error('所选物资存在批号为空的数据');
+        return;
+      }
+      
+      const rejectData = {
+        transferNumber: selectedTransfer.transferNumber,
+        items: selectedItems.filter(item => item.selected).map(item => ({ id: item.id, quantity: 0 })),
+        acceptor: '管理员',
+        acceptanceDate: new Date().toISOString().split('T')[0]
+      };
+      
+      const resp = await api.post('/api/scm/transfer/acceptance/reject', rejectData);
+      if (resp.code !== 1) {
+        message.error(resp.message || '拒收失败');
+        return;
+      }
+      
+      message.warning(`已拒收 ${selectedCount} 项物资`);
+      await fetchTransferAcceptanceData();
+      handleCloseDetailModal();
+    } catch (error) {
+      message.error(`拒收失败: ${error.message || '未知错误'}`);
+    } finally {
+      setAcceptLoading(false);
+    }
   };
 
   return (
@@ -159,6 +332,12 @@ const TransferAcceptance = () => {
         <Form
           form={form}
           layout="vertical"
+          initialValues={{
+            fromWarehouse: 'all',
+            toWarehouse: 'all',
+            acceptanceStatus: 'all'
+          }}
+          onFinish={handleSearch}
         >
           <Row gutter={[16, 0]} align="middle">
             <Col xs={24} sm={12} md={8} lg={6}>
@@ -170,9 +349,11 @@ const TransferAcceptance = () => {
               <Form.Item name="fromWarehouse" label="调出仓库">
                 <Select placeholder="请选择调出仓库" style={{ width: '100%' }}>
                   <Option value="all">全部仓库</Option>
-                  <Option value="warehouse1">仓库1</Option>
-                  <Option value="warehouse2">仓库2</Option>
-                  <Option value="warehouse3">仓库3</Option>
+                  {warehouseList.map(warehouse => (
+                    <Option key={warehouse.value} value={warehouse.value}>
+                      {warehouse.label}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -180,9 +361,11 @@ const TransferAcceptance = () => {
               <Form.Item name="toWarehouse" label="调入仓库">
                 <Select placeholder="请选择调入仓库" style={{ width: '100%' }}>
                   <Option value="all">全部仓库</Option>
-                  <Option value="warehouse1">仓库1</Option>
-                  <Option value="warehouse2">仓库2</Option>
-                  <Option value="warehouse3">仓库3</Option>
+                  {warehouseList.map(warehouse => (
+                    <Option key={warehouse.value} value={warehouse.value}>
+                      {warehouse.label}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -205,7 +388,7 @@ const TransferAcceptance = () => {
             <Col xs={24} sm={12} md={12} lg={6}>
               <Form.Item label=" ">
                 <Space>
-                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
+                  <Button type="primary" icon={<SearchOutlined />} htmlType="submit" loading={loading}>
                     查询
                   </Button>
                   <Button onClick={handleReset}>
@@ -225,8 +408,8 @@ const TransferAcceptance = () => {
             dataSource={transferAcceptanceData} 
             pagination={{
               current: currentPage,
-              pageSize: 10,
-              total: transferAcceptanceData.length,
+              pageSize: pageSize,
+              total: total,
               showSizeChanger: true,
               showQuickJumper: true,
               showTotal: (total) => `共 ${total} 条记录`,
@@ -236,7 +419,10 @@ const TransferAcceptance = () => {
                 alignItems: 'center',
                 margin: '24px 0 0 0',
               },
-              onChange: (page) => setCurrentPage(page),
+              onChange: (page, size) => {
+                setCurrentPage(page);
+                setPageSize(size);
+              },
             }}
             rowKey="key"
             style={{
@@ -246,6 +432,7 @@ const TransferAcceptance = () => {
               width: '100%',
             }}
             scroll={{ x: 'max-content' }} // 启用横向滚动
+            loading={loading}
             components={{
               Header: (props) => (
                 <thead {...props} style={{ 
@@ -302,10 +489,10 @@ const TransferAcceptance = () => {
         onCancel={handleCloseDetailModal}
         width={1000}
         footer={[
-          <Button key="reject" type="danger" onClick={handleRejectInModal}>
+          <Button key="reject" type="danger" onClick={handleRejectInModal} loading={acceptLoading}>
             拒收
           </Button>,
-          <Button key="accept" type="primary" onClick={handleAcceptInModal}>
+          <Button key="accept" type="primary" onClick={handleAcceptInModal} loading={acceptLoading}>
             入库
           </Button>,
         ]}
@@ -324,7 +511,7 @@ const TransferAcceptance = () => {
                   <div><strong>调入仓库：</strong>{selectedTransfer.toWarehouse}</div>
                 </Col>
                 <Col span={8}>
-                  <div><strong>调拨日期：</strong>{selectedTransfer.transferDate}</div>
+                  <div><strong>调拨日期：</strong>{formatDate(selectedTransfer.transferDate)}</div>
                 </Col>
                 <Col span={8}>
                   <div><strong>调拨人：</strong>{selectedTransfer.transferor}</div>
@@ -344,43 +531,68 @@ const TransferAcceptance = () => {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <h4>调拨物资列表</h4>
               </div>
-              <div style={{ overflowX: 'auto' }} className="custom-scrollbar">
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
-                  <thead style={{ backgroundColor: '#f0f0f0' }}>
-                    <tr>
-                      <th style={{ padding: '12px 8px', textAlign: 'center', width: '60px', whiteSpace: 'nowrap' }}>
-                        <Checkbox onChange={(e) => handleSelectAll(e.target.checked)} />
-                      </th>
-                      <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>商品名称</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>规格型号</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>批号</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>数量</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>单位</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>生产日期</th>
-                      <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>有效期</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedItems.map(item => (
-                      <tr key={item.key} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                        <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                          <Checkbox 
-                            checked={item.selected} 
-                            onChange={(e) => handleItemSelect(item.key, e.target.checked)}
-                          />
-                        </td>
-                        <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{item.materialName}</td>
-                        <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{item.specification}</td>
-                        <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{item.batchNumber}</td>
-                        <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{item.quantity}</td>
-                        <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{item.unit}</td>
-                        <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{item.productionDate}</td>
-                        <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{item.expiryDate}</td>
+              {detailLoading ? (
+                <div style={{ textAlign: 'center', padding: '40px 0' }}>加载中...</div>
+              ) : (
+                <div style={{ overflowX: 'auto' }} className="custom-scrollbar">
+                  <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
+                    <thead style={{ backgroundColor: '#f0f0f0' }}>
+                      <tr>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', width: '60px', whiteSpace: 'nowrap' }}>
+                          <Checkbox onChange={(e) => handleSelectAll(e.target.checked)} />
+                        </th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>商品名称</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>规格型号</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>批号</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>数量</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>已验收</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>本次验收</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>单位</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>生产日期</th>
+                        <th style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>有效期</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {selectedItems.map(item => (
+                        <tr key={item.key} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                          <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            <Checkbox 
+                              checked={item.selected} 
+                              disabled={item.disabled}
+                              onChange={(e) => handleItemSelect(item.key, e.target.checked)}
+                            />
+                          </td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{item.materialName}</td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{item.specification}</td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{item.batchNumber}</td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{item.quantity}</td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{item.acceptedQuantity || 0}</td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                            {item.disabled ? (
+                              0
+                            ) : (
+                              <InputNumber
+                                min={1}
+                                max={item.remainingQuantity || 0}
+                                value={item.acceptQuantity}
+                                disabled={!item.selected}
+                                onChange={(val) => {
+                                  const next = selectedItems.map(x => x.key === item.key ? { ...x, acceptQuantity: val } : x);
+                                  setSelectedItems(next);
+                                }}
+                                style={{ width: 110 }}
+                              />
+                            )}
+                          </td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{item.unit}</td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{formatDate(item.productionDate)}</td>
+                          <td style={{ padding: '12px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>{formatDate(item.expiryDate)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
               <div className="scrollbar-hint" style={{ marginTop: '8px', fontSize: '11px' }}>
               </div>
             </div>

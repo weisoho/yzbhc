@@ -370,7 +370,7 @@
   </update>
   <select id="selectRepairList" resultType="com.yunsheng.yzb.vo.RepairVo">
     select
-    bb.repair_code repairCode,
+    aa.repair_code repairCode,
     bb.asset_code assetCode,
     bb.asset_name assetName,
     bb.asset_typename assetTypename,
@@ -381,8 +381,7 @@
     aa.repair_type repairType,
     aa.repair_reason repairReason,
     aa.repair_fee repairFee,
-    aa.repair_status repairStatus,
-
+    aa.repair_status repairStatus
     from repair aa join asset bb on aa.asset_id=bb.id
     where 1=1
     <if test="assetCode!=null and assetCode!=''">
@@ -395,7 +394,7 @@
       AND bb.asset_typeid =#{assetTypeid}
     </if>
     <if test="repairStatus!=null ">
-      AND aa.asset_typeid =#{repairStatus}
+      AND aa.repair_status =#{repairStatus}
     </if>
     <if test="repairType!=null ">
       AND aa.repair_type =#{repairType}

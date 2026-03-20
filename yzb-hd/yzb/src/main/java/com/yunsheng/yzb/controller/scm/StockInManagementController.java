@@ -4,6 +4,7 @@ import com.yunsheng.yzb.vo.scm.PageResult;
 import com.yunsheng.yzb.vo.scm.ScmRequest;
 import com.yunsheng.yzb.vo.scm.ScmView;
 import com.yunsheng.yzb.model.scm.StockInOrderEntity;
+import com.yunsheng.yzb.model.scm.StockInItemEntity;
 import com.yunsheng.yzb.service.scm.StockInManagementService;
 import com.yunsheng.yzb.utils.AjaxResult;
 import org.springframework.validation.annotation.Validated;
@@ -39,6 +40,17 @@ public class StockInManagementController {
     }
 
     /**
+     * 分页查询入库明细。
+     *
+     * @param query 查询条件
+     * @return 入库明细分页结果
+     */
+    @GetMapping("/items")
+    public AjaxResult<PageResult<StockInItemEntity>> itemPage(ScmRequest.StockInQuery query) {
+        return AjaxResult.success(stockInManagementService.queryStockInItems(query));
+    }
+
+    /**
      * 查询入库单详情。
      *
      * @param stockInOrderId 入库单主键
@@ -60,6 +72,17 @@ public class StockInManagementController {
     public AjaxResult<StockInOrderEntity> create(@PathVariable Long receiptId,
                                                  @Valid @RequestBody ScmRequest.StockInSave request) {
         return AjaxResult.success(stockInManagementService.createStockIn(receiptId, request));
+    }
+
+    /**
+     * 手动入库（初始化入库）。
+     *
+     * @param request 入库保存请求体
+     * @return 新增后的入库单信息
+     */
+    @PostMapping("/manual")
+    public AjaxResult<StockInOrderEntity> createManual(@Valid @RequestBody ScmRequest.StockInSave request) {
+        return AjaxResult.success(stockInManagementService.createManualStockIn(request));
     }
 
     /**

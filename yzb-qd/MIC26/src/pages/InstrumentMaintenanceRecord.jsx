@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../utils/api';
 import { 
   Card, 
   Table, 
@@ -25,6 +26,7 @@ import {
   UploadOutlined,
   FileTextOutlined
 } from '@ant-design/icons';
+import moment from 'moment';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
@@ -38,64 +40,57 @@ const InstrumentMaintenanceRecord = () => {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [addForm] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [maintenanceRecords, setMaintenanceRecords] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
 
-  const maintenanceRecords = [
-    {
-      key: '1',
-      recordNo: 'MR202401001',
-      deviceName: '心脏起搏器',
-      serialNo: 'SN2023123456',
-      faultReason: '电池异常放电',
-      maintenancePlan: '更换电池',
-      cost: 1500,
-      maintenanceDate: '2024-01-15',
-      attachment: '维修报告.pdf'
-    },
-    {
-      key: '2',
-      recordNo: 'MR202401002',
-      deviceName: '呼吸机',
-      serialNo: 'SN2023112345',
-      faultReason: '氧浓度传感器故障',
-      maintenancePlan: '更换传感器',
-      cost: 800,
-      maintenanceDate: '2024-01-12',
-      attachment: '维修记录.docx'
-    },
-    {
-      key: '3',
-      recordNo: 'MR202401003',
-      deviceName: '输液泵',
-      serialNo: 'SN2023109876',
-      faultReason: '输液速度不稳定',
-      maintenancePlan: '校准泵体',
-      cost: 300,
-      maintenanceDate: '2024-01-10',
-      attachment: '维护记录.pdf'
-    },
-    {
-      key: '4',
-      recordNo: 'MR202401004',
-      deviceName: '监护仪',
-      serialNo: 'SN2023098765',
-      faultReason: '显示屏故障',
-      maintenancePlan: '更换显示屏',
-      cost: 2000,
-      maintenanceDate: '2024-01-08',
-      attachment: '维修报告.pdf'
-    },
-    {
-      key: '5',
-      recordNo: 'MR202401005',
-      deviceName: '除颤仪',
-      serialNo: 'SN2023087654',
-      faultReason: '电极片接触不良',
-      maintenancePlan: '清洁接触点',
-      cost: 500,
-      maintenanceDate: '2024-01-05',
-      attachment: '维修记录.docx'
+  // 从后端获取维修记录列表
+  const fetchMaintenanceRecords = async (params = {}) => {
+    setLoading(true);
+    try {
+      // 构建查询参数
+      const queryParams = new URLSearchParams();
+      queryParams.append('pageNum', params.pageNum || currentPage);
+      queryParams.append('pageSize', params.pageSize || pageSize);
+      queryParams.append('assetCode', params.assetCode || '');
+      queryParams.append('assetName', params.assetName || '');
+      if (params.repairType) queryParams.append('repairType', params.repairType);
+      if (params.repairStatus) queryParams.append('repairStatus', params.repairStatus);
+      if (params.assetTypeid) queryParams.append('assetTypeid', params.assetTypeid);
+      if (params.repairStart) queryParams.append('repairStart', params.repairStart);
+      if (params.repairEnd) queryParams.append('repairEnd', params.repairEnd);
+      
+      const response = await api.get(`/yzb/selectRepairList?${queryParams.toString()}`);
+      
+      if (response.code === 1) {
+        const data = response.data;
+        // 转换数据格式，确保每条记录有key字段
+        const records = data.list.map((record, index) => ({
+          ...record,
+          key: record.id || index + 1,
+          deviceName: record.assetName,
+          serialNo: record.assetCode,
+          recordNo: record.repairNo,
+          maintenanceDate: record.repairDate
+        }));
+        setMaintenanceRecords(records);
+        setTotal(data.total);
+      } else {
+        message.error(response.message || '获取维修记录失败');
+      }
+    } catch (error) {
+      console.error('获取维修记录失败:', error);
+      message.error('获取维修记录失败');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // 组件挂载时获取数据
+  useEffect(() => {
+    fetchMaintenanceRecords();
+  }, [currentPage, pageSize]);
 
   const columns = [
     {
@@ -172,12 +167,23 @@ const InstrumentMaintenanceRecord = () => {
     }
   ];
 
-  const handleSearch = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      message.success('查询成功');
-    }, 1000);
+  const handleSearch = async () => {
+    const values = await form.validateFields();
+    // 构建查询参数
+    const params = {
+      assetCode: values.serialNo || '',
+      assetName: values.instrumentName || '',
+      repairType: values.maintenanceType || null,
+      repairStatus: values.status || null,
+      repairStart: values.dateRange ? values.dateRange[0].format('YYYY-MM-DD') : null,
+      repairEnd: values.dateRange ? values.dateRange[1].format('YYYY-MM-DD') : null,
+      pageNum: 1, // 重置为第一页
+      pageSize: pageSize
+    };
+    
+    // 调用API查询数据
+    await fetchMaintenanceRecords(params);
+    setCurrentPage(1); // 重置为第一页
   };
 
   const handleReset = () => {
@@ -188,20 +194,50 @@ const InstrumentMaintenanceRecord = () => {
     setAddModalVisible(true);
   };
 
-  const handleAddSubmit = () => {
-    addForm.validateFields().then(values => {
-      console.log('表单数据:', values);
-      message.success('已新增维修记录');
-      setAddModalVisible(false);
-      addForm.resetFields();
-    }).catch(errorInfo => {
-      console.log('表单验证失败:', errorInfo);
-    });
+  const handleAddSubmit = async () => {
+    const values = await addForm.validateFields();
+    
+    // 构建维修记录数据
+    const repairData = {
+      assetName: values.deviceName,
+      assetCode: values.serialNo,
+      faultReason: values.faultReason,
+      maintenancePlan: values.maintenancePlan,
+      cost: values.cost,
+      repairDate: values.maintenanceDate ? values.maintenanceDate.format('YYYY-MM-DD') : null
+    };
+    
+    try {
+      let response;
+      if (selectedRecord) {
+        // 编辑模式
+        repairData.id = selectedRecord.id;
+        response = await api.post('/yzb/updateRepair', repairData);
+      } else {
+        // 新增模式
+        response = await api.post('/yzb/addRepair', repairData);
+      }
+      
+      if (response.code === 1) {
+        message.success(selectedRecord ? '编辑维修记录成功' : '新增维修记录成功');
+        setAddModalVisible(false);
+        addForm.resetFields();
+        setSelectedRecord(null);
+        // 重新获取数据
+        fetchMaintenanceRecords();
+      } else {
+        message.error(response.message || (selectedRecord ? '编辑维修记录失败' : '新增维修记录失败'));
+      }
+    } catch (error) {
+      console.error(selectedRecord ? '编辑维修记录失败:' : '新增维修记录失败:', error);
+      message.error(selectedRecord ? '编辑维修记录失败' : '新增维修记录失败');
+    }
   };
 
   const handleAddCancel = () => {
     setAddModalVisible(false);
     addForm.resetFields();
+    setSelectedRecord(null);
   };
 
   const handleAddReset = () => {
@@ -214,10 +250,22 @@ const InstrumentMaintenanceRecord = () => {
   };
 
   const handleEdit = (record) => {
-    message.info('编辑功能开发中');
+    // 设置编辑表单数据
+    addForm.setFieldsValue({
+      deviceName: record.deviceName,
+      serialNo: record.serialNo,
+      faultReason: record.faultReason,
+      maintenancePlan: record.maintenancePlan,
+      cost: record.cost,
+      maintenanceDate: record.maintenanceDate ? moment(record.maintenanceDate) : null
+    });
+    // 打开新增模态框作为编辑模态框
+    setSelectedRecord(record);
+    setAddModalVisible(true);
   };
 
   const handleDelete = (record) => {
+    // 后端暂未实现删除接口
     message.success('删除成功');
   };
 
@@ -321,7 +369,9 @@ const InstrumentMaintenanceRecord = () => {
             onChange: (keys) => setSelectedRowKeys(keys),
           }}
           pagination={{ 
-            pageSize: 10,
+            current: currentPage,
+            pageSize: pageSize,
+            total: total,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条记录`,
@@ -330,6 +380,10 @@ const InstrumentMaintenanceRecord = () => {
               justifyContent: 'center',
               alignItems: 'center',
               margin: '24px 0 0 0',
+            },
+            onChange: (page, size) => {
+              setCurrentPage(page);
+              setPageSize(size);
             }
           }} 
           scroll={{ x: 1800 }}
@@ -367,7 +421,7 @@ const InstrumentMaintenanceRecord = () => {
       </Modal>
 
       <Modal
-        title="新增维修记录"
+        title={selectedRecord ? "编辑维修记录" : "新增维修记录"}
         open={addModalVisible}
         onCancel={handleAddCancel}
         footer={[
@@ -378,7 +432,7 @@ const InstrumentMaintenanceRecord = () => {
             取消
           </Button>,
           <Button key="submit" type="primary" onClick={handleAddSubmit}>
-            提交
+            {selectedRecord ? "保存" : "提交"}
           </Button>
         ]}
         width={800}
@@ -387,10 +441,19 @@ const InstrumentMaintenanceRecord = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="deviceName"
-                label="设备名称"
+                name="department"
+                label="使用科室"
               >
-                <Input placeholder="请输入设备名称" />
+                <Select placeholder="请选择科室" style={{ width: '100%' }}>
+                  <Option value="心内科">心内科</Option>
+                  <Option value="ICU">ICU</Option>
+                  <Option value="外科">外科</Option>
+                  <Option value="急诊科">急诊科</Option>
+                  <Option value="手术室">手术室</Option>
+                  <Option value="内科">内科</Option>
+                  <Option value="儿科">儿科</Option>
+                  <Option value="妇产科">妇产科</Option>
+                </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -406,10 +469,10 @@ const InstrumentMaintenanceRecord = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="serialNo"
-                label="序列号"
+                name="deviceName"
+                label="设备名称"
               >
-                <Input placeholder="请输入序列号" />
+                <Input placeholder="请输入设备名称" />
               </Form.Item>
             </Col>
             <Col span={12}>

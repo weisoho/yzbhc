@@ -74,6 +74,14 @@ public class StockOutItemEntity {
     /** 出库日期。 */
     private LocalDate outboundDate;
 
+    /** 领用科室。 */
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String departmentName;
+
+    /** 操作人。 */
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String operatorName;
+
     /** 明细状态。 */
     private String status;
 

@@ -9,6 +9,7 @@ import com.yunsheng.yzb.common.ScmPageHelper;
 import com.yunsheng.yzb.vo.scm.PageResult;
 import com.yunsheng.yzb.vo.scm.ScmRequest;
 import com.yunsheng.yzb.vo.scm.ScmView;
+import com.yunsheng.yzb.vo.scm.ExceptionOrderDetailView;
 import com.yunsheng.yzb.model.scm.ExceptionOrderEntity;
 import com.yunsheng.yzb.model.scm.MaterialEntity;
 import com.yunsheng.yzb.model.scm.PurchaseOrderEntity;
@@ -35,6 +36,8 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -71,14 +74,57 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
     private OperationLogService operationLogService;
 
     @Override
-    public PageResult<PurchaseOrderEntity> queryOrders(ScmRequest.PurchaseQuery query) {
+    public PageResult<ScmView.PurchaseOrderDetail> queryOrders(ScmRequest.PurchaseQuery query) {
         LambdaQueryWrapper<PurchaseOrderEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.hasText(query.getOrderNumber()), PurchaseOrderEntity::getOrderNumber, query.getOrderNumber())
                 .like(StringUtils.hasText(query.getSupplierName()), PurchaseOrderEntity::getSupplierName, query.getSupplierName())
-                .eq(StringUtils.hasText(query.getStatus()), PurchaseOrderEntity::getStatus, query.getStatus())
-                .orderByDesc(PurchaseOrderEntity::getCreateTime);
+                .eq(StringUtils.hasText(query.getStatus()), PurchaseOrderEntity::getStatus, query.getStatus());
+
+        // 按物资编码、物资名称或厂家进行过滤
+        boolean hasItemFilter = StringUtils.hasText(query.getProductCode()) 
+                || StringUtils.hasText(query.getProductName())
+                || StringUtils.hasText(query.getManufacturer());
+        
+        if (hasItemFilter) {
+            wrapper.and(w -> w.exists("SELECT 1 FROM scm_purchase_order_item poi WHERE poi.purchase_order_id = scm_purchase_order.id " +
+                    (StringUtils.hasText(query.getProductCode()) ? "AND poi.material_code LIKE CONCAT('%', '" + query.getProductCode() + "', '%') " : "") +
+                    (StringUtils.hasText(query.getProductName()) ? "AND poi.material_name LIKE CONCAT('%', '" + query.getProductName() + "', '%') " : "") +
+                    (StringUtils.hasText(query.getManufacturer()) ? "AND poi.manufacturer LIKE CONCAT('%', '" + query.getManufacturer() + "', '%') " : "")
+            ));
+        }
+
+        wrapper.orderByDesc(PurchaseOrderEntity::getCreateTime);
         Page<PurchaseOrderEntity> page = purchaseOrderMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
-        return ScmPageHelper.of(page);
+        
+        // 加载明细并转换为 View
+        List<PurchaseOrderEntity> records = page.getRecords();
+        List<ScmView.PurchaseOrderDetail> viewRecords = new ArrayList<>();
+        
+        if (!records.isEmpty()) {
+            List<Long> orderIds = records.stream().map(PurchaseOrderEntity::getId).collect(Collectors.toList());
+            List<PurchaseOrderItemEntity> allItems = purchaseOrderItemMapper.selectList(new LambdaQueryWrapper<PurchaseOrderItemEntity>()
+                    .in(PurchaseOrderItemEntity::getPurchaseOrderId, orderIds));
+            Map<Long, List<PurchaseOrderItemEntity>> itemMap = allItems.stream()
+                    .collect(Collectors.groupingBy(PurchaseOrderItemEntity::getPurchaseOrderId));
+            
+            for (PurchaseOrderEntity order : records) {
+                ScmView.PurchaseOrderDetail view = new ScmView.PurchaseOrderDetail();
+                BeanUtils.copyProperties(order, view);
+                
+                List<PurchaseOrderItemEntity> items = itemMap.getOrDefault(order.getId(), new ArrayList<>());
+                view.setItems(items.stream().map(item -> {
+                    ScmView.PurchaseOrderItemDetail itemView = new ScmView.PurchaseOrderItemDetail();
+                    BeanUtils.copyProperties(item, itemView);
+                    return itemView;
+                }).collect(Collectors.toList()));
+                
+                viewRecords.add(view);
+            }
+        }
+        
+        Page<ScmView.PurchaseOrderDetail> viewPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
+        viewPage.setRecords(viewRecords);
+        return ScmPageHelper.of(viewPage);
     }
 
     @Override
@@ -197,7 +243,7 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
     }
 
     @Override
-    public PageResult<PurchaseOrderEntity> queryPendingReceiveOrders(ScmRequest.PurchaseQuery query) {
+    public PageResult<ScmView.PurchaseOrderDetail> queryPendingReceiveOrders(ScmRequest.PurchaseQuery query) {
         query.setStatus(ScmConstants.PURCHASE_WAIT_RECEIVE);
         return queryOrders(query);
     }
@@ -322,10 +368,91 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
         LambdaQueryWrapper<ExceptionOrderEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.hasText(query.getOrderNumber()), ExceptionOrderEntity::getOrderNo, query.getOrderNumber())
                 .like(StringUtils.hasText(query.getSupplierName()), ExceptionOrderEntity::getSupplierName, query.getSupplierName())
-                .eq(StringUtils.hasText(query.getStatus()), ExceptionOrderEntity::getStatus, query.getStatus())
+                .eq(StringUtils.hasText(query.getDepartment()), ExceptionOrderEntity::getDepartment, query.getDepartment())
                 .orderByDesc(ExceptionOrderEntity::getCreatedAt);
+        if (StringUtils.hasText(query.getStatus())) {
+            wrapper.eq(ExceptionOrderEntity::getStatus, query.getStatus());
+        } else {
+            wrapper.in(ExceptionOrderEntity::getStatus, Arrays.asList("已拒收", "超时未验收"));
+        }
         Page<ExceptionOrderEntity> page = exceptionOrderMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         return ScmPageHelper.of(page);
+    }
+
+    @Override
+    public ExceptionOrderDetailView getExceptionOrderDetail(Long exceptionOrderId) {
+        ExceptionOrderEntity entity = exceptionOrderMapper.selectById(exceptionOrderId);
+        if (entity == null) {
+            throw new ScmBusinessException("异常订单不存在");
+        }
+        ExceptionOrderDetailView view = new ExceptionOrderDetailView();
+        BeanUtils.copyProperties(entity, view);
+        if (entity.getPurchaseOrderId() == null) {
+            view.setItems(Collections.emptyList());
+            return view;
+        }
+        List<PurchaseOrderItemEntity> items = purchaseOrderItemMapper.selectList(new LambdaQueryWrapper<PurchaseOrderItemEntity>()
+                .eq(PurchaseOrderItemEntity::getPurchaseOrderId, entity.getPurchaseOrderId())
+                .orderByAsc(PurchaseOrderItemEntity::getId));
+        view.setItems(items.stream().map(this::toOrderItemDetail).collect(Collectors.toList()));
+        return view;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ExceptionOrderEntity updateExceptionOrder(Long exceptionOrderId, ScmRequest.ExceptionOrderUpdate request) {
+        ExceptionOrderEntity entity = exceptionOrderMapper.selectById(exceptionOrderId);
+        if (entity == null) {
+            throw new ScmBusinessException("异常订单不存在");
+        }
+        if (request.getSupplierName() != null) {
+            entity.setSupplierName(request.getSupplierName());
+        }
+        if (request.getSupplierCode() != null) {
+            entity.setSupplierCode(request.getSupplierCode());
+        }
+        if (request.getDepartment() != null) {
+            entity.setDepartment(request.getDepartment());
+        }
+        if (request.getBuyer() != null) {
+            entity.setBuyer(request.getBuyer());
+        }
+        if (request.getContactPerson() != null) {
+            entity.setContactPerson(request.getContactPerson());
+        }
+        if (request.getContactPhone() != null) {
+            entity.setContactPhone(request.getContactPhone());
+        }
+        if (request.getOrderDate() != null) {
+            entity.setOrderDate(request.getOrderDate());
+        }
+        if (request.getExpectedDeliveryDate() != null) {
+            entity.setExpectedDeliveryDate(request.getExpectedDeliveryDate());
+        }
+        if (request.getTotalAmount() != null) {
+            entity.setTotalAmount(request.getTotalAmount());
+        }
+        if (request.getRejectReason() != null) {
+            entity.setRejectReason(request.getRejectReason());
+        }
+        if (request.getTimeoutReason() != null) {
+            entity.setTimeoutReason(request.getTimeoutReason());
+        }
+        exceptionOrderMapper.updateById(entity);
+        return entity;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteExceptionOrder(Long exceptionOrderId, String operatorName) {
+        ExceptionOrderEntity entity = exceptionOrderMapper.selectById(exceptionOrderId);
+        if (entity == null) {
+            return true;
+        }
+        exceptionOrderMapper.deleteById(exceptionOrderId);
+        operationLogService.save(operatorName, "删除", "删除异常订单: " + entity.getOrderNo(),
+                ScmConstants.LOG_WARNING, "异常订单", entity.getOrderNo());
+        return true;
     }
 
     @Override

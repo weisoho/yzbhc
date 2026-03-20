@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Table, Input, Space, Select, Row, Col, Tag, Modal, Form, InputNumber, message, DatePicker, Divider, Alert, Descriptions } from 'antd';
 import { PlusOutlined, EditOutlined, SearchOutlined, DollarOutlined, SwapOutlined, CalculatorOutlined } from '@ant-design/icons';
+import api from '../utils/api';
 
 const { Option } = Select;
 const { RangePicker } = DatePicker;
@@ -20,102 +21,117 @@ const ProductPriceAdjustment = () => {
   const [adjustmentMethod, setAdjustmentMethod] = useState('fixed');
   const [pricePreview, setPricePreview] = useState({});
   const [showOtherReasonInput, setShowOtherReasonInput] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
 
-  const [products, setProducts] = useState([
-    {
-      key: '1',
-      materialCode: 'YZS-001',
-      name: '一次性注射器',
-      materialType: '医用耗材',
-      specification: '10ml',
-      model: 'SYR-10',
-      minPackage: '100支/盒',
-      unit: '支',
-      purchasePrice: 0.45,
-      registrationNumber: '国械注准201526400846',
-      supplier: '山东威高集团',
-      manufacturer: '山东威高集团有限公司',
-      adjustmentReason: '成本上涨',
-      currentPrice: 0.85,
-      costPrice: 0.45,
-    },
-    {
-      key: '2',
-      materialCode: 'YZS-002',
-      name: '输液器',
-      materialType: '医用耗材',
-      specification: '500ml',
-      model: 'IV-500',
-      minPackage: '50套/盒',
-      unit: '套',
-      purchasePrice: 2.80,
-      registrationNumber: '国械注准201626400977',
-      supplier: '山东威高集团',
-      manufacturer: '山东威高集团有限公司',
-      adjustmentReason: '市场竞争',
-      currentPrice: 4.50,
-      costPrice: 2.80,
-    },
-    {
-      key: '3',
-      materialCode: 'YZS-003',
-      name: '医用棉签',
-      materialType: '医用耗材',
-      specification: '100支/包',
-      model: 'QJ-100',
-      minPackage: '50包/盒',
-      unit: '包',
-      purchasePrice: 1.20,
-      registrationNumber: '国械注准201726400472',
-      supplier: '稳健医疗用品',
-      manufacturer: '稳健医疗用品股份有限公司',
-      adjustmentReason: '促销活动',
-      currentPrice: 2.00,
-      costPrice: 1.20,
-    },
-    {
-      key: '4',
-      materialCode: 'YZS-004',
-      name: '酒精棉球',
-      materialType: '医用耗材',
-      specification: '50g/瓶',
-      model: 'JQ-50',
-      minPackage: '30瓶/盒',
-      unit: '瓶',
-      purchasePrice: 2.00,
-      registrationNumber: '国械注准201826400481',
-      supplier: '稳健医疗用品',
-      manufacturer: '稳健医疗用品股份有限公司',
-      adjustmentReason: '库存清理',
-      currentPrice: 3.50,
-      costPrice: 2.00,
-    },
-    {
-      key: '5',
-      materialCode: 'YLQ-001',
-      name: '碘伏消毒液',
-      materialType: '医用耗材',
-      specification: '500ml',
-      model: 'DF-500',
-      minPackage: '20瓶/箱',
-      unit: '瓶',
-      purchasePrice: 7.50,
-      registrationNumber: '国械注准201926400459',
-      supplier: '利尔康消毒科技',
-      manufacturer: '利尔康消毒科技有限公司',
-      adjustmentReason: '新品上市',
-      currentPrice: 12.00,
-      costPrice: 7.50,
-    },
-  ]);
+  const [products, setProducts] = useState([]);
 
-  const [priceHistory, setPriceHistory] = useState([
-    { key: '1', materialCode: 'YZS-001', name: '一次性注射器', materialType: '医用耗材', oldPrice: 0.80, newPrice: 0.85, adjustmentType: 'increase', adjustmentAmount: 0.05, adjustmentPercent: 6.25, adjustedBy: '张三', adjustedAt: '2024-01-15 10:30:00', reason: '成本上涨' },
-    { key: '2', materialCode: 'YZS-002', name: '输液器', materialType: '医用耗材', oldPrice: 4.50, newPrice: 4.20, adjustmentType: 'decrease', adjustmentAmount: -0.30, adjustmentPercent: -6.67, adjustedBy: '李四', adjustedAt: '2024-01-14 14:20:00', reason: '促销活动' },
-    { key: '3', materialCode: 'YLQ-001', name: '碘伏消毒液', materialType: '医用耗材', oldPrice: 10.00, newPrice: 12.00, adjustmentType: 'increase', adjustmentAmount: 2.00, adjustmentPercent: 20.00, adjustedBy: '王五', adjustedAt: '2024-01-10 09:15:00', reason: '库存清理' },
-  ]);
+  const [priceHistory, setPriceHistory] = useState([]);
 
   const [editingProduct, setEditingProduct] = useState(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(10);
+  const [historyTotal, setHistoryTotal] = useState(0);
+
+  // 加载物资调价数据
+  const loadProducts = async () => {
+    try {
+      setLoading(true);
+      // 构建查询参数
+      const params = {
+        materialCode: searchParams.materialCode,
+        name: searchParams.name,
+        supplier: searchParams.supplier,
+        manufacturer: searchParams.manufacturer,
+        pageNum: currentPage,
+        pageSize: pageSize
+      };
+      const response = await api.get('/api/scm/product-price-adjustment', params);
+      if (response.code === 1 && response.data) {
+        // 转换数据格式以匹配前端需求
+        const productList = response.data.records.map(product => ({
+          key: product.productId, // 使用 productId 作为 key
+          materialCode: product.materialCode,
+          name: product.name,
+          materialType: product.materialType,
+          specification: product.specification,
+          model: product.model,
+          minPackage: product.minPackage,
+          unit: product.unit,
+          purchasePrice: product.purchasePrice,
+          registrationNumber: product.registrationNumber,
+          supplier: product.supplier,
+          manufacturer: product.manufacturer,
+          adjustmentReason: product.adjustmentReason,
+          currentPrice: product.currentPrice,
+          costPrice: product.costPrice
+        }));
+        setProducts(productList);
+        setTotal(response.data.total);
+      } else {
+        message.error(response.message || '加载物资调价数据失败');
+      }
+    } catch (error) {
+      console.error('加载物资调价数据失败:', error);
+      message.error('加载物资调价数据失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 组件加载时获取物资调价数据
+  useEffect(() => {
+    loadProducts();
+  }, [currentPage, pageSize]);
+
+  // 加载调价历史数据
+  const loadPriceHistory = async () => {
+    try {
+      setHistoryLoading(true);
+      // 构建查询参数
+      const params = {
+        pageNum: historyCurrentPage,
+        pageSize: historyPageSize
+      };
+      const response = await api.get('/api/scm/product-price-adjustment/history', params);
+      if (response.code === 1 && response.data) {
+        // 转换数据格式以匹配前端需求
+        const historyList = response.data.records.map(history => ({
+          key: history.id,
+          materialCode: history.materialCode,
+          name: history.name,
+          materialType: history.materialType,
+          oldPrice: history.oldPrice,
+          newPrice: history.newPrice,
+          adjustmentType: history.adjustmentAmount >= 0 ? 'increase' : 'decrease',
+          adjustmentAmount: history.adjustmentAmount,
+          adjustmentPercent: history.adjustmentPercent,
+          adjustedBy: history.adjustedBy,
+          adjustedAt: history.adjustedAt,
+          reason: history.adjustmentReason
+        }));
+        setPriceHistory(historyList);
+        setHistoryTotal(response.data.total);
+      } else {
+        message.error(response.message || '加载调价历史失败');
+      }
+    } catch (error) {
+      console.error('加载调价历史失败:', error);
+      message.error('加载调价历史失败，请检查网络连接或联系管理员');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // 打开历史模态框时加载历史数据
+  useEffect(() => {
+    if (historyModalVisible) {
+      loadPriceHistory();
+    }
+  }, [historyModalVisible, historyCurrentPage, historyPageSize]);
 
   const columns = [
     {
@@ -197,14 +213,14 @@ const ProductPriceAdjustment = () => {
       dataIndex: 'purchasePrice',
       key: 'purchasePrice',
       width: 100,
-      render: (price) => `¥${price.toFixed(2)}`,
+      render: (price) => price != null ? `¥${Number(price).toFixed(2)}` : '-',
     },
     {
       title: '现采购价',
       dataIndex: 'currentPrice',
       key: 'currentPrice',
       width: 100,
-      render: (price) => `¥${price.toFixed(2)}`,
+      render: (price) => price != null ? `¥${Number(price).toFixed(2)}` : '-',
     },
   ];
 
@@ -249,14 +265,14 @@ const ProductPriceAdjustment = () => {
       dataIndex: 'oldPrice',
       key: 'oldPrice',
       width: 100,
-      render: (price) => `¥${price.toFixed(2)}`,
+      render: (price) => price != null ? `¥${Number(price).toFixed(2)}` : '-',
     },
     {
       title: '现采购价',
       dataIndex: 'newPrice',
       key: 'newPrice',
       width: 100,
-      render: (price) => `¥${price.toFixed(2)}`,
+      render: (price) => price != null ? `¥${Number(price).toFixed(2)}` : '-',
     },
     {
       title: '调价原因',
@@ -351,55 +367,55 @@ const ProductPriceAdjustment = () => {
     }
   }, [adjustmentMethod, form]);
 
-  const handleAdjustOk = () => {
-    const values = form.getFieldsValue();
-    
-    const { newPrice } = pricePreview;
-    const currentPrice = editingProduct.currentPrice;
-    const adjustmentAmount = newPrice - currentPrice;
-    const adjustmentPercent = currentPrice > 0 ? (adjustmentAmount / currentPrice * 100).toFixed(2) : '0.00';
+  const handleAdjustOk = async () => {
+    try {
+      setLoading(true);
+      const values = form.getFieldsValue();
+      
+      const { newPrice } = pricePreview;
+      const currentPrice = editingProduct.currentPrice;
+      const adjustmentAmount = newPrice - currentPrice;
+      const adjustmentPercent = currentPrice > 0 ? (adjustmentAmount / currentPrice * 100).toFixed(2) : '0.00';
 
-    // 处理调价原因
-    let finalReason = values.reason || '手动调整';
-    if (values.reason === '其他原因' && values.otherReason) {
-      finalReason = `其他原因: ${values.otherReason}`;
-    }
-
-    const updatedProducts = products.map(p => {
-      if (p.key === editingProduct.key) {
-        return { 
-          ...p, 
-          currentPrice: parseFloat(newPrice.toFixed(2)),
-          adjustmentReason: finalReason
-        };
+      // 处理调价原因
+      let finalReason = values.reason || '手动调整';
+      if (values.reason === '其他原因' && values.otherReason) {
+        finalReason = `其他原因: ${values.otherReason}`;
       }
-      return p;
-    });
-    setProducts(updatedProducts);
 
-    const newHistory = {
-      key: Date.now().toString(),
-      materialCode: editingProduct.materialCode,
-      name: editingProduct.name,
-      materialType: editingProduct.materialType,
-      oldPrice: currentPrice,
-      newPrice: parseFloat(newPrice.toFixed(2)),
-      adjustmentType: adjustmentAmount >= 0 ? 'increase' : 'decrease',
-      adjustmentAmount: parseFloat(adjustmentAmount.toFixed(2)),
-      adjustmentPercent: parseFloat(adjustmentPercent),
-      adjustedBy: '当前用户',
-      adjustedAt: new Date().toLocaleString(),
-      reason: finalReason,
-    };
-    setPriceHistory([newHistory, ...priceHistory]);
+      // 构建调价数据
+      const adjustmentData = {
+        productId: editingProduct.key,
+        oldPrice: currentPrice,
+        newPrice: parseFloat(newPrice.toFixed(2)),
+        adjustmentReason: finalReason,
+        adjustmentAmount: parseFloat(adjustmentAmount.toFixed(2)),
+        adjustmentPercent: parseFloat(adjustmentPercent)
+      };
 
-    setAdjustModalVisible(false);
-    setShowOtherReasonInput(false);
-    message.success('调价成功');
+      // 调用API保存调价数据
+      const response = await api.post('/api/scm/product-price-adjustment', adjustmentData);
+      if (response.code === 1) {
+        message.success('调价成功');
+        // 重新加载数据
+        await loadProducts();
+      } else {
+        message.error(response.message || '调价失败');
+      }
+
+      setAdjustModalVisible(false);
+      setShowOtherReasonInput(false);
+    } catch (error) {
+      console.error('调价失败:', error);
+      message.error('调价失败，请检查网络连接或联系管理员');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSearch = () => {
-    message.loading('正在搜索...', 0.5);
+    setCurrentPage(1); // 重置为第一页
+    loadProducts();
   };
 
 
@@ -441,17 +457,12 @@ const ProductPriceAdjustment = () => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ whiteSpace: 'nowrap' }}>供应商：</span>
-                <Select
-                  placeholder="请选择供应商"
+                <Input
+                  placeholder="请输入供应商名称进行模糊查询"
                   style={{ width: 180 }}
                   value={searchParams.supplier}
-                  onChange={(value) => setSearchParams({ ...searchParams, supplier: value })}
-                  allowClear
-                >
-                  <Option value="山东威高集团">山东威高集团</Option>
-                  <Option value="稳健医疗用品">稳健医疗用品</Option>
-                  <Option value="利尔康消毒科技">利尔康消毒科技</Option>
-                </Select>
+                  onChange={(e) => setSearchParams({ ...searchParams, supplier: e.target.value })}
+                />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ whiteSpace: 'nowrap' }}>生产厂家：</span>
@@ -491,11 +502,19 @@ const ProductPriceAdjustment = () => {
           rowSelection={rowSelection}
           columns={columns}
           dataSource={products}
+          loading={loading}
           pagination={{
-            pageSize: 10,
+            pageSize: pageSize,
+            current: currentPage,
+            total: total,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条记录`,
+            onChange: async (page, size) => {
+              setCurrentPage(page);
+              setPageSize(size);
+              setSelectedProducts([]);
+            },
             style: {
               display: 'flex',
               justifyContent: 'center',
@@ -652,6 +671,19 @@ const ProductPriceAdjustment = () => {
         <Table
           columns={historyColumns}
           dataSource={priceHistory}
+          loading={historyLoading}
+          pagination={{
+            pageSize: historyPageSize,
+            current: historyCurrentPage,
+            total: historyTotal,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total) => `共 ${total} 条记录`,
+            onChange: (page, size) => {
+              setHistoryCurrentPage(page);
+              setHistoryPageSize(size);
+            }
+          }}
           scroll={{ x: 1200 }}
           size="small"
         />

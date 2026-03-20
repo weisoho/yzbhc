@@ -1,51 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, Table, Button, Modal, Form, Input, Select, Space, Tag, message, Popconfirm } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, UserOutlined } from '@ant-design/icons';
+import api from '../utils/api';
 
 const { Option } = Select;
 
 const DepartmentManagement = () => {
-  const [departments, setDepartments] = useState([
-    {
-      id: '1',
-      name: '运营部',
-      description: '负责日常运营管理',
-      manager: '张三',
-      employeeCount: 15,
-      roles: ['运营经理', '运营专员', '数据分析师']
-    },
-    {
-      id: '2',
-      name: '技术部',
-      description: '负责系统开发和维护',
-      manager: '李四',
-      employeeCount: 8,
-      roles: ['技术总监', '前端工程师', '后端工程师', '测试工程师']
-    },
-    {
-      id: '3',
-      name: '采购部',
-      description: '负责采购业务管理',
-      manager: '王五',
-      employeeCount: 6,
-      roles: ['采购经理', '采购专员', '供应商管理']
-    }
-  ]);
-
+  const [departments, setDepartments] = useState([]);
+  const [roleOptions, setRoleOptions] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState(null);
   const [form] = Form.useForm();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [loading, setLoading] = useState(false);
 
-  // 预设的角色选项
-  const roleOptions = [
-    '部门经理', '副经理', '主管', '专员', '助理',
-    '技术总监', '前端工程师', '后端工程师', '测试工程师',
-    '采购经理', '采购专员', '供应商管理', '质量控制',
-    '运营经理', '运营专员', '数据分析师', '市场专员',
-    '财务经理', '会计', '出纳', '人事专员'
-  ];
+  // 加载部门列表
+  useEffect(() => {
+    loadDepartments();
+    loadRoleOptions();
+  }, [currentPage, pageSize]);
+
+  const loadDepartments = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get('/api/department/list', {
+        pageNum: currentPage,
+        pageSize: pageSize
+      });
+      if (response.code === 1 && response.data) {
+        setDepartments(response.data.records || []);
+      }
+    } catch (error) {
+      message.error('加载部门列表失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadRoleOptions = async () => {
+    try {
+      const response = await api.get('/api/role/list');
+      if (response.code === 1 && response.data) {
+        setRoleOptions(response.data.map(role => ({
+          label: role.name,
+          value: role.id
+        })));
+      }
+    } catch (error) {
+      message.error('加载角色选项失败');
+    }
+  };
 
   const columns = [
     {
@@ -137,41 +142,53 @@ const DepartmentManagement = () => {
     setIsModalVisible(true);
   };
 
-  const handleDelete = (id) => {
-    setDepartments(departments.filter(dept => dept.id !== id));
-    message.success('删除成功');
+  const handleDelete = async (id) => {
+    try {
+      setLoading(true);
+      const response = await api.delete(`/api/department/${id}`);
+      if (response.code === 1) {
+        message.success('删除成功');
+        loadDepartments();
+      } else {
+        message.error('删除失败');
+      }
+    } catch (error) {
+      message.error('删除失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleModalOk = async () => {
     try {
+      setLoading(true);
       const values = await form.validateFields();
       
       if (editingDepartment) {
         // 编辑模式
-        setDepartments(departments.map(dept => 
-          dept.id === editingDepartment.id 
-            ? { 
-                ...dept, 
-                ...values,
-                employeeCount: Math.floor(Math.random() * 20) + 1 // 模拟员工数量变化
-              }
-            : dept
-        ));
-        message.success('部门信息更新成功');
+        const response = await api.put(`/api/department/${editingDepartment.id}`, values);
+        if (response.code === 1) {
+          message.success('部门信息更新成功');
+          loadDepartments();
+        } else {
+          message.error('更新失败');
+        }
       } else {
         // 新增模式
-        const newDepartment = {
-          id: Date.now().toString(),
-          ...values,
-          employeeCount: Math.floor(Math.random() * 20) + 1,
-        };
-        setDepartments([...departments, newDepartment]);
-        message.success('新增部门成功');
+        const response = await api.post('/api/department', values);
+        if (response.code === 1) {
+          message.success('新增部门成功');
+          loadDepartments();
+        } else {
+          message.error('新增失败');
+        }
       }
       
       setIsModalVisible(false);
     } catch (error) {
-      console.log('Failed:', error);
+      message.error('操作失败');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -206,6 +223,7 @@ const DepartmentManagement = () => {
           columns={columns}
           dataSource={departments}
           rowKey="id"
+          loading={loading}
           pagination={{
             pageSize: pageSize,
             current: currentPage,
