@@ -194,6 +194,49 @@ export const TabProvider = ({ children }) => {
   };
 
   /**
+   * 批量关闭标签页
+   * @param {string} action - 关闭动作
+   * @param {Object} referenceTab - 参考标签页
+   */
+  const handleCloseTabs = (action, referenceTab) => {
+    const homeTab = tabs.find((tab) => tab.key === '/') || { key: '/', title: '首页', path: '/' };
+    const referenceIndex = tabs.findIndex((tab) => tab.key === referenceTab?.key);
+
+    let newTabs = tabs;
+    if (action === 'all') {
+      newTabs = [homeTab];
+    } else if (referenceIndex !== -1) {
+      if (action === 'left') {
+        newTabs = tabs.filter((tab, index) => tab.key === '/' || index >= referenceIndex);
+      } else if (action === 'right') {
+        newTabs = tabs.filter((tab, index) => tab.key === '/' || index <= referenceIndex);
+      } else if (action === 'others') {
+        newTabs = tabs.filter((tab) => tab.key === '/' || tab.key === referenceTab.key);
+      } else if (action === 'current') {
+        if (referenceTab.key === '/') {
+          return;
+        }
+        newTabs = tabs.filter((tab) => tab.key !== referenceTab.key);
+      }
+    }
+
+    if (!newTabs.length) {
+      newTabs = [homeTab];
+    }
+
+    setTabs(newTabs);
+
+    const activeStillExists = newTabs.some((tab) => tab.key === activeTab.key);
+    if (activeStillExists) {
+      return;
+    }
+
+    const nextTab = newTabs.find((tab) => tab.key === referenceTab?.key) || newTabs[newTabs.length - 1] || homeTab;
+    setActiveTab(nextTab);
+    navigate(nextTab.path);
+  };
+
+  /**
    * 处理标签页重新排序
    * @param {Array} newTabs - 重新排序后的标签页列表
    */
@@ -213,6 +256,7 @@ export const TabProvider = ({ children }) => {
     activeTab,
     handleTabClick,
     handleTabClose,
+    handleCloseTabs,
     handleTabsReorder,
   };
 

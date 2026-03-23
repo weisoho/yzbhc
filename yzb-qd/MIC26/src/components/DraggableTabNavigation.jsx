@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { CloseOutlined } from '@ant-design/icons';
+import { Dropdown } from 'antd';
 
 /**
  * 可拖拽的标签页导航组件
@@ -15,7 +16,7 @@ import { CloseOutlined } from '@ant-design/icons';
  * @param {Function} props.onTabClose - 标签页关闭回调
  * @param {Function} props.onTabsReorder - 标签页重新排序回调
  */
-const DraggableTabNavigation = ({ tabs, activeTab, onTabClick, onTabClose, onTabsReorder }) => {
+const DraggableTabNavigation = ({ tabs, activeTab, onTabClick, onTabClose, onCloseTabs, onTabsReorder }) => {
   // 悬停的标签页
   const [hoveredTab, setHoveredTab] = useState(null);
   // 正在拖拽的标签页
@@ -78,6 +79,28 @@ const DraggableTabNavigation = ({ tabs, activeTab, onTabClick, onTabClose, onTab
   const handleTabClose = (e, tab) => {
     e.stopPropagation();
     onTabClose(tab);
+  };
+
+  const buildContextMenuItems = (tab) => {
+    const currentIndex = tabs.findIndex((item) => item.key === tab.key);
+    const closableTabs = tabs.filter((item) => item.key !== '/');
+    const leftClosable = tabs.slice(1, currentIndex).length > 0;
+    const rightClosable = tabs.slice(currentIndex + 1).filter((item) => item.key !== '/').length > 0;
+
+    return [
+      { key: 'current', label: '关闭当前', disabled: tab.key === '/' },
+      { key: 'left', label: '关闭左侧', disabled: !leftClosable },
+      { key: 'right', label: '关闭右侧', disabled: !rightClosable },
+      { key: 'others', label: '关闭其他', disabled: closableTabs.length <= 1 },
+      { key: 'all', label: '关闭全部', disabled: closableTabs.length === 0 },
+    ];
+  };
+
+  const handleContextMenuClick = ({ key }, tab) => {
+    if (!onCloseTabs) {
+      return;
+    }
+    onCloseTabs(key, tab);
   };
 
   /**
@@ -199,7 +222,7 @@ const DraggableTabNavigation = ({ tabs, activeTab, onTabClick, onTabClose, onTab
         const isDragging = draggingTab?.key === tab.key;
         const isDragOver = dragOverTab?.key === tab.key;
         
-        return (
+        const tabNode = (
           <div
             key={tab.key}
             draggable={!isHomeTab}
@@ -302,6 +325,23 @@ const DraggableTabNavigation = ({ tabs, activeTab, onTabClick, onTabClose, onTab
               }} />
             )}
           </div>
+        );
+
+        if (isHomeTab) {
+          return tabNode;
+        }
+
+        return (
+          <Dropdown
+            key={tab.key}
+            trigger={['contextMenu']}
+            menu={{
+              items: buildContextMenuItems(tab),
+              onClick: (info) => handleContextMenuClick(info, tab),
+            }}
+          >
+            {tabNode}
+          </Dropdown>
         );
       })}
     </div>

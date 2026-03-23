@@ -3,8 +3,9 @@
  * 显示系统概览、统计数据、预警信息等
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Statistic, Table, Tag, Button } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import { 
   DollarOutlined, 
   InboxOutlined, 
@@ -12,12 +13,17 @@ import {
   UnorderedListOutlined,
   AlertOutlined
 } from '@ant-design/icons';
+import moment from 'moment';
+import api from '../utils/api';
 
 /**
  * 首页组件
  * 展示系统概览、库存统计、近效期商品、过期商品和资质预警等信息
  */
 const Home = () => {
+  const navigate = useNavigate();
+  const [qualificationWarningData, setQualificationWarningData] = useState([]);
+
   // 库存统计数据
   const inventoryData = [
     { 
@@ -109,6 +115,45 @@ const Home = () => {
     };
   }, [styles]);
 
+  useEffect(() => {
+    const loadQualificationWarnings = async () => {
+      try {
+        const response = await api.get('/api/scm/suppliers/qualifications', {
+          pageNum: 1,
+          pageSize: 20,
+        });
+
+        if (response.code !== 1 || !response.data) {
+          return;
+        }
+
+        const rows = (response.data.records || [])
+          .filter((item) => item.type !== 'REGISTRATION_CERTIFICATE')
+          .map((item) => {
+            const { status, daysUntilExpiry } = getQualificationWarningStatus(item.expiryDate);
+            return {
+              key: item.id,
+              supplierName: item.supplierName,
+              certificateType: item.licenseType || item.type,
+              certificateNumber: item.licenseNumber,
+              expiryDate: item.expiryDate,
+              status,
+              daysUntilExpiry,
+            };
+          })
+          .sort((left, right) => (left.daysUntilExpiry ?? 0) - (right.daysUntilExpiry ?? 0))
+          .slice(0, 4);
+
+        setQualificationWarningData(rows);
+      } catch (error) {
+        console.error('首页资质预警加载失败:', error);
+        setQualificationWarningData([]);
+      }
+    };
+
+    loadQualificationWarnings();
+  }, []);
+
   // 近效期商品数据
   const expiringItems = [
     { key: '1', name: '一次性注射器', specification: '10ml', warehouse: '仓库1', shelf: 'A1-01', productionDate: '2024-01-15', expirationDate: '2024-03-15', daysLeft: 15 },
@@ -121,13 +166,19 @@ const Home = () => {
     { key: '1', name: '酒精棉球', specification: '50g/瓶', warehouse: '仓库3', shelf: 'D4-02', productionDate: '2023-11-20', expirationDate: '2024-02-10', daysOverdue: 10 },
   ];
 
-  // 资质预警数据
-  const qualificationWarningData = [
-    { key: '1', supplierName: '供应商B', certificateType: '生产许可证', certificateNumber: 'SC2024002', expiryDate: '2026-02-10', status: '紧急', daysUntilExpiry: 10 },
-    { key: '2', supplierName: '供应商C', certificateType: '生产许可证', certificateNumber: 'SC2024003', expiryDate: '2026-01-25', status: '已过期', daysUntilExpiry: -5 },
-    { key: '3', supplierName: '供应商B', certificateType: '经营许可证', certificateNumber: 'BL2024002', expiryDate: '2026-02-28', status: '即将过期', daysUntilExpiry: 30 },
-    { key: '4', supplierName: '供应商C', certificateType: '经营许可证', certificateNumber: 'BL2024003', expiryDate: '2026-02-15', status: '即将过期', daysUntilExpiry: 15 },
-  ];
+  const getQualificationWarningStatus = (expiryDate) => {
+    const today = moment().startOf('day');
+    const targetDate = moment(expiryDate).startOf('day');
+    const daysUntilExpiry = targetDate.diff(today, 'days');
+
+    if (daysUntilExpiry < 0) {
+      return { status: '已过期', daysUntilExpiry };
+    }
+    if (daysUntilExpiry <= 90) {
+      return { status: '即将过期', daysUntilExpiry };
+    }
+    return { status: '有效', daysUntilExpiry };
+  };
 
   /**
    * 近效期商品表格列配置
@@ -344,7 +395,6 @@ const Home = () => {
       render: (status) => {
         let color = '#52c41a';
         if (status === '已过期') color = '#f5222d';
-        else if (status === '紧急') color = '#fa541c';
         else if (status === '即将过期') color = '#faad14';
         return (
           <Tag 
@@ -364,9 +414,10 @@ const Home = () => {
         <Button 
           type="primary" 
           size="small" 
+          onClick={() => navigate('/supplier-qualification-warning')}
           style={{ borderRadius: 6 }}
         >
-          查看详情
+          打开预警页
         </Button>
       )
     },
@@ -729,6 +780,7 @@ const Home = () => {
               <Button 
                 type="primary" 
                 ghost
+                onClick={() => navigate('/supplier-qualification-warning')}
                 style={{ 
                   color: '#faad14', 
                   fontWeight: 600,

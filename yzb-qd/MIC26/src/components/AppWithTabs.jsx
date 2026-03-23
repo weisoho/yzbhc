@@ -3,7 +3,7 @@ import { TabProvider, useTabContext } from '../contexts/TabContext';
 import DraggableTabNavigation from './DraggableTabNavigation';
 
 const AppContent = ({ children }) => {
-  const { tabs, activeTab, handleTabClick, handleTabClose, handleTabsReorder } = useTabContext();
+  const { tabs, activeTab, handleTabClick, handleTabClose, handleCloseTabs, handleTabsReorder } = useTabContext();
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
@@ -12,6 +12,7 @@ const AppContent = ({ children }) => {
         activeTab={activeTab}
         onTabClick={handleTabClick}
         onTabClose={handleTabClose}
+        onCloseTabs={handleCloseTabs}
         onTabsReorder={handleTabsReorder}
       />
       <div style={{ flex: 1 }}>
