@@ -70,5 +70,9 @@ public class LoginController {
         userTokenMapper.insert(userToken);
         return AjaxResult.res(1, "登录成功", ysUser);
     }
+    @GetMapping("/test")
+    public String test(){
+        return "11111";
+    }
 }
 

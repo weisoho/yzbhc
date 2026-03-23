@@ -19,7 +19,7 @@ import java.util.List;
  * 仓库管理模块
  */
 @RestController
-@RequestMapping("/yzb")
+@RequestMapping("/api")
 public class WarehouseController {
     @Autowired
     private WarehouseMapper warehouseMapper;
