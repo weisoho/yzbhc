@@ -35,22 +35,31 @@ public class DataScopeUtil {
 
         StringBuilder condition = new StringBuilder();
         String prefix = tableAlias != null && !tableAlias.isEmpty() ? tableAlias + "." : "";
+        Long currentDeptId = getCurrentUserDeptId();
 
         switch (dataScope) {
             case 1: // 全部数据权限
                 // 不添加任何条件
                 break;
             case 2: // 本部门及以下数据权限
-                // 需要查询部门树，这里简化处理
-                condition.append(" AND ").append(prefix).append(deptColumn)
-                        .append(" IN (SELECT id FROM sys_department WHERE id = ")
-                        .append(getCurrentUserDeptId())
-                        .append(" OR FIND_IN_SET(").append(getCurrentUserDeptId())
-                        .append(", ancestors))");
+                if (currentDeptId == null) {
+                    condition.append(" AND 1=0");
+                } else {
+                    condition.append(" AND ").append(prefix).append(deptColumn)
+                            .append(" IN (SELECT id FROM sys_department WHERE is_deleted = 0 AND (id = ")
+                            .append(currentDeptId)
+                            .append(" OR parent_id = ")
+                            .append(currentDeptId)
+                            .append("))");
+                }
                 break;
             case 3: // 本部门数据权限
-                condition.append(" AND ").append(prefix).append(deptColumn)
-                        .append(" = ").append(getCurrentUserDeptId());
+                if (currentDeptId == null) {
+                    condition.append(" AND 1=0");
+                } else {
+                    condition.append(" AND ").append(prefix).append(deptColumn)
+                            .append(" = ").append(currentDeptId);
+                }
                 break;
             case 4: // 仅本人数据权限
                 condition.append(" AND ").append(prefix).append(userColumn)
@@ -84,9 +93,11 @@ public class DataScopeUtil {
      * 获取当前用户部门ID
      */
     private static Long getCurrentUserDeptId() {
-        // 这里需要从用户信息中获取部门ID
-        // 简化处理，实际应该从缓存或数据库获取
-        return 1L;
+        YsUser currentAccount = LoginCacheUtil.getCurrentAccount();
+        if (currentAccount == null || currentAccount.getDepId() == null) {
+            return null;
+        }
+        return currentAccount.getDepId().longValue();
     }
 
     /**
@@ -108,18 +119,22 @@ public class DataScopeUtil {
             dataScope = 4;
         }
 
+        Long currentDeptId = getCurrentUserDeptId();
+
         switch (dataScope) {
             case 1: // 全部数据权限
                 return true;
             case 2: // 本部门及以下
+                return targetDeptId != null && currentDeptId != null
+                        && targetDeptId.longValue() == currentDeptId.longValue();
             case 3: // 本部门
-                // 需要判断目标部门是否在权限范围内
-                return targetDeptId != null && targetDeptId.equals(getCurrentUserDeptId());
+                return targetDeptId != null && currentDeptId != null
+                        && targetDeptId.longValue() == currentDeptId.longValue();
             case 4: // 仅本人
-                return currentUserId.equals(targetUserId);
+                return targetUserId != null && currentUserId.intValue() == targetUserId.intValue();
             case 5: // 自定义
                 Set<Integer> customDeptIds = permissions.getCustomDeptIds();
-                return customDeptIds != null && customDeptIds.contains(targetDeptId);
+                return targetDeptId != null && customDeptIds != null && customDeptIds.contains(targetDeptId.intValue());
             default:
                 return false;
         }

@@ -1,17 +1,27 @@
 /**
  * 院区上下文模块
- * 提供院区状态管理功能，包括院区选择、切换和状态持久化
+ * 提供院区和科室状态管理功能，包括真实部门树加载、院区切换和状态持久化
  */
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { message } from 'antd';
+import api, { getApiErrorMessage } from '../utils/api';
+import {
+  findDepartmentById,
+  flattenDepartmentTree,
+  getCampusNodes,
+  getDepartmentDisplayName,
+  getDepartmentOptionsByCampus,
+  normalizeDepartmentTree,
+} from '../utils/departmentTree';
 
-// 创建院区上下文
 const CampusContext = createContext();
 
-/**
- * 使用院区上下文的Hook
- * @returns {Object} 院区上下文对象
- */
+const CURRENT_CAMPUS_ID_KEY = 'currentCampusId';
+const CURRENT_CAMPUS_NAME_KEY = 'currentCampus';
+const CURRENT_DEPARTMENT_ID_KEY = 'currentDepartmentId';
+const CURRENT_DEPARTMENT_NAME_KEY = 'currentDepartment';
+
 export const useCampusContext = () => {
   const context = useContext(CampusContext);
   if (!context) {
@@ -20,102 +30,153 @@ export const useCampusContext = () => {
   return context;
 };
 
-/**
- * 院区上下文提供者组件
- * @param {Object} props - 组件属性
- * @param {React.ReactNode} props.children - 子组件
- */
 export const CampusProvider = ({ children }) => {
-  // 院区列表
-  const campuses = [
-    { id: 1, name: '白云总院', description: '总部所在地，主要管理部门' },
-    { id: 2, name: '天河分院', description: '天河区主要分院，设备先进' },
-    { id: 3, name: '越秀分院', description: '越秀区老牌分院，历史悠久' },
-    { id: 4, name: '北京分院', description: '北京地区分院，规模较大' },
-    { id: 5, name: '湛江分院', description: '湛江地区分院，服务粤西' },
-  ];
-
-  // 从localStorage读取当前院区，如果不存在则使用默认值'白云总院'
-  const [currentCampus, setCurrentCampus] = useState(() => {
-    const savedCampus = localStorage.getItem('currentCampus');
-    return savedCampus || '白云总院';
+  const [campuses, setCampuses] = useState([]);
+  const [campusLoading, setCampusLoading] = useState(false);
+  const [currentCampusId, setCurrentCampusId] = useState(() => {
+    const savedId = localStorage.getItem(CURRENT_CAMPUS_ID_KEY);
+    return savedId ? Number(savedId) : null;
   });
-
-  // 院区选择模态框可见状态
+  const [currentDepartmentId, setCurrentDepartmentId] = useState(() => {
+    const savedId = localStorage.getItem(CURRENT_DEPARTMENT_ID_KEY);
+    return savedId ? Number(savedId) : null;
+  });
   const [isCampusModalVisible, setIsCampusModalVisible] = useState(false);
+  const [hasSelectedCampus, setHasSelectedCampus] = useState(() => localStorage.getItem('hasSelectedCampus') === 'true');
 
-  // 是否已选择院区（用于登录后首次选择）
-  const [hasSelectedCampus, setHasSelectedCampus] = useState(() => {
-    const saved = localStorage.getItem('hasSelectedCampus');
-    return saved === 'true';
-  });
+  const persistDepartmentSelection = (department) => {
+    if (department?.id) {
+      localStorage.setItem(CURRENT_DEPARTMENT_ID_KEY, String(department.id));
+    } else {
+      localStorage.removeItem(CURRENT_DEPARTMENT_ID_KEY);
+    }
+    localStorage.setItem(CURRENT_DEPARTMENT_NAME_KEY, getDepartmentDisplayName(department));
+    window.dispatchEvent(new CustomEvent('departmentChanged', { detail: department }));
+  };
 
-  /**
-   * 选择院区
-   * @param {string} campusName - 院区名称
-   */
-  const selectCampus = (campusName) => {
-    setCurrentCampus(campusName);
+  const persistCampusSelection = (campus) => {
+    if (campus?.id) {
+      localStorage.setItem(CURRENT_CAMPUS_ID_KEY, String(campus.id));
+    } else {
+      localStorage.removeItem(CURRENT_CAMPUS_ID_KEY);
+    }
+    localStorage.setItem(CURRENT_CAMPUS_NAME_KEY, getDepartmentDisplayName(campus));
+    window.dispatchEvent(new CustomEvent('campusChanged', { detail: campus }));
+  };
+
+  const campusById = useMemo(() => new Map(flattenDepartmentTree(campuses).map((item) => [Number(item.id), item])), [campuses]);
+
+  const currentCampusNode = currentCampusId ? campusById.get(Number(currentCampusId)) || null : null;
+  const departmentOptions = useMemo(() => getDepartmentOptionsByCampus(currentCampusNode), [currentCampusNode]);
+  const currentDepartmentNode = currentDepartmentId
+    ? findDepartmentById(departmentOptions, currentDepartmentId) || null
+    : null;
+
+  const applyCampusSelection = (campusNode, nextDepartmentId) => {
+    if (!campusNode) {
+      setCurrentCampusId(null);
+      setCurrentDepartmentId(null);
+      persistCampusSelection(null);
+      persistDepartmentSelection(null);
+      return;
+    }
+
+    const campusDepartments = getDepartmentOptionsByCampus(campusNode);
+    const nextDepartment = campusDepartments.find((item) => Number(item.id) === Number(nextDepartmentId)) || campusDepartments[0] || null;
+
+    setCurrentCampusId(Number(campusNode.id));
+    setCurrentDepartmentId(nextDepartment ? Number(nextDepartment.id) : null);
+    persistCampusSelection(campusNode);
+    persistDepartmentSelection(nextDepartment);
     setHasSelectedCampus(true);
-    localStorage.setItem('currentCampus', campusName);
     localStorage.setItem('hasSelectedCampus', 'true');
+  };
+
+  const loadCampusTree = async () => {
+    try {
+      setCampusLoading(true);
+      const response = await api.get('/api/department/tree');
+      if (response.code !== 1 || !Array.isArray(response.data)) {
+        throw new Error('加载部门树失败');
+      }
+
+      const normalizedTree = getCampusNodes(normalizeDepartmentTree(response.data));
+      setCampuses(normalizedTree);
+
+      const savedCampusName = localStorage.getItem(CURRENT_CAMPUS_NAME_KEY);
+      const preferredCampus = normalizedTree.find((item) => Number(item.id) === Number(currentCampusId))
+        || normalizedTree.find((item) => item.deptName === savedCampusName)
+        || normalizedTree[0]
+        || null;
+
+      if (preferredCampus) {
+        applyCampusSelection(preferredCampus, currentDepartmentId);
+      }
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '加载院区和科室失败'));
+    } finally {
+      setCampusLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCampusTree();
+  }, []);
+
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    if (isLoggedIn && !hasSelectedCampus && campuses.length > 0) {
+      setIsCampusModalVisible(true);
+    }
+  }, [campuses.length, hasSelectedCampus]);
+
+  const selectCampus = (campusIdentifier) => {
+    const campusNode = campuses.find((item) => Number(item.id) === Number(campusIdentifier))
+      || campuses.find((item) => item.deptName === campusIdentifier);
+    applyCampusSelection(campusNode, null);
     setIsCampusModalVisible(false);
   };
 
-  /**
-   * 显示院区选择模态框
-   */
+  const selectDepartment = (departmentIdentifier) => {
+    const nextDepartment = departmentOptions.find((item) => Number(item.id) === Number(departmentIdentifier))
+      || departmentOptions.find((item) => item.deptName === departmentIdentifier);
+    setCurrentDepartmentId(nextDepartment ? Number(nextDepartment.id) : null);
+    persistDepartmentSelection(nextDepartment);
+  };
+
   const showCampusModal = () => {
     setIsCampusModalVisible(true);
   };
 
-  /**
-   * 隐藏院区选择模态框
-   */
   const hideCampusModal = () => {
     setIsCampusModalVisible(false);
   };
 
-  /**
-   * 检查是否需要显示院区选择（登录后首次）
-   */
-  const checkNeedCampusSelection = () => {
-    return !hasSelectedCampus;
-  };
+  const checkNeedCampusSelection = () => !hasSelectedCampus;
 
-  /**
-   * 强制显示院区选择（用于登录后）
-   */
   const forceShowCampusSelection = () => {
     setHasSelectedCampus(false);
     localStorage.removeItem('hasSelectedCampus');
     setIsCampusModalVisible(true);
   };
 
-  // 监听登录状态变化
-  useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    if (isLoggedIn && !hasSelectedCampus) {
-      setIsCampusModalVisible(true);
-    }
-  }, [hasSelectedCampus]);
-
-  // 上下文值
   const contextValue = {
     campuses,
-    currentCampus,
+    campusLoading,
+    currentCampus: getDepartmentDisplayName(currentCampusNode),
+    currentCampusNode,
+    currentDepartment: currentDepartmentNode,
+    departmentOptions,
     selectCampus,
+    selectDepartment,
     isCampusModalVisible,
     showCampusModal,
     hideCampusModal,
     hasSelectedCampus,
     checkNeedCampusSelection,
     forceShowCampusSelection,
+    reloadCampuses: loadCampusTree,
   };
 
-  return (
-    <CampusContext.Provider value={contextValue}>
-      {children}
-    </CampusContext.Provider>
-  );
+  return <CampusContext.Provider value={contextValue}>{children}</CampusContext.Provider>;
 };

@@ -2,6 +2,7 @@ package com.yunsheng.yzb.service;
 
 import com.yunsheng.yzb.model.SysRole;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 角色服务接口
@@ -47,6 +48,16 @@ public interface RoleService {
      * 为用户分配角色
      */
     int assignRolesToUser(Integer userId, List<Long> roleIds, Integer operatorId);
+
+    /**
+     * 查询角色已分配的数据权限部门ID。
+     */
+    Set<Long> getDepartmentIdsByRoleId(Long roleId);
+
+    /**
+     * 为角色分配数据权限部门，自动包含下级科室。
+     */
+    int assignDepartments(Long roleId, List<Long> deptIds);
 
     /**
      * 移除用户角色
