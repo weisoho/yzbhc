@@ -21,6 +21,9 @@ const CURRENT_CAMPUS_ID_KEY = 'currentCampusId';
 const CURRENT_CAMPUS_NAME_KEY = 'currentCampus';
 const CURRENT_DEPARTMENT_ID_KEY = 'currentDepartmentId';
 const CURRENT_DEPARTMENT_NAME_KEY = 'currentDepartment';
+const AUTH_CHANGED_EVENT = 'authChanged';
+
+const getStoredLoginState = () => localStorage.getItem('isLoggedIn') === 'true';
 
 export const useCampusContext = () => {
   const context = useContext(CampusContext);
@@ -33,6 +36,7 @@ export const useCampusContext = () => {
 export const CampusProvider = ({ children }) => {
   const [campuses, setCampuses] = useState([]);
   const [campusLoading, setCampusLoading] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(getStoredLoginState);
   const [currentCampusId, setCurrentCampusId] = useState(() => {
     const savedId = localStorage.getItem(CURRENT_CAMPUS_ID_KEY);
     return savedId ? Number(savedId) : null;
@@ -42,7 +46,24 @@ export const CampusProvider = ({ children }) => {
     return savedId ? Number(savedId) : null;
   });
   const [isCampusModalVisible, setIsCampusModalVisible] = useState(false);
-  const [hasSelectedCampus, setHasSelectedCampus] = useState(() => localStorage.getItem('hasSelectedCampus') === 'true');
+  const [hasSelectedCampus, setHasSelectedCampus] = useState(() => getStoredLoginState() && localStorage.getItem('hasSelectedCampus') === 'true');
+
+  const resetCampusState = (clearPersistent = false) => {
+    setCampuses([]);
+    setCampusLoading(false);
+    setCurrentCampusId(null);
+    setCurrentDepartmentId(null);
+    setIsCampusModalVisible(false);
+    setHasSelectedCampus(false);
+
+    if (clearPersistent) {
+      localStorage.removeItem(CURRENT_CAMPUS_ID_KEY);
+      localStorage.removeItem(CURRENT_CAMPUS_NAME_KEY);
+      localStorage.removeItem(CURRENT_DEPARTMENT_ID_KEY);
+      localStorage.removeItem(CURRENT_DEPARTMENT_NAME_KEY);
+      localStorage.removeItem('hasSelectedCampus');
+    }
+  };
 
   const persistDepartmentSelection = (department) => {
     if (department?.id) {
@@ -120,15 +141,39 @@ export const CampusProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    loadCampusTree();
+    const handleAuthChanged = () => {
+      const nextLoggedIn = getStoredLoginState();
+      setIsLoggedIn(nextLoggedIn);
+      if (!nextLoggedIn) {
+        resetCampusState(true);
+      } else {
+        setHasSelectedCampus(localStorage.getItem('hasSelectedCampus') === 'true');
+      }
+    };
+
+    window.addEventListener(AUTH_CHANGED_EVENT, handleAuthChanged);
+    window.addEventListener('storage', handleAuthChanged);
+
+    return () => {
+      window.removeEventListener(AUTH_CHANGED_EVENT, handleAuthChanged);
+      window.removeEventListener('storage', handleAuthChanged);
+    };
   }, []);
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    if (isLoggedIn) {
+      loadCampusTree();
+      return;
+    }
+
+    resetCampusState(false);
+  }, [isLoggedIn]);
+
+  useEffect(() => {
     if (isLoggedIn && !hasSelectedCampus && campuses.length > 0) {
       setIsCampusModalVisible(true);
     }
-  }, [campuses.length, hasSelectedCampus]);
+  }, [campuses.length, hasSelectedCampus, isLoggedIn]);
 
   const selectCampus = (campusIdentifier) => {
     const campusNode = campuses.find((item) => Number(item.id) === Number(campusIdentifier))

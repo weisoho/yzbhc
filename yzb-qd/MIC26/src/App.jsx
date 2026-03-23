@@ -114,8 +114,13 @@ const AppContent = () => {
   
   // 使用院区上下文
   const {
+    campuses,
     currentCampus,
+    currentCampusNode,
+    currentDepartment,
+    departmentOptions,
     selectCampus,
+    selectDepartment,
     isCampusModalVisible,
     showCampusModal,
     hideCampusModal
@@ -124,14 +129,10 @@ const AppContent = () => {
   // 侧边栏折叠状态
   const [collapsed, setCollapsed] = useState(false);
   
-  // 从localStorage读取当前科室，如果不存在则使用默认值'测试科室'
-  const [currentDepartment, setCurrentDepartment] = useState(() => {
-    const savedDepartment = localStorage.getItem('currentDepartment');
-    return savedDepartment || '测试科室';
-  });
-  
   // 科室选择模态框可见状态
   const [isDepartmentModalVisible, setIsDepartmentModalVisible] = useState(false);
+
+  const currentDepartmentLabel = currentDepartment?.deptName || currentDepartment?.name || '未选择科室';
   
   // 主页功能设置（与 PageVisibilityContext 双向绑定）
   const [homeFeatureSettings, setHomeFeatureSettings] = useState({
@@ -237,12 +238,18 @@ const AppContent = () => {
    * 清除登录状态并跳转到登录页面
    */
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userInfo');
+    localStorage.removeItem('username');
     localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('currentCampusId');
+    localStorage.removeItem('currentCampus');
+    localStorage.removeItem('currentDepartmentId');
+    localStorage.removeItem('currentDepartment');
+    localStorage.removeItem('hasSelectedCampus');
+    window.dispatchEvent(new CustomEvent('authChanged', { detail: { isLoggedIn: false } }));
     window.location.href = '/login';
   };
-
-  // 科室列表
-  const departments = ['内科', '外科', '儿科', '妇产科', '急诊科', '运营组', '测试科室'];
 
   /**
    * 显示科室选择模态框
@@ -257,11 +264,7 @@ const AppContent = () => {
    */
   const handleDepartmentChange = (e) => {
     const newDepartment = e.target.value;
-    setCurrentDepartment(newDepartment);
-    // 将当前科室保存到localStorage
-    localStorage.setItem('currentDepartment', newDepartment);
-    // 触发自定义事件，通知其他组件科室已更改
-    window.dispatchEvent(new CustomEvent('departmentChanged', { detail: newDepartment }));
+    selectDepartment(newDepartment);
     setIsDepartmentModalVisible(false);
   };
 
@@ -536,7 +539,7 @@ const AppContent = () => {
                     e.target.style.boxShadow = 'none';
                   }}
                 >
-                  {currentCampus}
+                  {currentCampus || '未选择院区'}
                 </button>
                 
                 <Avatar
@@ -582,7 +585,7 @@ const AppContent = () => {
                     e.target.style.backgroundColor = 'transparent';
                   }}
                 >
-                  {currentDepartment}
+                  {currentDepartmentLabel}
                 </button>
                 
                 {/* 退出登录按钮 */}
@@ -628,13 +631,13 @@ const AppContent = () => {
             >
               <Radio.Group
                 onChange={handleDepartmentChange}
-                value={currentDepartment}
+                value={currentDepartment?.id ?? null}
                 style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}
               >
-                {departments.map((dept) => (
+                {departmentOptions.map((dept) => (
                   <Radio.Button
-                    key={dept}
-                    value={dept}
+                    key={dept.id}
+                    value={dept.id}
                     style={{
                       width: '100%',
                       textAlign: 'center',
@@ -642,12 +645,12 @@ const AppContent = () => {
                       lineHeight: '38px',
                       borderRadius: 6,
                       border: '1px solid #d9d9d9',
-                      background: currentDepartment === dept ? '#667eea' : '#fff',
-                      color: currentDepartment === dept ? '#fff' : '#262626',
+                      background: Number(currentDepartment?.id) === Number(dept.id) ? '#667eea' : '#fff',
+                      color: Number(currentDepartment?.id) === Number(dept.id) ? '#fff' : '#262626',
                       transition: 'all 0.3s',
                     }}
                   >
-                    {dept}
+                    {dept.deptName || dept.name}
                   </Radio.Button>
                 ))}
               </Radio.Group>
@@ -1015,6 +1018,8 @@ const AppContent = () => {
                   onCancel={hideCampusModal}
                   onSelect={selectCampus}
                   currentCampus={currentCampus}
+                  currentCampusId={currentCampusNode?.id}
+                  campuses={campuses}
                 />
                 
               </div>

@@ -165,6 +165,9 @@
             <if test="query.manufacturer != null and query.manufacturer != ''">
                 AND m.manufacturer LIKE CONCAT('%', #{query.manufacturer}, '%')
             </if>
+            <if test="query.productName != null and query.productName != ''">
+                AND m.name LIKE CONCAT('%', #{query.productName}, '%')
+            </if>
             <if test="query.licenseNumber != null and query.licenseNumber != ''">
                 AND (sq.license_number LIKE CONCAT('%', #{query.licenseNumber}, '%')
                      OR m.registration_number LIKE CONCAT('%', #{query.licenseNumber}, '%'))

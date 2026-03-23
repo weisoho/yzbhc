@@ -118,6 +118,8 @@ public final class ScmRequest {
         private String supplierName;
         /** 生产厂家。 */
         private String manufacturer;
+        /** 物资名称。 */
+        private String productName;
         /** 证件编号/注册证号。 */
         private String licenseNumber;
         /** 预警状态。 */

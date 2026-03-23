@@ -24,6 +24,7 @@ const Login = () => {
         localStorage.setItem('username', values.username);
         localStorage.setItem('token', data.data.userToken);
         localStorage.setItem('userInfo', JSON.stringify(data.data));
+        window.dispatchEvent(new CustomEvent('authChanged', { detail: { isLoggedIn: true } }));
         
         // 设置token到api实例
         api.setToken(data.data.userToken);
