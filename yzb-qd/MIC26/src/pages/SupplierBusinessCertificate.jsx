@@ -3,7 +3,13 @@ import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, mes
 import { useParams } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import moment from 'moment';
-import api from '../utils/api';
+import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
+
+const sanitizeCapitalInput = (value) => {
+  const sanitized = (value || '').replace(/[^\d.]/g, '');
+  const [integerPart = '', ...decimalParts] = sanitized.split('.');
+  return decimalParts.length > 0 ? `${integerPart}.${decimalParts.join('')}` : integerPart;
+};
 
 const SupplierBusinessCertificate = () => {
   const { supplierId } = useParams();
@@ -74,13 +80,13 @@ const SupplierBusinessCertificate = () => {
           setTotal(0);
         }
       } else {
-        message.error('加载营业执照列表失败');
+        message.error(getApiResponseMessage(response, '加载营业执照列表失败'));
         setBusinessCertificates([]);
         setTotal(0);
       }
     } catch (error) {
       console.error('加载营业执照列表失败:', error);
-      message.error('加载营业执照列表失败');
+      message.error(getApiErrorMessage(error, '加载营业执照列表失败'));
       setBusinessCertificates([]);
       setTotal(0);
     } finally {
@@ -166,7 +172,7 @@ const SupplierBusinessCertificate = () => {
         message.success('营业执照更新成功');
         await loadBusinessCertificates();
       } else {
-        message.error('营业执照更新失败');
+        message.error(getApiResponseMessage(response, '营业执照更新失败'));
       }
       
       setEditVisible(false);
@@ -175,7 +181,7 @@ const SupplierBusinessCertificate = () => {
       setEditFileList([]);
     } catch (error) {
       console.error('编辑营业执照失败:', error);
-      message.error('操作失败');
+      message.error(getApiErrorMessage(error, '操作失败'));
     } finally {
       setLoading(false);
     }
@@ -197,10 +203,10 @@ const SupplierBusinessCertificate = () => {
             message.success('营业执照删除成功');
             await loadBusinessCertificates();
           } else {
-            message.error('营业执照删除失败');
+            message.error(getApiResponseMessage(response, '营业执照删除失败'));
           }
         } catch (error) {
-          message.error('营业执照删除失败');
+          message.error(getApiErrorMessage(error, '营业执照删除失败'));
         } finally {
           setLoading(false);
         }
@@ -532,7 +538,7 @@ const SupplierBusinessCertificate = () => {
               message.success('营业执照新增成功');
               await loadBusinessCertificates();
             } else {
-              message.error('营业执照新增失败');
+              message.error(getApiResponseMessage(response, '营业执照新增失败'));
             }
             
             setVisible(false);
@@ -540,7 +546,7 @@ const SupplierBusinessCertificate = () => {
             setFileList([]);
           } catch (error) {
             console.error('新增营业执照失败:', error);
-            message.error('操作失败');
+            message.error(getApiErrorMessage(error, '操作失败'));
           } finally {
             setLoading(false);
           }
@@ -606,6 +612,7 @@ const SupplierBusinessCertificate = () => {
           <Form.Item
             name="registeredCapital"
             label="注册资本"
+            getValueFromEvent={(event) => sanitizeCapitalInput(event?.target?.value)}
             rules={[{ required: true, message: '请输入注册资本' }]}
           >
             <Input placeholder="请输入注册资本" />
@@ -713,6 +720,7 @@ const SupplierBusinessCertificate = () => {
           <Form.Item
             name="registeredCapital"
             label="注册资本"
+            getValueFromEvent={(event) => sanitizeCapitalInput(event?.target?.value)}
             rules={[{ required: true, message: '请输入注册资本' }]}
           >
             <Input placeholder="请输入注册资本" />

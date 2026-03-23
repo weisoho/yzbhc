@@ -24,6 +24,9 @@ const SupplierInspectionReport = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [suppliers, setSuppliers] = useState([]);
+  const [total, setTotal] = useState(0);
+
+  const getErrorMessage = (error, fallback) => error?.msg || error?.message || error?.data?.msg || error?.data?.message || fallback;
 
   // 加载供应商列表
   const loadSuppliers = async () => {
@@ -33,9 +36,12 @@ const SupplierInspectionReport = () => {
       if (response.code === 1 && response.data) {
         console.log('供应商列表数据:', response.data.records);
         setSuppliers(response.data.records);
+      } else {
+        message.error(response.msg || response.message || '获取供应商列表失败');
       }
     } catch (error) {
       console.error('获取供应商列表失败:', error);
+      message.error(getErrorMessage(error, '获取供应商列表失败'));
     }
   };
 
@@ -55,7 +61,9 @@ const SupplierInspectionReport = () => {
       if (response.code === 1 && response.data) {
         console.log('资质数据:', response.data);
         console.log('供应商列表:', suppliers);
-        const certificateList = response.data.map(certificate => {
+        const records = Array.isArray(response.data?.records) ? response.data.records : [];
+        const totalCount = typeof response.data?.total === 'number' ? response.data.total : records.length;
+        const certificateList = records.map(certificate => {
           // 计算状态
           const status = certificate.expiryDate && new Date(certificate.expiryDate) < new Date() ? '已过期' : '有效';
           // 根据supplierId从供应商列表中查找对应的供应商名称
@@ -77,11 +85,16 @@ const SupplierInspectionReport = () => {
           };
         });
         setRegistrationCertificates(certificateList);
+        setTotal(totalCount);
       } else {
-        message.error('加载注册证列表失败');
+        setRegistrationCertificates([]);
+        setTotal(0);
+        message.error(response.msg || response.message || '加载注册证列表失败');
       }
     } catch (error) {
-      message.error('加载注册证列表失败');
+      setRegistrationCertificates([]);
+      setTotal(0);
+      message.error(getErrorMessage(error, '加载注册证列表失败'));
     } finally {
       setLoading(false);
     }
@@ -155,7 +168,7 @@ const SupplierInspectionReport = () => {
         message.success('注册证更新成功');
         await loadRegistrationCertificates();
       } else {
-        message.error('注册证更新失败');
+        message.error(response.msg || response.message || '注册证更新失败');
       }
       
       setEditVisible(false);
@@ -163,7 +176,7 @@ const SupplierInspectionReport = () => {
       editForm.resetFields();
       setEditFileList([]);
     } catch (error) {
-      message.error('操作失败');
+      message.error(getErrorMessage(error, '操作失败'));
     } finally {
       setLoading(false);
     }
@@ -185,10 +198,10 @@ const SupplierInspectionReport = () => {
             message.success('注册证删除成功');
             await loadRegistrationCertificates();
           } else {
-            message.error('注册证删除失败');
+            message.error(response.msg || response.message || '注册证删除失败');
           }
         } catch (error) {
-          message.error('注册证删除失败');
+          message.error(getErrorMessage(error, '注册证删除失败'));
         } finally {
           setLoading(false);
         }
@@ -490,6 +503,7 @@ const SupplierInspectionReport = () => {
           dataSource={registrationCertificates} 
           loading={loading}
           pagination={{ 
+            total: total,
             pageSize: pageSize,
             current: currentPage,
             onChange: async (page, size) => {
@@ -537,14 +551,14 @@ const SupplierInspectionReport = () => {
               message.success('注册证新增成功');
               await loadRegistrationCertificates();
             } else {
-              message.error('注册证新增失败');
+              message.error(response.msg || response.message || '注册证新增失败');
             }
             
             setVisible(false);
             form.resetFields();
             setFileList([]);
           } catch (error) {
-            message.error('操作失败');
+            message.error(getErrorMessage(error, '操作失败'));
           } finally {
             setLoading(false);
           }

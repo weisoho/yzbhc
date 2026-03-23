@@ -3,7 +3,7 @@ import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, mes
 import { useParams } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import moment from 'moment';
-import api from '../utils/api';
+import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
 
 const SupplierCertificate = () => {
   const { supplierId } = useParams();
@@ -73,13 +73,13 @@ const SupplierCertificate = () => {
           setTotal(0);
         }
       } else {
-        message.error('加载注册证列表失败');
+        message.error(getApiResponseMessage(response, '加载注册证列表失败'));
         setCertificates([]);
         setTotal(0);
       }
     } catch (error) {
       console.error('加载注册证列表失败:', error);
-      message.error('加载注册证列表失败');
+      message.error(getApiErrorMessage(error, '加载注册证列表失败'));
       setCertificates([]);
       setTotal(0);
     } finally {
@@ -154,7 +154,7 @@ const SupplierCertificate = () => {
         message.success('注册证更新成功');
         await loadCertificates();
       } else {
-        message.error('注册证更新失败');
+        message.error(getApiResponseMessage(response, '注册证更新失败'));
       }
       
       setEditVisible(false);
@@ -162,7 +162,7 @@ const SupplierCertificate = () => {
       editForm.resetFields();
       setEditFileList([]);
     } catch (error) {
-      message.error('操作失败');
+      message.error(getApiErrorMessage(error, '操作失败'));
     } finally {
       setLoading(false);
     }
@@ -184,10 +184,10 @@ const SupplierCertificate = () => {
             message.success('注册证删除成功');
             await loadCertificates();
           } else {
-            message.error('注册证删除失败');
+            message.error(getApiResponseMessage(response, '注册证删除失败'));
           }
         } catch (error) {
-          message.error('注册证删除失败');
+          message.error(getApiErrorMessage(error, '注册证删除失败'));
         } finally {
           setLoading(false);
         }
@@ -329,13 +329,13 @@ const SupplierCertificate = () => {
               message.success('注册证新增成功');
               await loadCertificates();
             } else {
-              message.error('注册证新增失败');
+              message.error(getApiResponseMessage(response, '注册证新增失败'));
             }
             setVisible(false);
             form.resetFields();
             setFileList([]);
           } catch (error) {
-            message.error('操作失败');
+            message.error(getApiErrorMessage(error, '操作失败'));
           } finally {
             setLoading(false);
           }

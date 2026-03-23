@@ -6,6 +6,11 @@ import { FORM_STYLES, getFormLayoutStyle, getModalConfig } from '../utils/formSt
 import api from '../utils/api';
 
 
+const CREDIT_CODE_REGEX = /^[0-9A-Z]{18}$/;
+const MOBILE_PHONE_REGEX = /^1\d{10}$/;
+const NUMERIC_AMOUNT_REGEX = /^\d+(\.\d+)?$/;
+
+
 
 const SupplierMaintenance = () => {
   const [visible, setVisible] = useState(false);
@@ -23,6 +28,18 @@ const SupplierMaintenance = () => {
     legalRepresentative: '',
     phone: ''
   });
+
+  const normalizeCreditCode = (value) => (value ? value.trim().toUpperCase() : value);
+
+  const sanitizePhoneInput = (value) => (value || '').replace(/\D/g, '').slice(0, 11);
+
+  const sanitizeCapitalInput = (value) => {
+    const sanitized = (value || '').replace(/[^\d.]/g, '');
+    const [integerPart = '', ...decimalParts] = sanitized.split('.');
+    return decimalParts.length > 0 ? `${integerPart}.${decimalParts.join('')}` : integerPart;
+  };
+
+  const getErrorMessage = (error, fallback) => error?.msg || error?.message || error?.data?.msg || error?.data?.message || fallback;
 
   // 加载供应商列表
   const loadSuppliers = async () => {
@@ -53,11 +70,11 @@ const SupplierMaintenance = () => {
         }));
         setSuppliers(supplierList);
       } else {
-        message.error(response.message || '加载供应商列表失败');
+        message.error(response.msg || response.message || '加载供应商列表失败');
       }
     } catch (error) {
       console.error('加载供应商列表失败:', error);
-      message.error('加载供应商列表失败，请检查网络连接或联系管理员');
+      message.error(getErrorMessage(error, '加载供应商列表失败，请检查网络连接或联系管理员'));
     } finally {
       setLoading(false);
     }
@@ -107,11 +124,11 @@ const SupplierMaintenance = () => {
         name: values.name,
         enterpriseType: values.enterpriseType,
         contactPerson: values.legalRepresentative, // 使用法定代表人作为联系人
-        contactPhone: values.phone,
+        contactPhone: values.phone.trim(),
         address: values.address,
-        creditCode: values.creditCode,
+        creditCode: normalizeCreditCode(values.creditCode),
         legalRepresentative: values.legalRepresentative,
-        registeredCapital: values.registeredCapital,
+        registeredCapital: values.registeredCapital.trim(),
         registrationDate: values.registrationDate ? values.registrationDate.format('YYYY-MM-DD') : null
       };
       
@@ -122,7 +139,7 @@ const SupplierMaintenance = () => {
           message.success('供应商编辑成功');
           await loadSuppliers();
         } else {
-          message.error(response.message || '供应商编辑失败');
+          message.error(response.msg || response.message || '供应商编辑失败');
         }
       } else {
         // 新增供应商
@@ -131,7 +148,7 @@ const SupplierMaintenance = () => {
           message.success('供应商新增成功');
           await loadSuppliers();
         } else {
-          message.error(response.message || '供应商新增失败');
+          message.error(response.msg || response.message || '供应商新增失败');
         }
       }
       
@@ -140,7 +157,7 @@ const SupplierMaintenance = () => {
       form.resetFields();
     } catch (error) {
       console.error('操作失败:', error);
-      message.error('操作失败，请检查网络连接或联系管理员');
+      message.error(getErrorMessage(error, '操作失败，请检查网络连接或联系管理员'));
     } finally {
       setLoading(false);
     }
@@ -164,10 +181,10 @@ const SupplierMaintenance = () => {
         });
         setViewVisible(true);
       } else {
-        message.error('加载供应商详情失败');
+        message.error(response.msg || response.message || '加载供应商详情失败');
       }
     } catch (error) {
-      message.error('加载供应商详情失败');
+      message.error(getErrorMessage(error, '加载供应商详情失败'));
     } finally {
       setLoading(false);
     }
@@ -365,10 +382,10 @@ const SupplierMaintenance = () => {
                   message.success('供应商删除成功');
                   await loadSuppliers();
                 } else {
-                  message.error('供应商删除失败');
+                  message.error(response.msg || response.message || '供应商删除失败');
                 }
               } catch (error) {
-                message.error('供应商删除失败');
+                message.error(getErrorMessage(error, '供应商删除失败'));
               } finally {
                 setLoading(false);
               }
@@ -495,7 +512,23 @@ const SupplierMaintenance = () => {
               <Form.Item
                 name="creditCode"
                 label="统一社会信用代码"
-                rules={[{ required: true, message: '请输入统一社会信用代码' }]}
+                normalize={normalizeCreditCode}
+                rules={[
+                  { required: true, message: '请输入统一社会信用代码' },
+                  {
+                    validator: (_, value) => {
+                      if (!value) {
+                        return Promise.resolve();
+                      }
+
+                      if (!CREDIT_CODE_REGEX.test(normalizeCreditCode(value))) {
+                        return Promise.reject(new Error('统一社会信用代码应为18位大写字母或数字'));
+                      }
+
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
               >
                 <Input placeholder="请输入统一社会信用代码" />
               </Form.Item>
@@ -516,9 +549,25 @@ const SupplierMaintenance = () => {
               <Form.Item
                 name="registeredCapital"
                 label="注册资本"
-                rules={[{ required: true, message: '请输入注册资本' }]}
+                getValueFromEvent={(event) => sanitizeCapitalInput(event?.target?.value)}
+                rules={[
+                  { required: true, message: '请输入注册资本' },
+                  {
+                    validator: (_, value) => {
+                      if (!value) {
+                        return Promise.resolve();
+                      }
+
+                      if (!NUMERIC_AMOUNT_REGEX.test(value.trim())) {
+                        return Promise.reject(new Error('注册资本只能填写数字'));
+                      }
+
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
               >
-                <Input placeholder="请输入注册资本" />
+                <Input placeholder="请输入注册资本" inputMode="decimal" />
               </Form.Item>
             </Col>
           </Row>
@@ -537,9 +586,25 @@ const SupplierMaintenance = () => {
               <Form.Item
                 name="phone"
                 label="联系电话"
-                rules={[{ required: true, message: '请输入联系电话' }]}
+                getValueFromEvent={(event) => sanitizePhoneInput(event?.target?.value)}
+                rules={[
+                  { required: true, message: '请输入联系电话' },
+                  {
+                    validator: (_, value) => {
+                      if (!value) {
+                        return Promise.resolve();
+                      }
+
+                      if (!MOBILE_PHONE_REGEX.test(value.trim())) {
+                        return Promise.reject(new Error('请输入11位手机号'));
+                      }
+
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
               >
-                <Input placeholder="请输入联系电话" />
+                <Input placeholder="请输入联系电话" maxLength={11} inputMode="numeric" />
               </Form.Item>
             </Col>
           </Row>

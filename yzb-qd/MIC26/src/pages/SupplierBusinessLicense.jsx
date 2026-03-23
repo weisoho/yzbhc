@@ -3,7 +3,7 @@ import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, mes
 import { useParams } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import moment from 'moment';
-import api from '../utils/api';
+import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
 
 const SupplierBusinessLicense = () => {
   const { supplierId } = useParams();
@@ -63,13 +63,13 @@ const SupplierBusinessLicense = () => {
           setTotal(0);
         }
       } else {
-        message.error('加载经营许可证列表失败');
+        message.error(getApiResponseMessage(response, '加载经营许可证列表失败'));
         setBusinessLicenses([]);
         setTotal(0);
       }
     } catch (error) {
       console.error('加载经营许可证列表失败:', error);
-      message.error('加载经营许可证列表失败');
+      message.error(getApiErrorMessage(error, '加载经营许可证列表失败'));
       setBusinessLicenses([]);
       setTotal(0);
     } finally {
@@ -165,7 +165,7 @@ const SupplierBusinessLicense = () => {
         message.success('经营许可证更新成功');
         await loadBusinessLicenses();
       } else {
-        message.error('经营许可证更新失败');
+        message.error(getApiResponseMessage(response, '经营许可证更新失败'));
       }
       
       setEditVisible(false);
@@ -173,7 +173,7 @@ const SupplierBusinessLicense = () => {
       editForm.resetFields();
       setEditFileList([]);
     } catch (error) {
-      message.error('操作失败');
+      message.error(getApiErrorMessage(error, '操作失败'));
     } finally {
       setLoading(false);
     }
@@ -195,10 +195,10 @@ const SupplierBusinessLicense = () => {
             message.success('经营许可证删除成功');
             await loadBusinessLicenses();
           } else {
-            message.error('经营许可证删除失败');
+            message.error(getApiResponseMessage(response, '经营许可证删除失败'));
           }
         } catch (error) {
-          message.error('经营许可证删除失败');
+          message.error(getApiErrorMessage(error, '经营许可证删除失败'));
         } finally {
           setLoading(false);
         }
@@ -470,14 +470,14 @@ const SupplierBusinessLicense = () => {
               message.success('经营许可证新增成功');
               await loadBusinessLicenses();
             } else {
-              message.error('经营许可证新增失败');
+              message.error(getApiResponseMessage(response, '经营许可证新增失败'));
             }
             
             setVisible(false);
             form.resetFields();
             setFileList([]);
           } catch (error) {
-            message.error('操作失败');
+            message.error(getApiErrorMessage(error, '操作失败'));
           } finally {
             setLoading(false);
           }

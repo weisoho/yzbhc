@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, Table, Space, Tag, Select, Input, Button, Modal, Checkbox, Typography, message } from 'antd';
 import { SearchOutlined, WarningOutlined, AlertOutlined, CheckCircleOutlined, EyeOutlined, PlusOutlined, FileOutlined, InboxOutlined, DownloadOutlined } from '@ant-design/icons';
 import moment from 'moment';
-import api from '../utils/api';
+import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
 
 const { Text } = Typography;
 
@@ -146,7 +146,7 @@ const SupplierQualificationWarning = () => {
       }
     } catch (error) {
       console.error('加载预警数据失败:', error);
-      message.error('加载预警数据失败');
+      message.error(getApiErrorMessage(error, '加载预警数据失败'));
     } finally {
       setLoading(false);
     }
@@ -349,7 +349,8 @@ const SupplierQualificationWarning = () => {
       });
 
       if (!response.ok) {
-        throw new Error('导出失败');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(getApiResponseMessage(errorData, '导出失败'));
       }
 
       const contentDisposition = response.headers.get('content-disposition');
@@ -377,7 +378,7 @@ const SupplierQualificationWarning = () => {
       message.success(`导出成功，共 ${selectedWarningKeys.length} 条`);
     } catch (error) {
       console.error('导出资质预警失败:', error);
-      message.error('导出失败，请稍后重试');
+      message.error(getApiErrorMessage(error, '导出失败，请稍后重试'));
     } finally {
       setLoading(false);
     }

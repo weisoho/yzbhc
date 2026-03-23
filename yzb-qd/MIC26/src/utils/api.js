@@ -9,6 +9,26 @@ const TIMEOUT = 30000;
 // 请求重试次数
 const RETRY_COUNT = 3;
 
+const normalizeResponseMessage = (payload) => {
+  if (!payload || typeof payload !== 'object') {
+    return payload;
+  }
+
+  if (payload.msg && !payload.message) {
+    payload.message = payload.msg;
+  }
+
+  if (payload.message && !payload.msg) {
+    payload.msg = payload.message;
+  }
+
+  return payload;
+};
+
+export const getApiResponseMessage = (response, fallback) => response?.msg || response?.message || fallback;
+
+export const getApiErrorMessage = (error, fallback) => error?.msg || error?.message || error?.data?.msg || error?.data?.message || fallback;
+
 // 创建请求实例
 class API {
   constructor() {
@@ -127,10 +147,11 @@ class API {
           return this.request(url, options, retry + 1);
         }
 
-        const errorData = await response.json().catch(() => ({}));
+        const errorData = normalizeResponseMessage(await response.json().catch(() => ({})));
         const error = {
           status: response.status,
-          message: errorData.message || '请求失败',
+          message: errorData.msg || errorData.message || '请求失败',
+          msg: errorData.msg || errorData.message || '请求失败',
           data: errorData,
         };
 
@@ -146,7 +167,7 @@ class API {
       }
 
       // 解析响应数据
-      const responseData = await response.json();
+      const responseData = normalizeResponseMessage(await response.json());
 
       // 应用响应拦截器处理成功响应
       for (const interceptor of this.responseInterceptors) {
@@ -161,7 +182,7 @@ class API {
       clearTimeout(timeoutId);
 
       if (error.name === 'AbortError') {
-        const timeoutError = { status: 408, message: '请求超时' };
+        const timeoutError = { status: 408, message: '请求超时', msg: '请求超时' };
         
         // 应用响应拦截器处理超时错误
         for (const interceptor of this.responseInterceptors) {
@@ -240,10 +261,11 @@ class API {
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      const errorData = normalizeResponseMessage(await response.json().catch(() => ({})));
       throw {
         status: response.status,
-        message: errorData.message || '下载失败',
+        message: errorData.msg || errorData.message || '下载失败',
+        msg: errorData.msg || errorData.message || '下载失败',
         data: errorData,
       };
     }
