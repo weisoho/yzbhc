@@ -25,9 +25,9 @@ spring:
     request-context-attribute: request
 
   datasource:
-    url: jdbc:mysql://111.229.113.226:3306/yzb?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://111.229.113.226:53302/yzb?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
-    password: root1234
+    password: ENC(Yccg2d7sG0RQqYGq42HVLPO3ISRTQkDMzKnV/i34hRI=)
     #com.mysql.cj.jdbc.Driver com.mysql.jdbc.Driver
     driver-class-name: com.mysql.cj.jdbc.Driver
 
@@ -62,6 +62,12 @@ pagehelper:
   reasonable: true
   supportMethodsArguments: true
   params=count: countSql
+
+jasypt:
+  encryptor:
+    password: ${JASYPT_ENCRYPTOR_PASSWORD}
+    algorithm: PBEWithMD5AndDES
+    iv-generator-classname: org.jasypt.iv.NoIvGenerator
 
 
 
