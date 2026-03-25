@@ -1,0 +1,401 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.yunsheng.yzb.mapper.CheckInventoryMapper" >
+  <resultMap id="BaseResultMap" type="com.yunsheng.yzb.model.CheckInventory" >
+    <id column="id" property="id" jdbcType="INTEGER" />
+    <result column="che_code" property="cheCode" jdbcType="VARCHAR" />
+    <result column="inventory_id" property="inventoryId" jdbcType="INTEGER" />
+    <result column="inventory_name" property="inventoryName" jdbcType="VARCHAR" />
+    <result column="cdate" property="cdate" jdbcType="TIMESTAMP" />
+    <result column="udate" property="udate" jdbcType="TIMESTAMP" />
+    <result column="status" property="status" jdbcType="INTEGER" />
+    <result column="user_id" property="userId" jdbcType="INTEGER" />
+    <result column="user_name" property="userName" jdbcType="VARCHAR" />
+    <result column="dep_id" property="depId" jdbcType="INTEGER" />
+    <result column="dep_name" property="depName" jdbcType="VARCHAR" />
+    <result column="actual _num" property="actualNum" jdbcType="INTEGER" />
+    <result column="sys_num" property="sysNum" jdbcType="INTEGER" />
+    <result column="diff_reason" property="diffReason" jdbcType="VARCHAR" />
+    <result column="che_status" property="cheStatus" jdbcType="INTEGER" />
+    <result column="che_date" property="cheDate" jdbcType="TIMESTAMP" />
+  </resultMap>
+  <sql id="Example_Where_Clause" >
+    <where >
+      <foreach collection="oredCriteria" item="criteria" separator="or" >
+        <if test="criteria.valid" >
+          <trim prefix="(" suffix=")" prefixOverrides="and" >
+            <foreach collection="criteria.criteria" item="criterion" >
+              <choose >
+                <when test="criterion.noValue" >
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue" >
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue" >
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue" >
+                  and ${criterion.condition}
+                  <foreach collection="criterion.value" item="listItem" open="(" close=")" separator="," >
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause" >
+    <where >
+      <foreach collection="example.oredCriteria" item="criteria" separator="or" >
+        <if test="criteria.valid" >
+          <trim prefix="(" suffix=")" prefixOverrides="and" >
+            <foreach collection="criteria.criteria" item="criterion" >
+              <choose >
+                <when test="criterion.noValue" >
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue" >
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue" >
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue" >
+                  and ${criterion.condition}
+                  <foreach collection="criterion.value" item="listItem" open="(" close=")" separator="," >
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List" >
+    id, che_code, inventory_id, inventory_name, cdate, udate, status, user_id, user_name, 
+    dep_id, dep_name, "actual _num", sys_num, diff_reason, che_status, che_date
+  </sql>
+  <select id="selectByExample" resultMap="BaseResultMap" parameterType="com.yunsheng.yzb.model.CheckInventoryExample" >
+    select
+    <if test="distinct" >
+      distinct
+    </if>
+    <include refid="Base_Column_List" />
+    from check_inventory
+    <if test="_parameter != null" >
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null" >
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Integer" >
+    select 
+    <include refid="Base_Column_List" />
+    from check_inventory
+    where id = #{id,jdbcType=INTEGER}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer" >
+    delete from check_inventory
+    where id = #{id,jdbcType=INTEGER}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.yunsheng.yzb.model.CheckInventoryExample" >
+    delete from check_inventory
+    <if test="_parameter != null" >
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.yunsheng.yzb.model.CheckInventory" >
+    insert into check_inventory (id, che_code, inventory_id, 
+      inventory_name, cdate, udate, 
+      status, user_id, user_name, 
+      dep_id, dep_name, "actual _num", 
+      sys_num, diff_reason, che_status, 
+      che_date)
+    values (#{id,jdbcType=INTEGER}, #{cheCode,jdbcType=VARCHAR}, #{inventoryId,jdbcType=INTEGER}, 
+      #{inventoryName,jdbcType=VARCHAR}, #{cdate,jdbcType=TIMESTAMP}, #{udate,jdbcType=TIMESTAMP}, 
+      #{status,jdbcType=INTEGER}, #{userId,jdbcType=INTEGER}, #{userName,jdbcType=VARCHAR}, 
+      #{depId,jdbcType=INTEGER}, #{depName,jdbcType=VARCHAR}, #{actualNum,jdbcType=INTEGER}, 
+      #{sysNum,jdbcType=INTEGER}, #{diffReason,jdbcType=VARCHAR}, #{cheStatus,jdbcType=INTEGER}, 
+      #{cheDate,jdbcType=TIMESTAMP})
+  </insert>
+  <insert id="insertSelective" parameterType="com.yunsheng.yzb.model.CheckInventory" >
+    insert into check_inventory
+    <trim prefix="(" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        id,
+      </if>
+      <if test="cheCode != null" >
+        che_code,
+      </if>
+      <if test="inventoryId != null" >
+        inventory_id,
+      </if>
+      <if test="inventoryName != null" >
+        inventory_name,
+      </if>
+      <if test="cdate != null" >
+        cdate,
+      </if>
+      <if test="udate != null" >
+        udate,
+      </if>
+      <if test="status != null" >
+        status,
+      </if>
+      <if test="userId != null" >
+        user_id,
+      </if>
+      <if test="userName != null" >
+        user_name,
+      </if>
+      <if test="depId != null" >
+        dep_id,
+      </if>
+      <if test="depName != null" >
+        dep_name,
+      </if>
+      <if test="actualNum != null" >
+        "actual _num",
+      </if>
+      <if test="sysNum != null" >
+        sys_num,
+      </if>
+      <if test="diffReason != null" >
+        diff_reason,
+      </if>
+      <if test="cheStatus != null" >
+        che_status,
+      </if>
+      <if test="cheDate != null" >
+        che_date,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        #{id,jdbcType=INTEGER},
+      </if>
+      <if test="cheCode != null" >
+        #{cheCode,jdbcType=VARCHAR},
+      </if>
+      <if test="inventoryId != null" >
+        #{inventoryId,jdbcType=INTEGER},
+      </if>
+      <if test="inventoryName != null" >
+        #{inventoryName,jdbcType=VARCHAR},
+      </if>
+      <if test="cdate != null" >
+        #{cdate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="udate != null" >
+        #{udate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="status != null" >
+        #{status,jdbcType=INTEGER},
+      </if>
+      <if test="userId != null" >
+        #{userId,jdbcType=INTEGER},
+      </if>
+      <if test="userName != null" >
+        #{userName,jdbcType=VARCHAR},
+      </if>
+      <if test="depId != null" >
+        #{depId,jdbcType=INTEGER},
+      </if>
+      <if test="depName != null" >
+        #{depName,jdbcType=VARCHAR},
+      </if>
+      <if test="actualNum != null" >
+        #{actualNum,jdbcType=INTEGER},
+      </if>
+      <if test="sysNum != null" >
+        #{sysNum,jdbcType=INTEGER},
+      </if>
+      <if test="diffReason != null" >
+        #{diffReason,jdbcType=VARCHAR},
+      </if>
+      <if test="cheStatus != null" >
+        #{cheStatus,jdbcType=INTEGER},
+      </if>
+      <if test="cheDate != null" >
+        #{cheDate,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.yunsheng.yzb.model.CheckInventoryExample" resultType="java.lang.Integer" >
+    select count(*) from check_inventory
+    <if test="_parameter != null" >
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map" >
+    update check_inventory
+    <set >
+      <if test="record.id != null" >
+        id = #{record.id,jdbcType=INTEGER},
+      </if>
+      <if test="record.cheCode != null" >
+        che_code = #{record.cheCode,jdbcType=VARCHAR},
+      </if>
+      <if test="record.inventoryId != null" >
+        inventory_id = #{record.inventoryId,jdbcType=INTEGER},
+      </if>
+      <if test="record.inventoryName != null" >
+        inventory_name = #{record.inventoryName,jdbcType=VARCHAR},
+      </if>
+      <if test="record.cdate != null" >
+        cdate = #{record.cdate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="record.udate != null" >
+        udate = #{record.udate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="record.status != null" >
+        status = #{record.status,jdbcType=INTEGER},
+      </if>
+      <if test="record.userId != null" >
+        user_id = #{record.userId,jdbcType=INTEGER},
+      </if>
+      <if test="record.userName != null" >
+        user_name = #{record.userName,jdbcType=VARCHAR},
+      </if>
+      <if test="record.depId != null" >
+        dep_id = #{record.depId,jdbcType=INTEGER},
+      </if>
+      <if test="record.depName != null" >
+        dep_name = #{record.depName,jdbcType=VARCHAR},
+      </if>
+      <if test="record.actualNum != null" >
+        "actual _num" = #{record.actualNum,jdbcType=INTEGER},
+      </if>
+      <if test="record.sysNum != null" >
+        sys_num = #{record.sysNum,jdbcType=INTEGER},
+      </if>
+      <if test="record.diffReason != null" >
+        diff_reason = #{record.diffReason,jdbcType=VARCHAR},
+      </if>
+      <if test="record.cheStatus != null" >
+        che_status = #{record.cheStatus,jdbcType=INTEGER},
+      </if>
+      <if test="record.cheDate != null" >
+        che_date = #{record.cheDate,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    <if test="_parameter != null" >
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map" >
+    update check_inventory
+    set id = #{record.id,jdbcType=INTEGER},
+      che_code = #{record.cheCode,jdbcType=VARCHAR},
+      inventory_id = #{record.inventoryId,jdbcType=INTEGER},
+      inventory_name = #{record.inventoryName,jdbcType=VARCHAR},
+      cdate = #{record.cdate,jdbcType=TIMESTAMP},
+      udate = #{record.udate,jdbcType=TIMESTAMP},
+      status = #{record.status,jdbcType=INTEGER},
+      user_id = #{record.userId,jdbcType=INTEGER},
+      user_name = #{record.userName,jdbcType=VARCHAR},
+      dep_id = #{record.depId,jdbcType=INTEGER},
+      dep_name = #{record.depName,jdbcType=VARCHAR},
+      "actual _num" = #{record.actualNum,jdbcType=INTEGER},
+      sys_num = #{record.sysNum,jdbcType=INTEGER},
+      diff_reason = #{record.diffReason,jdbcType=VARCHAR},
+      che_status = #{record.cheStatus,jdbcType=INTEGER},
+      che_date = #{record.cheDate,jdbcType=TIMESTAMP}
+    <if test="_parameter != null" >
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.yunsheng.yzb.model.CheckInventory" >
+    update check_inventory
+    <set >
+      <if test="cheCode != null" >
+        che_code = #{cheCode,jdbcType=VARCHAR},
+      </if>
+      <if test="inventoryId != null" >
+        inventory_id = #{inventoryId,jdbcType=INTEGER},
+      </if>
+      <if test="inventoryName != null" >
+        inventory_name = #{inventoryName,jdbcType=VARCHAR},
+      </if>
+      <if test="cdate != null" >
+        cdate = #{cdate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="udate != null" >
+        udate = #{udate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="status != null" >
+        status = #{status,jdbcType=INTEGER},
+      </if>
+      <if test="userId != null" >
+        user_id = #{userId,jdbcType=INTEGER},
+      </if>
+      <if test="userName != null" >
+        user_name = #{userName,jdbcType=VARCHAR},
+      </if>
+      <if test="depId != null" >
+        dep_id = #{depId,jdbcType=INTEGER},
+      </if>
+      <if test="depName != null" >
+        dep_name = #{depName,jdbcType=VARCHAR},
+      </if>
+      <if test="actualNum != null" >
+        "actual _num" = #{actualNum,jdbcType=INTEGER},
+      </if>
+      <if test="sysNum != null" >
+        sys_num = #{sysNum,jdbcType=INTEGER},
+      </if>
+      <if test="diffReason != null" >
+        diff_reason = #{diffReason,jdbcType=VARCHAR},
+      </if>
+      <if test="cheStatus != null" >
+        che_status = #{cheStatus,jdbcType=INTEGER},
+      </if>
+      <if test="cheDate != null" >
+        che_date = #{cheDate,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.yunsheng.yzb.model.CheckInventory" >
+    update check_inventory
+    set che_code = #{cheCode,jdbcType=VARCHAR},
+      inventory_id = #{inventoryId,jdbcType=INTEGER},
+      inventory_name = #{inventoryName,jdbcType=VARCHAR},
+      cdate = #{cdate,jdbcType=TIMESTAMP},
+      udate = #{udate,jdbcType=TIMESTAMP},
+      status = #{status,jdbcType=INTEGER},
+      user_id = #{userId,jdbcType=INTEGER},
+      user_name = #{userName,jdbcType=VARCHAR},
+      dep_id = #{depId,jdbcType=INTEGER},
+      dep_name = #{depName,jdbcType=VARCHAR},
+      "actual _num" = #{actualNum,jdbcType=INTEGER},
+      sys_num = #{sysNum,jdbcType=INTEGER},
+      diff_reason = #{diffReason,jdbcType=VARCHAR},
+      che_status = #{cheStatus,jdbcType=INTEGER},
+      che_date = #{cheDate,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+<select id="selectpdxyModelList" resultType="com.yunsheng.yzb.vo.CheckInventoryVo" >
+  select
+  bb.material_name materialName,
+  bb.specification,
+  bb.shelf,
+  bb.batch_number batchNumber,
+  bb.model,
+  aa.actual_num actualNum,
+  aa.sys_num sysNum,
+  aa.diff_reason diffReason,
+  aa.che_status cheStatus
+  from check_inventory aa join scm_inventory bb on aa.inventory_id=bb.id
+  where aa.status=1
+  order  by cdate desc
+</select>
+
+</mapper>
