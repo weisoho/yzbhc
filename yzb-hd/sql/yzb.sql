@@ -1206,4 +1206,64 @@ CREATE TABLE `ys_user`  (
 INSERT INTO `ys_user` VALUES (1, 'admin', '123456', 'admin', '领导部门', 1, NULL, NULL, '操作员', NULL, '2026-03-16 14:05:23', '2026-03-16 14:05:23', 1);
 INSERT INTO `ys_user` VALUES (2, 'lier', '000000', '李二', '儿科', 1, NULL, NULL, '操作员', '全部仓库', '2026-03-16 14:06:25', '2026-03-16 14:06:25', 1);
 
+-- ----------------------------
+-- 初始化院区/科室与用户绑定（部署后可直接使用）
+-- ----------------------------
+
+-- 1) 初始化院区与科室
+INSERT INTO `sys_department` (`id`, `parent_id`, `dept_name`, `org_type`, `dept_code`, `address`, `leader`, `phone`, `email`, `remark`, `status`, `sort_order`, `create_by`, `create_time`, `update_by`, `update_time`, `is_deleted`)
+VALUES
+  (1, 0, '总院区', 'CAMPUS', 'ROOT', '默认院区', '系统管理员', NULL, NULL, '系统初始化', 1, 1, NULL, NOW(), NULL, NOW(), 0),
+  (2, 0, '东院区', 'CAMPUS', 'CAMPUS_EAST', '东院区', '系统管理员', NULL, NULL, '系统初始化', 1, 2, NULL, NOW(), NULL, NOW(), 0),
+  (11, 1, '药剂科', 'DEPARTMENT', 'DEPT_PHARM_MAIN', '总院区', '药剂科主任', NULL, NULL, '系统初始化', 1, 1, NULL, NOW(), NULL, NOW(), 0),
+  (12, 1, '手术室', 'DEPARTMENT', 'DEPT_OR_MAIN', '总院区', '手术室主任', NULL, NULL, '系统初始化', 1, 2, NULL, NOW(), NULL, NOW(), 0),
+  (13, 2, '急诊科', 'DEPARTMENT', 'DEPT_ER_EAST', '东院区', '急诊科主任', NULL, NULL, '系统初始化', 1, 1, NULL, NOW(), NULL, NOW(), 0),
+  (14, 2, '检验科', 'DEPARTMENT', 'DEPT_LAB_EAST', '东院区', '检验科主任', NULL, NULL, '系统初始化', 1, 2, NULL, NOW(), NULL, NOW(), 0)
+ON DUPLICATE KEY UPDATE
+  `parent_id` = VALUES(`parent_id`),
+  `dept_name` = VALUES(`dept_name`),
+  `org_type` = VALUES(`org_type`),
+  `address` = VALUES(`address`),
+  `leader` = VALUES(`leader`),
+  `remark` = VALUES(`remark`),
+  `status` = VALUES(`status`),
+  `sort_order` = VALUES(`sort_order`),
+  `update_time` = NOW(),
+  `is_deleted` = 0;
+
+-- 2) 初始化用户并绑定到不同科室（admin 保持超级管理员）
+INSERT INTO `ys_user` (`id`, `user_name`, `password`, `real_name`, `user_dep`, `dep_id`, `phone`, `email`, `account_type`, `warehouse_scope`, `create_time`, `update_time`, `status`)
+VALUES
+  (1, 'admin', '123456', '管理员', '药剂科', 11, NULL, NULL, '管理员', '全部仓库', NOW(), NOW(), 1),
+  (2, 'lier', '000000', '李二', '手术室', 12, NULL, NULL, '科室管理员', '全部仓库', NOW(), NOW(), 1),
+  (3, 'wangwu', '123456', '王五', '急诊科', 13, NULL, NULL, '科室管理员', '全部仓库', NOW(), NOW(), 1),
+  (4, 'zhaoliu', '123456', '赵六', '检验科', 14, NULL, NULL, '操作员', '全部仓库', NOW(), NOW(), 1)
+ON DUPLICATE KEY UPDATE
+  `password` = VALUES(`password`),
+  `real_name` = VALUES(`real_name`),
+  `user_dep` = VALUES(`user_dep`),
+  `dep_id` = VALUES(`dep_id`),
+  `account_type` = VALUES(`account_type`),
+  `warehouse_scope` = VALUES(`warehouse_scope`),
+  `status` = VALUES(`status`),
+  `update_time` = NOW();
+
+-- 3) 初始化用户角色关系
+DELETE FROM `sys_user_role`;
+INSERT INTO `sys_user_role` (`id`, `user_id`, `role_id`, `create_by`, `create_time`)
+VALUES
+  (1, 1, 1, NULL, NOW()),
+  (2, 2, 2, NULL, NOW()),
+  (3, 3, 2, NULL, NOW()),
+  (4, 4, 3, NULL, NOW());
+
+-- 4) 初始化角色-部门关系（部门管理员角色可管理对应院区科室）
+DELETE FROM `sys_role_dept`;
+INSERT INTO `sys_role_dept` (`id`, `role_id`, `dept_id`, `create_time`)
+VALUES
+  (1, 2, 11, NOW()),
+  (2, 2, 12, NOW()),
+  (3, 2, 13, NOW()),
+  (4, 2, 14, NOW());
+
 SET FOREIGN_KEY_CHECKS = 1;

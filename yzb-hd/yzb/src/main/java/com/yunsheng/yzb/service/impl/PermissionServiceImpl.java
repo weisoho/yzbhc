@@ -7,10 +7,10 @@ import com.yunsheng.yzb.model.SysDepartment;
 import com.yunsheng.yzb.model.SysPermission;
 import com.yunsheng.yzb.model.SysRole;
 import com.yunsheng.yzb.service.PermissionService;
+import com.yunsheng.yzb.utils.DepartmentTreeUtils;
 import com.yunsheng.yzb.vo.PermissionTreeVO;
 import com.yunsheng.yzb.vo.UserPermissionVO;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -68,10 +68,16 @@ public class PermissionServiceImpl implements PermissionService {
         // 如果是自定义数据权限，获取部门ID列表
         if (dataScope == 5) {
             Set<Integer> deptIds = new HashSet<>();
+            List<SysDepartment> allDepartments = departmentMapper.selectAll();
             for (SysRole role : roles) {
                 if (role.getDataScope() == 5) {
                     List<SysDepartment> departments = departmentMapper.selectByRoleId(role.getId());
-                    deptIds.addAll(departments.stream().map(SysDepartment::getId).collect(Collectors.toSet()));
+                    Set<Long> expandedDeptIds = DepartmentTreeUtils.expandWithDescendants(
+                            departments.stream()
+                                    .map(dept -> dept.getId().longValue())
+                                    .collect(Collectors.toSet()),
+                            allDepartments);
+                    deptIds.addAll(expandedDeptIds.stream().map(Long::intValue).collect(Collectors.toSet()));
                 }
             }
             vo.setCustomDeptIds(deptIds);

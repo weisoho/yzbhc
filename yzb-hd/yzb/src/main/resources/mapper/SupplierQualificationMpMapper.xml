@@ -2,6 +2,29 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.yunsheng.yzb.mapper.scm.SupplierQualificationMpMapper">
 
+    <sql id="warningConditionByQuery">
+        <choose>
+            <when test="query.warningStatus == 'EXPIRED'">
+                sq.expiry_date &lt; CURDATE()
+            </when>
+            <when test="query.warningStatus == 'EXPIRING_SOON'">
+                sq.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL #{query.warningDays} DAY)
+            </when>
+            <when test="query.warningStatus == 'VALID'">
+                sq.expiry_date &gt; DATE_ADD(CURDATE(), INTERVAL #{query.warningDays} DAY)
+            </when>
+            <otherwise>
+                (sq.expiry_date &lt; CURDATE()
+                OR sq.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL #{query.warningDays} DAY))
+            </otherwise>
+        </choose>
+    </sql>
+
+    <sql id="warningConditionByDays">
+        (sq.expiry_date &lt; CURDATE()
+        OR sq.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL #{warningDays} DAY))
+    </sql>
+
     <select id="selectQualificationViewPage" resultType="com.yunsheng.yzb.vo.scm.SupplierQualificationView">
         SELECT
             sq.id,
@@ -62,6 +85,121 @@
             </if>
         </where>
         ORDER BY sq.update_time DESC, sq.create_time DESC
+    </select>
+
+    <select id="selectQualificationWarningPage" resultType="com.yunsheng.yzb.vo.scm.SupplierQualificationView">
+        SELECT
+            sq.id,
+            sq.supplier_id,
+            s.name as supplier_name,
+            s.credit_code,
+            s.legal_representative,
+            sq.type,
+            sq.certificate_name,
+            sq.license_number,
+            sq.license_type,
+            sq.issue_date,
+            sq.expiry_date,
+            sq.issuing_authority,
+            s.registered_capital,
+            s.registration_date,
+            s.address,
+            sq.attachment_name,
+            sq.license_file,
+            sq.status,
+            sq.create_time,
+            sq.update_time
+        FROM
+            supplier_qualification sq
+        LEFT JOIN
+            supplier s ON sq.supplier_id = s.id
+        <where>
+            <if test="query.supplierId != null">
+                AND sq.supplier_id = #{query.supplierId}
+            </if>
+            <if test="query.type != null and query.type != ''">
+                AND sq.type = #{query.type}
+            </if>
+            <if test="query.certificateName != null and query.certificateName != ''">
+                AND (sq.certificate_name LIKE CONCAT('%', #{query.certificateName}, '%')
+                     OR s.name LIKE CONCAT('%', #{query.certificateName}, '%'))
+            </if>
+            <if test="query.licenseNumber != null and query.licenseNumber != ''">
+                AND sq.license_number LIKE CONCAT('%', #{query.licenseNumber}, '%')
+            </if>
+            <if test="query.creditCode != null and query.creditCode != ''">
+                AND s.credit_code LIKE CONCAT('%', #{query.creditCode}, '%')
+            </if>
+            <if test="query.legalRepresentative != null and query.legalRepresentative != ''">
+                AND s.legal_representative LIKE CONCAT('%', #{query.legalRepresentative}, '%')
+            </if>
+            AND <include refid="warningConditionByQuery"/>
+        </where>
+        ORDER BY sq.expiry_date ASC, sq.update_time DESC, sq.create_time DESC
+    </select>
+
+    <select id="selectManufacturerWarningPage" resultType="com.yunsheng.yzb.vo.scm.ManufacturerQualificationWarningView">
+        SELECT
+            sq.id AS qualification_id,
+            sq.supplier_id,
+            s.name AS supplier_name,
+            m.manufacturer,
+            COUNT(DISTINCT m.id) AS product_count,
+            sq.type,
+            sq.certificate_name,
+            sq.license_number,
+            sq.expiry_date,
+            sq.status
+        FROM
+            scm_material m
+        INNER JOIN
+            supplier_qualification sq ON m.qualification_id = sq.id
+        LEFT JOIN
+            supplier s ON sq.supplier_id = s.id
+        <where>
+            AND m.manufacturer IS NOT NULL
+            AND m.manufacturer != ''
+            <if test="query.supplierName != null and query.supplierName != ''">
+                AND s.name LIKE CONCAT('%', #{query.supplierName}, '%')
+            </if>
+            <if test="query.manufacturer != null and query.manufacturer != ''">
+                AND m.manufacturer LIKE CONCAT('%', #{query.manufacturer}, '%')
+            </if>
+            <if test="query.productName != null and query.productName != ''">
+                AND m.name LIKE CONCAT('%', #{query.productName}, '%')
+            </if>
+            <if test="query.licenseNumber != null and query.licenseNumber != ''">
+                AND (sq.license_number LIKE CONCAT('%', #{query.licenseNumber}, '%')
+                     OR m.registration_number LIKE CONCAT('%', #{query.licenseNumber}, '%'))
+            </if>
+            AND <include refid="warningConditionByQuery"/>
+        </where>
+        GROUP BY
+            sq.id, sq.supplier_id, s.name, m.manufacturer, sq.type, sq.certificate_name,
+            sq.license_number, sq.expiry_date, sq.status
+        ORDER BY sq.expiry_date ASC, m.manufacturer ASC
+    </select>
+
+    <select id="countSupplierWarnings" resultType="java.lang.Integer">
+        SELECT COUNT(1)
+        FROM supplier_qualification sq
+        WHERE <include refid="warningConditionByDays"/>
+    </select>
+
+    <select id="countManufacturerWarnings" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT m.manufacturer)
+        FROM scm_material m
+        INNER JOIN supplier_qualification sq ON m.qualification_id = sq.id
+        WHERE m.manufacturer IS NOT NULL
+          AND m.manufacturer != ''
+          AND <include refid="warningConditionByDays"/>
+    </select>
+
+    <select id="countProductWarnings" resultType="java.lang.Integer">
+        SELECT COUNT(1)
+        FROM scm_material m
+        INNER JOIN supplier_qualification sq ON m.qualification_id = sq.id
+        WHERE <include refid="warningConditionByDays"/>
     </select>
 
 </mapper>

@@ -1,17 +1,24 @@
 package com.yunsheng.yzb.service.impl;
 
+import com.yunsheng.yzb.mapper.SysDepartmentMapper;
+import com.yunsheng.yzb.mapper.SysRoleDeptMapper;
 import com.yunsheng.yzb.mapper.SysRoleMapper;
 import com.yunsheng.yzb.mapper.SysRolePermissionMapper;
 import com.yunsheng.yzb.mapper.SysUserRoleMapper;
+import com.yunsheng.yzb.model.SysDepartment;
 import com.yunsheng.yzb.model.SysRole;
+import com.yunsheng.yzb.model.SysRoleDept;
 import com.yunsheng.yzb.model.SysRolePermission;
 import com.yunsheng.yzb.model.SysUserRole;
 import com.yunsheng.yzb.service.RoleService;
+import com.yunsheng.yzb.utils.DepartmentTreeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -30,6 +37,12 @@ public class RoleServiceImpl implements RoleService {
 
     @Autowired
     private SysRolePermissionMapper rolePermissionMapper;
+
+    @Autowired
+    private SysRoleDeptMapper roleDeptMapper;
+
+    @Autowired
+    private SysDepartmentMapper departmentMapper;
 
     @Override
     public SysRole getRoleById(Long id) {
@@ -117,6 +130,42 @@ public class RoleServiceImpl implements RoleService {
             return userRoleMapper.insertBatch(list);
         }
         return 0;
+    }
+
+    @Override
+    public Set<Long> getDepartmentIdsByRoleId(Long roleId) {
+        List<SysRoleDept> roleDepts = roleDeptMapper.selectByRoleId(roleId);
+        if (roleDepts == null || roleDepts.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return roleDepts.stream()
+                .map(SysRoleDept::getDeptId)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int assignDepartments(Long roleId, List<Long> deptIds) {
+        roleDeptMapper.deleteByRoleId(roleId);
+        if (deptIds == null || deptIds.isEmpty()) {
+            return 0;
+        }
+
+        List<SysDepartment> allDepartments = departmentMapper.selectAll();
+        Set<Long> expandedDeptIds = DepartmentTreeUtils.expandWithDescendants(deptIds, allDepartments);
+        if (expandedDeptIds.isEmpty()) {
+            return 0;
+        }
+
+        List<SysRoleDept> list = expandedDeptIds.stream()
+                .map(deptId -> {
+                    SysRoleDept roleDept = new SysRoleDept();
+                    roleDept.setRoleId(roleId);
+                    roleDept.setDeptId(deptId);
+                    return roleDept;
+                })
+                .collect(Collectors.toList());
+        return roleDeptMapper.insertBatch(list);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.yunsheng.yzb.controller.scm;
 
 import com.yunsheng.yzb.export.ExportUtil;
+import com.yunsheng.yzb.vo.scm.ManufacturerQualificationWarningView;
 import com.yunsheng.yzb.vo.scm.PageResult;
 import com.yunsheng.yzb.vo.scm.ScmRequest;
 import com.yunsheng.yzb.vo.scm.SupplierQualificationView;
@@ -121,6 +122,46 @@ public class SupplierManagementController {
     }
 
     /**
+     * 分页查询供应商资质预警列表。
+     *
+     * @param query 资质预警分页查询参数
+     * @return 资质预警分页结果
+     */
+    @GetMapping("/qualifications/warnings")
+    public AjaxResult<PageResult<SupplierQualificationView>> qualificationWarnings(ScmRequest.QualificationQuery query) {
+        return AjaxResult.success(supplierManagementService.queryQualificationWarnings(query));
+    }
+
+    /**
+     * 分页查询厂商资质预警列表。
+     *
+     * @param query 厂商资质预警分页查询参数
+     * @return 厂商资质预警分页结果
+     */
+    @GetMapping({"/manufacturers/warnings", "/manufacturer-warnings", "/manufacturers/qualification-warnings",
+            "/manufacturers/expiry-warnings"})
+    public AjaxResult<PageResult<ManufacturerQualificationWarningView>> manufacturerWarnings(
+            ScmRequest.ManufacturerWarningQuery query) {
+        return AjaxResult.success(supplierManagementService.queryManufacturerWarnings(query));
+    }
+
+    /**
+     * 导出厂商资质/效期预警数据。
+     */
+    @GetMapping({"/manufacturers/warnings/export", "/manufacturers/qualification-warnings/export",
+            "/manufacturers/expiry-warnings/export"})
+    public void exportManufacturerWarnings(ScmRequest.ManufacturerWarningQuery query) {
+        try {
+            String fileName = ExportUtil.generateExcelFileName("厂商资质预警");
+            try (OutputStream outputStream = ExportUtil.getOutputStream(fileName)) {
+                supplierManagementService.exportManufacturerWarnings(query, outputStream);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("导出失败：" + e.getMessage(), e);
+        }
+    }
+
+    /**
      * 查询指定供应商资质列表（不分页）。
      *
      * @param supplierId 供应商主键
@@ -178,7 +219,6 @@ public class SupplierManagementController {
      * 支持百万级数据，采用多线程、分批次处理。
      *
      * @param query 查询条件
-     * @param response HTTP 响应
      */
     @GetMapping("/export")
     public void exportSuppliers(ScmRequest.SupplierQuery query) {
@@ -213,7 +253,6 @@ public class SupplierManagementController {
      * 导出供应商资质数据到 Excel。
      *
      * @param query 查询条件
-     * @param response HTTP 响应
      */
     @GetMapping("/qualifications/export")
     public void exportQualifications(ScmRequest.QualificationQuery query) {

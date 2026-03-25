@@ -109,6 +109,26 @@ public final class ScmRequest {
     }
 
     /**
+     * 厂商资质预警分页查询参数。
+     */
+    @EqualsAndHashCode(callSuper = true)
+    @Data
+    public static class ManufacturerWarningQuery extends PageQuery {
+        /** 供应商名称。 */
+        private String supplierName;
+        /** 生产厂家。 */
+        private String manufacturer;
+        /** 物资名称。 */
+        private String productName;
+        /** 证件编号/注册证号。 */
+        private String licenseNumber;
+        /** 预警状态。 */
+        private String warningStatus;
+        /** 预警天数。 */
+        private Integer warningDays;
+    }
+
+    /**
      * 供应商资质保存参数。
      */
     @Data

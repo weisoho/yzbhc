@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import {
-	Alert,
 	Button,
 	Card,
 	Checkbox,
@@ -23,10 +22,10 @@ import {
 	EyeOutlined,
 	ReloadOutlined,
 	SearchOutlined,
-	WarningOutlined,
 } from '@ant-design/icons';
 import moment from 'moment';
 import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
+import { useCampusContext } from '../contexts/CampusContext';
 
 const { Text, Title } = Typography;
 
@@ -63,6 +62,13 @@ const WARNING_DAY_OPTIONS = [
 
 const QUALIFICATION_PAGE_SIZE = 200;
 const MATERIAL_PAGE_SIZE = 200;
+
+const QUALIFICATION_TYPE_LABEL_MAP = {
+	BUSINESS_CERTIFICATE: '营业执照',
+	BUSINESS_LICENSE: '经营许可证',
+	REGISTRATION_CERTIFICATE: '注册证',
+	INSPECTION_REPORT: '产品检验报告',
+};
 
 const buildEmptyDetailState = () => ({
 	open: false,
@@ -146,6 +152,7 @@ const fetchAllPages = async (requester, pageSize) => {
 };
 
 const SupplierQualificationWarning = () => {
+	const { currentCampus, currentDepartment } = useCampusContext();
 	const [loading, setLoading] = useState(false);
 	const [detailLoading, setDetailLoading] = useState(false);
 	const [mainTab, setMainTab] = useState('supplier');
@@ -159,6 +166,23 @@ const SupplierQualificationWarning = () => {
 	const [currentPage, setCurrentPage] = useState(1);
 	const [pageSize, setPageSize] = useState(10);
 	const [detailState, setDetailState] = useState(buildEmptyDetailState());
+	const currentDepartmentLabel = currentDepartment?.deptName || currentDepartment?.name || '--';
+
+	const mapWarningStatus = (status, excludeExpired) => {
+		if (status === '已过期') {
+			return 'EXPIRED';
+		}
+		if (status === '即将过期') {
+			return 'EXPIRING_SOON';
+		}
+		if (status === '有效') {
+			return 'VALID';
+		}
+		if (excludeExpired) {
+			return 'EXPIRING_SOON';
+		}
+		return undefined;
+	};
 
 	const normalizeQualification = (item) => {
 		const { status, daysUntilExpiry } = getWarningStatus(item.expiryDate);
@@ -179,6 +203,24 @@ const SupplierQualificationWarning = () => {
 			address: item.address,
 			attachmentName: item.attachmentName,
 			licenseFile: item.licenseFile,
+			status,
+			daysUntilExpiry,
+		};
+	};
+
+	const normalizeManufacturerWarning = (item) => {
+		const { status, daysUntilExpiry } = getWarningStatus(item.expiryDate);
+		return {
+			key: `${item.qualificationId}-${item.manufacturer}`,
+			qualificationId: item.qualificationId,
+			supplierId: item.supplierId,
+			supplierName: item.supplierName,
+			manufacturer: item.manufacturer,
+			productCount: item.productCount,
+			certificateType: QUALIFICATION_TYPE_LABEL_MAP[item.type] || item.type,
+			certificateName: item.certificateName,
+			certificateNumber: item.licenseNumber,
+			expiryDate: item.expiryDate,
 			status,
 			daysUntilExpiry,
 		};
@@ -228,11 +270,13 @@ const SupplierQualificationWarning = () => {
 
 	const loadSupplierRows = async (activeFilters) => {
 		const records = await fetchAllPages(
-			(pageNum, innerPageSize) => api.get('/api/scm/suppliers/qualifications', {
+			(pageNum, innerPageSize) => api.get('/api/scm/suppliers/qualifications/warnings', {
 				pageNum,
 				pageSize: innerPageSize,
 				certificateName: activeFilters.supplier,
 				licenseNumber: activeFilters.certificateNumber,
+				warningStatus: mapWarningStatus(activeFilters.status, onlyUnexpired),
+				warningDays: activeFilters.days,
 			}),
 			QUALIFICATION_PAGE_SIZE,
 		);
@@ -246,12 +290,14 @@ const SupplierQualificationWarning = () => {
 
 	const loadProductRows = async (activeFilters) => {
 		const records = await fetchAllPages(
-			(pageNum, innerPageSize) => api.get('/api/scm/suppliers/qualifications', {
+			(pageNum, innerPageSize) => api.get('/api/scm/suppliers/qualifications/warnings', {
 				pageNum,
 				pageSize: innerPageSize,
 				type: 'REGISTRATION_CERTIFICATE',
 				certificateName: activeFilters.productName,
 				licenseNumber: activeFilters.certificateNumber,
+				warningStatus: mapWarningStatus(activeFilters.status, onlyUnexpired),
+				warningDays: activeFilters.days,
 			}),
 			QUALIFICATION_PAGE_SIZE,
 		);
@@ -267,47 +313,20 @@ const SupplierQualificationWarning = () => {
 
 	const loadManufacturerRows = async (activeFilters) => {
 		const records = await fetchAllPages(
-			(pageNum, innerPageSize) => api.get('/api/scm/materials', {
+			(pageNum, innerPageSize) => api.get('/api/scm/suppliers/manufacturers/warnings', {
 				pageNum,
 				pageSize: innerPageSize,
+				supplierName: activeFilters.supplier,
 				manufacturer: activeFilters.manufacturer,
-				supplier: activeFilters.supplier,
-				name: activeFilters.productName,
+				productName: activeFilters.productName,
+				licenseNumber: activeFilters.certificateNumber,
+				warningStatus: mapWarningStatus(activeFilters.status, false),
+				warningDays: activeFilters.days,
 			}),
 			MATERIAL_PAGE_SIZE,
 		);
 
-		const grouped = new Map();
-
-		records.forEach((item) => {
-			const groupKey = `${item.manufacturer || '未维护厂商'}__${item.supplierName || '未关联供应商'}`;
-			if (!grouped.has(groupKey)) {
-				grouped.set(groupKey, {
-					key: groupKey,
-					manufacturer: item.manufacturer || '未维护厂商',
-					supplierNames: [item.supplierName].filter(Boolean),
-					materialCount: 0,
-					registrationNumbers: [],
-					materialNames: [],
-					materials: [],
-				});
-			}
-
-			const currentGroup = grouped.get(groupKey);
-			currentGroup.materialCount += 1;
-			currentGroup.materials.push(item);
-			if (item.supplierName && !currentGroup.supplierNames.includes(item.supplierName)) {
-				currentGroup.supplierNames.push(item.supplierName);
-			}
-			if (item.registrationNumber && !currentGroup.registrationNumbers.includes(item.registrationNumber)) {
-				currentGroup.registrationNumbers.push(item.registrationNumber);
-			}
-			if (item.name && !currentGroup.materialNames.includes(item.name)) {
-				currentGroup.materialNames.push(item.name);
-			}
-		});
-
-		return Array.from(grouped.values()).sort((left, right) => left.manufacturer.localeCompare(right.manufacturer));
+		return records.map(normalizeManufacturerWarning);
 	};
 
 	const loadData = async () => {
@@ -369,15 +388,29 @@ const SupplierQualificationWarning = () => {
 			record,
 			supplier: null,
 			qualifications: [],
-			materials: mode === 'manufacturer' ? record.materials || [] : [],
+			materials: [],
 		});
-
-		if (mode === 'manufacturer') {
-			return;
-		}
 
 		setDetailLoading(true);
 		try {
+			if (mode === 'manufacturer') {
+				const materials = await fetchAllPages(
+					(pageNum, innerPageSize) => api.get('/api/scm/materials', {
+						pageNum,
+						pageSize: innerPageSize,
+						supplier: record.supplierName,
+						manufacturer: record.manufacturer,
+					}),
+					MATERIAL_PAGE_SIZE,
+				);
+
+				setDetailState((previous) => ({
+					...previous,
+					materials,
+				}));
+				return;
+			}
+
 			const [supplierResponse, qualificationResponse] = await Promise.all([
 				api.get(`/api/scm/suppliers/${record.supplierId}`),
 				api.get(`/api/scm/suppliers/${record.supplierId}/qualifications`),
@@ -408,7 +441,24 @@ const SupplierQualificationWarning = () => {
 
 	const handleExportSelectedWarnings = async () => {
 		if (mainTab === 'manufacturer') {
-			message.warning('厂商页为物资聚合视图，当前后台未提供资质预警导出接口');
+			try {
+				setLoading(true);
+				await api.download('/api/scm/suppliers/manufacturers/warnings/export', {
+					supplierName: submittedFilters.supplier,
+					manufacturer: submittedFilters.manufacturer,
+					productName: submittedFilters.productName,
+					licenseNumber: submittedFilters.certificateNumber,
+					warningStatus: mapWarningStatus(submittedFilters.status, false),
+					warningDays: submittedFilters.days,
+				}, {
+					filename: '厂商资质预警.xlsx',
+				});
+				message.success('厂商资质预警导出成功');
+			} catch (error) {
+				message.error(getApiErrorMessage(error, '厂商资质预警导出失败'));
+			} finally {
+				setLoading(false);
+			}
 			return;
 		}
 
@@ -508,10 +558,13 @@ const SupplierQualificationWarning = () => {
 
 	const manufacturerColumns = [
 		{ title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 220 },
-		{ title: '关联供应商', dataIndex: 'supplierNames', key: 'supplierNames', width: 260, render: (value) => value?.length ? value.join('、') : '--' },
-		{ title: '关联物资数', dataIndex: 'materialCount', key: 'materialCount', width: 120, render: (value) => <Text strong>{value}</Text> },
-		{ title: '注册证号', dataIndex: 'registrationNumbers', key: 'registrationNumbers', width: 260, render: (value) => value?.length ? value.slice(0, 3).join('、') : '--' },
-		{ title: '物资示例', dataIndex: 'materialNames', key: 'materialNames', width: 260, render: (value) => value?.length ? value.slice(0, 3).join('、') : '--' },
+		{ title: '关联供应商', dataIndex: 'supplierName', key: 'supplierName', width: 200, render: (value) => value || '--' },
+		{ title: '资质名称', dataIndex: 'certificateName', key: 'certificateName', width: 180, render: (value) => value || '--' },
+		{ title: '资质类型', dataIndex: 'certificateType', key: 'certificateType', width: 140, render: (value) => value || '--' },
+		{ title: '资质编号', dataIndex: 'certificateNumber', key: 'certificateNumber', width: 180, render: (value) => value || '--' },
+		{ title: '有效期至', dataIndex: 'expiryDate', key: 'expiryDate', width: 120, render: (value) => value || '--' },
+		{ title: '预警状态', dataIndex: 'status', key: 'status', width: 120, render: renderStatusTag },
+		{ title: '关联物资数', dataIndex: 'productCount', key: 'productCount', width: 120, render: (value) => <Text strong>{value || 0}</Text> },
 		{
 			title: '操作',
 			key: 'action',
@@ -574,11 +627,14 @@ const SupplierQualificationWarning = () => {
 				<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
 					<div>
 						<Title level={3} style={{ marginBottom: 8 }}>资质预警</Title>
-						<Text type="secondary">供应商与产品页已改为真实资质数据，厂商页按物资字典真实聚合，不再展示伪造详情。</Text>
+						<Text type="secondary">供应商、厂商、产品页均已切换为真实接口数据。</Text>
+						<div style={{ marginTop: 8 }}>
+							<Text type="secondary">当前院区：{currentCampus || '--'}，当前科室：{currentDepartmentLabel}</Text>
+						</div>
 					</div>
 					<Space wrap>
 						<Button icon={<ReloadOutlined />} onClick={loadData}>刷新</Button>
-						<Button type="primary" icon={<DownloadOutlined />} onClick={handleExportSelectedWarnings} disabled={mainTab === 'manufacturer'}>
+						<Button type="primary" icon={<DownloadOutlined />} onClick={handleExportSelectedWarnings}>
 							批量导出
 						</Button>
 					</Space>
@@ -636,16 +692,6 @@ const SupplierQualificationWarning = () => {
 							<Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
 							<Button icon={<ReloadOutlined />} onClick={handleReset}>重置</Button>
 						</Space>
-
-						{mainTab === 'manufacturer' && (
-							<Alert
-								type="warning"
-								showIcon
-								icon={<WarningOutlined />}
-								message="当前后台未提供厂商资质/效期专用接口"
-								description="该视图按照物资字典接口聚合展示真实厂商、供应商和注册证信息，因此这里不再显示伪造的过期数量，也不提供资质导出。"
-							/>
-						)}
 					</Space>
 				</Card>
 
@@ -688,11 +734,14 @@ const SupplierQualificationWarning = () => {
 					<Space direction="vertical" size={16} style={{ width: '100%' }}>
 						<Descriptions bordered size="small" column={1}>
 							<Descriptions.Item label="生产厂家">{detailState.record?.manufacturer || '--'}</Descriptions.Item>
-							<Descriptions.Item label="关联供应商">{detailState.record?.supplierNames?.join('、') || '--'}</Descriptions.Item>
-							<Descriptions.Item label="关联物资数">{detailState.record?.materialCount || 0}</Descriptions.Item>
+							<Descriptions.Item label="关联供应商">{detailState.record?.supplierName || '--'}</Descriptions.Item>
+							<Descriptions.Item label="资质名称">{detailState.record?.certificateName || '--'}</Descriptions.Item>
+							<Descriptions.Item label="资质编号">{detailState.record?.certificateNumber || '--'}</Descriptions.Item>
+							<Descriptions.Item label="关联物资数">{detailState.record?.productCount || 0}</Descriptions.Item>
 						</Descriptions>
 						<Table
 							rowKey="id"
+							loading={detailLoading}
 							size="small"
 							pagination={false}
 							dataSource={detailState.materials}

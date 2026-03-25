@@ -4,15 +4,12 @@ import { EnvironmentOutlined, CheckOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 
-const CampusSelectorModal = ({ visible, onCancel, onSelect, currentCampus }) => {
-  // 院区列表
-  const campuses = [
-    { id: 1, name: '白云总院', description: '总部所在地，主要管理部门' },
-    { id: 2, name: '天河分院', description: '天河区主要分院，设备先进' },
-    { id: 3, name: '越秀分院', description: '越秀区老牌分院，历史悠久' },
-    { id: 4, name: '北京分院', description: '北京地区分院，规模较大' },
-    { id: 5, name: '湛江分院', description: '湛江地区分院，服务粤西' },
-  ];
+const CampusSelectorModal = ({ visible, onCancel, onSelect, currentCampus, currentCampusId, campuses = [] }) => {
+  const campusList = campuses.map((campus) => ({
+    id: campus.id,
+    name: campus.deptName || campus.name,
+    description: campus.remark || campus.address || '该院区暂未维护说明信息',
+  }));
 
   return (
     <Modal
@@ -35,13 +32,13 @@ const CampusSelectorModal = ({ visible, onCancel, onSelect, currentCampus }) => 
           gap: 16,
           marginBottom: 24
         }}>
-          {campuses.map((campus) => (
+          {campusList.map((campus) => (
             <Card
               key={campus.id}
               hoverable
-              onClick={() => onSelect(campus.name)}
+              onClick={() => onSelect(campus.id)}
               style={{
-                border: currentCampus === campus.name 
+                border: Number(currentCampusId) === Number(campus.id)
                   ? '2px solid #667eea' 
                   : '1px solid #f0f0f0',
                 borderRadius: 8,
@@ -52,7 +49,7 @@ const CampusSelectorModal = ({ visible, onCancel, onSelect, currentCampus }) => 
               }}
               styles={{ body: { padding: 16 } }}
             >
-              {currentCampus === campus.name && (
+              {Number(currentCampusId) === Number(campus.id) && (
                 <div style={{
                   position: 'absolute',
                   top: 8,
@@ -98,14 +95,14 @@ const CampusSelectorModal = ({ visible, onCancel, onSelect, currentCampus }) => 
                   点击选择此院区
                 </Text>
                 <Button 
-                  type={currentCampus === campus.name ? 'primary' : 'default'}
+                  type={Number(currentCampusId) === Number(campus.id) ? 'primary' : 'default'}
                   size="small"
                   style={{
-                    background: currentCampus === campus.name ? '#667eea' : 'transparent',
-                    borderColor: currentCampus === campus.name ? '#667eea' : '#d9d9d9'
+                    background: Number(currentCampusId) === Number(campus.id) ? '#667eea' : 'transparent',
+                    borderColor: Number(currentCampusId) === Number(campus.id) ? '#667eea' : '#d9d9d9'
                   }}
                 >
-                  {currentCampus === campus.name ? '已选择' : '选择'}
+                  {Number(currentCampusId) === Number(campus.id) ? '已选择' : '选择'}
                 </Button>
               </div>
             </Card>
@@ -121,7 +118,7 @@ const CampusSelectorModal = ({ visible, onCancel, onSelect, currentCampus }) => 
         }}>
           <Space direction="vertical" size={8} style={{ width: '100%' }}>
             <Text strong style={{ color: '#52c41a' }}>
-              当前选择：{currentCampus}
+              当前选择：{currentCampus || '未选择院区'}
             </Text>
             <Text type="secondary" style={{ fontSize: 12 }}>
               提示：院区选择将影响您可访问的功能模块和数据权限。如需切换院区，可随时点击状态栏中的院区名称进行更改。

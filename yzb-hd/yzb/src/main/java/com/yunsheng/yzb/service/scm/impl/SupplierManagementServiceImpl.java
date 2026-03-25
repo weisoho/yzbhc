@@ -8,15 +8,15 @@ import com.yunsheng.yzb.common.ScmConstants;
 import com.yunsheng.yzb.common.ScmPageHelper;
 import com.yunsheng.yzb.export.ExportConfig;
 import com.yunsheng.yzb.export.ExportProcessor;
+import com.yunsheng.yzb.export.scm.ManufacturerQualificationWarningConverter;
 import com.yunsheng.yzb.export.scm.QualificationConverter;
 import com.yunsheng.yzb.export.scm.SupplierConverter;
+import com.yunsheng.yzb.vo.scm.ManufacturerQualificationWarningView;
 import com.yunsheng.yzb.vo.scm.PageResult;
 import com.yunsheng.yzb.vo.scm.ScmRequest;
 import com.yunsheng.yzb.vo.scm.SupplierQualificationView;
-import com.yunsheng.yzb.mapper.scm.MaterialMapper;
 import com.yunsheng.yzb.mapper.scm.SupplierMpMapper;
 import com.yunsheng.yzb.mapper.scm.SupplierQualificationMpMapper;
-import com.yunsheng.yzb.model.scm.MaterialEntity;
 import com.yunsheng.yzb.model.scm.SupplierEntity;
 import com.yunsheng.yzb.model.scm.SupplierQualificationEntity;
 import com.yunsheng.yzb.service.scm.OperationLogService;
@@ -40,6 +40,8 @@ import java.util.Map;
 @Service
 public class SupplierManagementServiceImpl implements SupplierManagementService {
 
+    private static final int DEFAULT_WARNING_DAYS = 90;
+
     @Resource(name = "supplierMpMapper")
     private SupplierMpMapper supplierMapper;
 
@@ -49,25 +51,13 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
     @Resource
     private OperationLogService operationLogService;
 
-    @Resource
-    private MaterialMapper materialMapper;
-
     @Override
     public Map<String, Integer> getWarningStatistics() {
         Map<String, Integer> stats = new HashMap<>();
-        
-        // 供应商资质数量 (排除注册证)
-        stats.put("supplierCount", qualificationMapper.selectCount(new LambdaQueryWrapper<SupplierQualificationEntity>()
-                .ne(SupplierQualificationEntity::getType, "REGISTRATION_CERTIFICATE")).intValue());
-        
-        // 厂商数量 (物资字典中的唯一厂家)
-        stats.put("manufacturerCount", materialMapper.selectCount(new LambdaQueryWrapper<MaterialEntity>()
-                .groupBy(MaterialEntity::getManufacturer)).intValue());
-        
-        // 产品注册证数量
-        stats.put("productCount", qualificationMapper.selectCount(new LambdaQueryWrapper<SupplierQualificationEntity>()
-                .eq(SupplierQualificationEntity::getType, "REGISTRATION_CERTIFICATE")).intValue());
-        
+        Integer warningDays = DEFAULT_WARNING_DAYS;
+        stats.put("supplierCount", safeCount(qualificationMapper.countSupplierWarnings(warningDays)));
+        stats.put("manufacturerCount", safeCount(qualificationMapper.countManufacturerWarnings(warningDays)));
+        stats.put("productCount", safeCount(qualificationMapper.countProductWarnings(warningDays)));
         return stats;
     }
 
@@ -89,6 +79,20 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
     public PageResult<SupplierQualificationView> queryQualifications(ScmRequest.QualificationQuery query) {
         Page<SupplierQualificationView> page = new Page<>(query.getPageNum(), query.getPageSize());
         return ScmPageHelper.of(qualificationMapper.selectQualificationViewPage(page, query));
+    }
+
+    @Override
+    public PageResult<SupplierQualificationView> queryQualificationWarnings(ScmRequest.QualificationQuery query) {
+        query.setWarningDays(normalizeWarningDays(query.getWarningDays()));
+        Page<SupplierQualificationView> page = new Page<>(query.getPageNum(), query.getPageSize());
+        return ScmPageHelper.of(qualificationMapper.selectQualificationWarningPage(page, query));
+    }
+
+    @Override
+    public PageResult<ManufacturerQualificationWarningView> queryManufacturerWarnings(ScmRequest.ManufacturerWarningQuery query) {
+        query.setWarningDays(normalizeWarningDays(query.getWarningDays()));
+        Page<ManufacturerQualificationWarningView> page = new Page<>(query.getPageNum(), query.getPageSize());
+        return ScmPageHelper.of(qualificationMapper.selectManufacturerWarningPage(page, query));
     }
 
     @Override
@@ -312,6 +316,31 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
         processor.export(qualifications, converter, outputStream, config, null);
     }
 
+    @Override
+    public void exportManufacturerWarnings(ScmRequest.ManufacturerWarningQuery query, OutputStream outputStream) {
+        query.setWarningDays(normalizeWarningDays(query.getWarningDays()));
+
+        ExportProcessor<ManufacturerQualificationWarningView> processor = new ExportProcessor<>();
+        ManufacturerQualificationWarningConverter converter = new ManufacturerQualificationWarningConverter();
+        ExportConfig config = new ExportConfig();
+        config.setBatchSize(2000);
+        config.setThreadPoolSize(1);
+        config.setEnableProgress(true);
+        config.setProgressInterval(1000);
+        config.setSheetName("厂商资质预警");
+        config.setFileNamePrefix("manufacturer_warning_export");
+        config.setIncludeHeader(true);
+
+        final int pageSize = config.getBatchSize();
+        processor.exportStream(pageIndex -> qualificationMapper
+                        .selectManufacturerWarningPage(new Page<>(pageIndex + 1L, pageSize, false), query)
+                        .getRecords(),
+                converter,
+                outputStream,
+                config,
+                null);
+    }
+
     /**
      * 构建供应商查询条件。
      */
@@ -378,5 +407,13 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
                 ? ScmConstants.SUPPLIER_AVAILABLE : ScmConstants.SUPPLIER_UNAVAILABLE);
         supplier.setUpdateTime(LocalDateTime.now());
         supplierMapper.updateById(supplier);
+    }
+
+    private int safeCount(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private int normalizeWarningDays(Integer warningDays) {
+        return warningDays == null || warningDays < 1 ? DEFAULT_WARNING_DAYS : warningDays;
     }
 }

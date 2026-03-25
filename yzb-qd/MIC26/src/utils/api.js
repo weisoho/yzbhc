@@ -82,6 +82,24 @@ class API {
       defaultHeaders['token'] = token;
     }
 
+    const currentCampusId = localStorage.getItem('currentCampusId');
+    const currentDepartmentId = localStorage.getItem('currentDepartmentId');
+    const currentCampusName = localStorage.getItem('currentCampus');
+    const currentDepartmentName = localStorage.getItem('currentDepartment');
+
+    if (currentCampusId) {
+      defaultHeaders['X-Campus-Id'] = currentCampusId;
+    }
+    if (currentDepartmentId) {
+      defaultHeaders['X-Department-Id'] = currentDepartmentId;
+    }
+    if (currentCampusName) {
+      defaultHeaders['X-Campus-Name'] = encodeURIComponent(currentCampusName);
+    }
+    if (currentDepartmentName) {
+      defaultHeaders['X-Department-Name'] = encodeURIComponent(currentDepartmentName);
+    }
+
     return { ...defaultHeaders, ...headers };
   }
 

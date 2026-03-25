@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 角色管理
@@ -108,6 +109,28 @@ public class RoleController {
     public AjaxResult<String> assignPermissions(@PathVariable Long roleId, @RequestBody List<Long> permissionIds) {
         Integer operatorId = LoginCacheUtil.getCurrentUserId();
         int result = roleService.assignPermissions(roleId, permissionIds, operatorId);
+        if (result >= 0) {
+            return AjaxResult.successInstance("分配成功");
+        }
+        return AjaxResult.errorInstance("分配失败");
+    }
+
+    /**
+     * 查询角色已分配的数据权限部门ID。
+     */
+    @GetMapping("/{roleId}/departments")
+    @RequiresPermission("system:role:query")
+    public AjaxResult<Set<Long>> getRoleDepartments(@PathVariable Long roleId) {
+        return AjaxResult.successInstance(roleService.getDepartmentIdsByRoleId(roleId));
+    }
+
+    /**
+     * 为角色分配数据权限部门。
+     */
+    @PostMapping("/{roleId}/departments")
+    @RequiresPermission("system:role:assign")
+    public AjaxResult<String> assignDepartments(@PathVariable Long roleId, @RequestBody List<Long> deptIds) {
+        int result = roleService.assignDepartments(roleId, deptIds);
         if (result >= 0) {
             return AjaxResult.successInstance("分配成功");
         }

@@ -1,6 +1,7 @@
 package com.yunsheng.yzb.service.scm;
 
 import com.yunsheng.yzb.vo.scm.PageResult;
+import com.yunsheng.yzb.vo.scm.ManufacturerQualificationWarningView;
 import com.yunsheng.yzb.vo.scm.ScmRequest;
 import com.yunsheng.yzb.vo.scm.SupplierQualificationView;
 import com.yunsheng.yzb.model.scm.SupplierEntity;
@@ -37,6 +38,22 @@ public interface SupplierManagementService {
      * @return 资质分页结果
      */
     PageResult<SupplierQualificationView> queryQualifications(ScmRequest.QualificationQuery query);
+
+    /**
+     * 分页查询供应商资质预警。
+     *
+     * @param query 查询条件
+     * @return 资质预警分页结果
+     */
+    PageResult<SupplierQualificationView> queryQualificationWarnings(ScmRequest.QualificationQuery query);
+
+    /**
+     * 分页查询厂商资质预警。
+     *
+     * @param query 查询条件
+     * @return 厂商资质预警分页结果
+     */
+    PageResult<ManufacturerQualificationWarningView> queryManufacturerWarnings(ScmRequest.ManufacturerWarningQuery query);
 
     /**
      * 查询供应商详情。
@@ -145,4 +162,12 @@ public interface SupplierManagementService {
      * @param outputStream 输出流
      */
     void exportQualificationWarningsByIds(List<Long> qualificationIds, OutputStream outputStream);
+
+    /**
+     * 导出厂商资质预警数据。
+     *
+     * @param query 查询条件
+     * @param outputStream 输出流
+     */
+    void exportManufacturerWarnings(ScmRequest.ManufacturerWarningQuery query, OutputStream outputStream);
 }

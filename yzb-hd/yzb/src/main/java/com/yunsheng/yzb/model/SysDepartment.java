@@ -101,5 +101,10 @@ public class SysDepartment implements Serializable {
      * 子部门列表，用于树形结构展示
      */
     private List<SysDepartment> children;
+
+    /**
+     * 是否已选中，用于角色数据权限树回显。
+     */
+    private Boolean checked;
 }
 
