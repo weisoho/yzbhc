@@ -97,7 +97,4 @@ public class InventoryEntity {
 
     /** 更新时间。 */
     private LocalDateTime updateTime;
-
-    private Integer pageNum;
-    private Integer pageSize;
 }

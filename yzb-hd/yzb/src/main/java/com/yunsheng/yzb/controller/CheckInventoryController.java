@@ -4,7 +4,6 @@ package com.yunsheng.yzb.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
-import com.yunsheng.yzb.common.ScmCodeGenerator;
 import com.yunsheng.yzb.mapper.CheckInventoryMapper;
 import com.yunsheng.yzb.mapper.scm.InventoryMapper;
 import com.yunsheng.yzb.model.*;
@@ -22,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -76,7 +76,7 @@ public class CheckInventoryController {
      * 明细列表
      */
     @PostMapping("/selectModelMXList")
-    public AjaxResult selectModelMXList(@RequestBody InventoryEntity model, ScmRequest.InventoryQuery query){
+    public AjaxResult selectModelMXList(@RequestBody ScmRequest.InventoryQuery query){
         YsUser user = LoginCacheUtil.getCurrentAccount();//获取当前登录人信息
         //查所有的仓库
         CheckInventoryExample example = new CheckInventoryExample();
@@ -88,17 +88,22 @@ public class CheckInventoryController {
                 listint.add(checkInventory.getInventoryId());
             }
         }
-        PageHelper.startPage(model.getPageNum(), model.getPageSize());
+        if (listint.isEmpty()) {
+            PageInfo<InventoryEntity> emptyPageInfo = new PageInfo<>(Collections.emptyList());
+            return AjaxResult.res(1,"成功", ClassCastUtil.pageInfoToPageOutputDto(emptyPageInfo));
+        }
+
+        PageHelper.startPage(Math.toIntExact(query.getPageNum()), Math.toIntExact(query.getPageSize()));
         LambdaQueryWrapper<InventoryEntity> wrapper = new LambdaQueryWrapper<>();
-        wrapper.in(true,InventoryEntity::getId,listint)
+        wrapper.in(InventoryEntity::getId,listint)
                 .like(StringUtils.hasText(query.getMaterialCode()), InventoryEntity::getMaterialCode, query.getMaterialCode())
                 .like(StringUtils.hasText(query.getMaterialName()), InventoryEntity::getMaterialName, query.getMaterialName())
                 .like(StringUtils.hasText(query.getSupplier()), InventoryEntity::getSupplier, query.getSupplier())
                 .like(StringUtils.hasText(query.getManufacturer()), InventoryEntity::getManufacturer, query.getManufacturer())
                 .like(StringUtils.hasText(query.getWarehouse()), InventoryEntity::getWarehouse, query.getWarehouse())
                 .like(StringUtils.hasText(query.getBatchNumber()), InventoryEntity::getBatchNumber, query.getBatchNumber());
-        inventoryMapper.selectList(wrapper);
-        PageInfo<CheckInventory> pageInfo = new PageInfo<>(list);
+        List<InventoryEntity> inventoryList = inventoryMapper.selectList(wrapper);
+        PageInfo<InventoryEntity> pageInfo = new PageInfo<>(inventoryList);
         return AjaxResult.res(1,"成功", ClassCastUtil.pageInfoToPageOutputDto(pageInfo));
     }
 
