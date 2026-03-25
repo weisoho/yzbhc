@@ -25,7 +25,7 @@ import java.util.List;
  * 资产维修
  */
 @RestController
-@RequestMapping("/yzb")
+@RequestMapping("/api")
 public class RepairController {
     @Autowired
     private RepairMapper repairMapper;

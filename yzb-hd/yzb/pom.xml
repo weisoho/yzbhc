@@ -165,6 +165,12 @@
 			<groupId>org.xmlunit</groupId>
 			<artifactId>xmlunit-core</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>com.alibaba</groupId>
+			<artifactId>easyexcel</artifactId>
+			<version>3.0.5</version>
+		</dependency>
+
 
 	</dependencies>
 
