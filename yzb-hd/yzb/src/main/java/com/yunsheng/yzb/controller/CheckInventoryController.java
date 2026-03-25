@@ -57,6 +57,8 @@ public class CheckInventoryController {
     }
     /**
      * 盘点列表
+     * model.getStatus()=0.盘点表。
+     * model.getStatus()=2.盘点历史记录表。
      */
     @PostMapping("/selectModelList")
     public AjaxResult selectModelList(@RequestBody CheckInventory model){
@@ -64,7 +66,7 @@ public class CheckInventoryController {
         PageHelper.startPage(model.getPageNum(), model.getPageSize());
         CheckInventoryExample example = new CheckInventoryExample();
         //只可以盘他自己的科室部门
-        example.createCriteria().andStatusEqualTo(0).andDepIdEqualTo(user.getDepId());
+        example.createCriteria().andStatusEqualTo(model.getStatus()).andDepIdEqualTo(user.getDepId());
         List<CheckInventory> list = checkInventoryMapper.selectByExample(example);
         PageInfo<CheckInventory> pageInfo = new PageInfo<>(list);
         return AjaxResult.res(1,"成功", ClassCastUtil.pageInfoToPageOutputDto(pageInfo));
