@@ -1,5 +1,6 @@
 package com.yunsheng.yzb.model;
 
+import com.alibaba.excel.annotation.ExcelProperty;
 import lombok.Data;
 
 import java.util.Date;
@@ -12,61 +13,73 @@ public class SampleMan {
     /**
      * id
      */
+    @ExcelProperty("id")
     private Integer id;
 
     /**
      * 日期
      */
+    @ExcelProperty("日期")
     private Date sampleDate;
 
     /**
      * 科室id
      */
+    @ExcelProperty("科室id")
     private Integer depId;
 
     /**
      * 科室名字
      */
+    @ExcelProperty("科室名字")
     private String depName;
 
     /**
      * 检测数
      */
+    @ExcelProperty("检测数")
     private Integer detectionNum;
 
     /**
      * 操作人id
      */
+    @ExcelProperty("操作人id")
     private Integer userId;
 
     /**
      * 操作人
      */
+    @ExcelProperty("操作人")
     private String userName;
 
     /**
      * 备注
      */
+    @ExcelProperty("备注")
     private String remark;
 
     /**
      * 创建时间
      */
+    @ExcelProperty("创建时间")
     private Date cdate;
 
     /**
      * 更新时间
      */
+    @ExcelProperty("更新时间")
     private Date udate;
 
     /**
      * 项目id
      */
+    @ExcelProperty("项目id")
     private Integer itemId;
 
     /**
      * 项目名字
      */
+    @ExcelProperty("项目名字")
     private String itemName;
 
     private Integer pageNum;
