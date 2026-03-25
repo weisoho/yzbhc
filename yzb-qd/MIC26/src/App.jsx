@@ -34,6 +34,7 @@ import StockOutDetail from './pages/StockOutDetail';
 import StockOutStats from './pages/StockOutStats';
 import StockOutConsumptionUndo from './pages/StockOutConsumptionUndo';
 import InventoryCheckGenerate from './pages/InventoryCheckGenerate';
+import InventoryCheckDetail from './pages/InventoryCheckDetail';
 import InventoryCheckDiff from './pages/InventoryCheckDiff';
 import ReportsStockInDetail from './pages/ReportsStockInDetail';
 import ReportsStockInSummary from './pages/ReportsStockInSummary';
@@ -962,7 +963,7 @@ const AppContent = () => {
                     <Route path="/stock-out-stats" element={<StockOutStats />} />
                     <Route path="/stock-out-consumption-undo" element={<StockOutConsumptionUndo />} />
                     <Route path="/inventory-check-generate" element={<InventoryCheckGenerate />} />
-                    <Route path="/inventory-check-detail" element={<InventoryDetail />} />
+                    <Route path="/inventory-check-detail" element={<InventoryCheckDetail />} />
                     <Route path="/inventory-check-diff" element={<InventoryCheckDiff />} />
                     <Route path="/reports-stock-in-detail" element={<ReportsStockInDetail />} />
                     <Route path="/reports-stock-in-summary" element={<ReportsStockInSummary />} />

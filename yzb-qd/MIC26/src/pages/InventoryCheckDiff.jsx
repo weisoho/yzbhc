@@ -1,136 +1,194 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Button, Table, Space, message } from 'antd';
-import { CheckOutlined, CloseOutlined } from '@ant-design/icons';
-import api from '../utils/api';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Button, Card, Space, Table, Tabs, Tag, message } from 'antd';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
+import { archiveCheckRecord, fetchCheckRecords, fetchInventoryCatalog, formatDate, mapCheckRecord } from '../utils/inventoryCheck';
 
 const InventoryCheckDiff = () => {
-  const [checkDetails, setCheckDetails] = useState([]);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [pendingDiffRecords, setPendingDiffRecords] = useState([]);
+  const [historyRecords, setHistoryRecords] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [checkSheetId, setCheckSheetId] = useState('PD20240220001'); // 假设从URL参数或其他方式获取
-  const [checkSheetInfo, setCheckSheetInfo] = useState({});
+  const [activeTab, setActiveTab] = useState('pending');
 
-  // 加载盘点差异数据
-  const loadCheckDiffData = async () => {
+  const loadDiffData = async () => {
     try {
       setLoading(true);
-      // 根据checkSheetId调用对应的API
-      const response = await api.get(`/api/scm/inventory/check/${checkSheetId}/details`);
-      if (response.code === 1 && response.data) {
-        setCheckDetails(response.data.records || []);
-      } else {
-        message.error(response.message || '加载盘点差异数据失败');
-      }
+      const [inventoryResult, pendingResult, historyResult] = await Promise.all([
+        fetchInventoryCatalog(),
+        fetchCheckRecords(0),
+        fetchCheckRecords(2),
+      ]);
+
+      const inventoryById = inventoryResult.records.reduce((accumulator, item) => {
+        accumulator[item.id] = item;
+        return accumulator;
+      }, {});
+
+      const pendingRows = pendingResult.records
+        .map((item) => mapCheckRecord(item, inventoryById))
+        .filter((item) => item.checkState === 'checked' && item.cheStatus !== 0);
+      const historyRows = historyResult.records.map((item) => mapCheckRecord(item, inventoryById));
+
+      setPendingDiffRecords(pendingRows);
+      setHistoryRecords(historyRows);
     } catch (error) {
-      console.error('加载盘点差异数据失败:', error);
-      message.error('加载盘点差异数据失败，请检查网络连接或联系管理员');
+      message.error(getApiErrorMessage(error, '加载盘点损溢数据失败'));
     } finally {
       setLoading(false);
     }
   };
 
-  // 加载盘点表信息
-  const loadCheckSheetInfo = async () => {
-    try {
-      const response = await api.get(`/api/scm/inventory/check/${checkSheetId}`);
-      if (response.code === 1 && response.data) {
-        setCheckSheetInfo(response.data);
-      }
-    } catch (error) {
-      console.error('加载盘点表信息失败:', error);
-    }
-  };
-
-  // 提交盘点结果
-  const handleSubmit = async () => {
-    try {
-      setLoading(true);
-      const response = await api.post(`/api/scm/inventory/check/${checkSheetId}/submit`, checkDetails);
-      if (response.code === 1) {
-        message.success('盘点结果提交成功');
-      } else {
-        message.error(response.message || '盘点结果提交失败');
-      }
-    } catch (error) {
-      console.error('提交盘点结果失败:', error);
-      message.error('提交盘点结果失败，请检查网络连接或联系管理员');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 组件加载时获取数据
   useEffect(() => {
-    loadCheckDiffData();
-    loadCheckSheetInfo();
+    loadDiffData();
   }, []);
 
+  useEffect(() => {
+    if (location.state?.source === 'detail-submit') {
+      setActiveTab('pending');
+    }
+  }, [location.state]);
+
+  const focusedPendingRecords = useMemo(() => {
+    if (!location.state?.focusId) {
+      return pendingDiffRecords;
+    }
+    const focusedRecord = pendingDiffRecords.find((item) => item.id === location.state.focusId);
+    return focusedRecord ? [focusedRecord, ...pendingDiffRecords.filter((item) => item.id !== location.state.focusId)] : pendingDiffRecords;
+  }, [location.state, pendingDiffRecords]);
+
+  const handleArchive = async (record) => {
+    try {
+      setLoading(true);
+      const response = await archiveCheckRecord(record.id);
+      if (response.code !== 1) {
+        message.error(getApiResponseMessage(response, '损溢记录确认失败'));
+        return;
+      }
+      message.success('损溢记录已归档');
+      await loadDiffData();
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '损溢记录确认失败'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const detailColumns = [
-    { title: '商品名称', dataIndex: 'materialName', key: 'materialName' },
-    { title: '规格型号', dataIndex: 'specification', key: 'specification' },
-    { title: '货架位置', dataIndex: 'shelf', key: 'shelf' },
-    { title: '批号', dataIndex: 'batchNumber', key: 'batchNumber' },
-    { title: '系统数量', dataIndex: 'systemQuantity', key: 'systemQuantity' },
-    { title: '实际数量', dataIndex: 'actualQuantity', key: 'actualQuantity' },
+    { title: '盘点单号', dataIndex: 'cheCode', key: 'cheCode', width: 180 },
+    { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
+    { title: '商品名称', dataIndex: 'materialName', key: 'materialName', width: 180 },
+    { title: '规格型号', key: 'specification', width: 180, render: (_, record) => `${record.specification} / ${record.model}` },
+    { title: '货架位置', dataIndex: 'shelf', key: 'shelf', width: 120 },
+    { title: '批号', dataIndex: 'batchNumber', key: 'batchNumber', width: 140 },
+    { title: '系统数量', dataIndex: 'sysNum', key: 'sysNum', width: 100 },
+    { title: '实际数量', dataIndex: 'actualNum', key: 'actualNum', width: 100 },
     {
       title: '差异',
-      dataIndex: 'difference',
-      key: 'difference',
+      dataIndex: 'diffQuantity',
+      key: 'diffQuantity',
+      width: 100,
       render: (difference) => (
-        <span style={{ color: difference === 0 ? 'black' : difference > 0 ? 'red' : 'blue' }}>
+        <span style={{ color: difference === 0 ? '#262626' : difference > 0 ? '#d46b08' : '#cf1322' }}>
           {difference > 0 ? '+' : ''}{difference}
         </span>
       )
     },
-    { title: '差异原因', dataIndex: 'reason', key: 'reason' },
+    { title: '差异类型', dataIndex: 'resultText', key: 'resultText', width: 100, render: (value, record) => <Tag color={record.resultColor}>{value}</Tag> },
     {
-      title: '确认',
-      key: 'confirm',
-      render: () => (
-        <Space size="middle">
-          <a style={{ color: 'green' }}><CheckOutlined />确认</a>
-          <a style={{ color: 'red' }}><CloseOutlined />驳回</a>
-        </Space>
-      )
+      title: '建议处理',
+      key: 'suggestion',
+      width: 220,
+      render: (_, record) => record.cheStatus === 1 ? '盘亏: 建议走消耗出库或报损' : '盘盈: 仅登记盘盈记录，不增加系统库存'
     },
+    { title: '差异原因', dataIndex: 'diffReason', key: 'diffReason', width: 180, render: (value) => value || '-' },
+    { title: '盘点日期', dataIndex: 'checkDate', key: 'checkDate', width: 120, render: (value) => formatDate(value) },
+    {
+      title: '操作',
+      key: 'confirm',
+      width: 140,
+      render: (_, record) => <Button type="link" onClick={() => handleArchive(record)}>登记完成</Button>
+    },
+  ];
+
+  const historyColumns = [
+    ...detailColumns.filter((column) => column.key !== 'confirm'),
+    { title: '处理状态', key: 'archiveStatus', width: 100, render: () => <Tag color="green">已归档</Tag> },
   ];
 
   return (
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>盘点损溢录入</h1>
-      
+
       <Card>
-        <div style={{ marginBottom: 16 }}>
-          <h3>盘点表：{checkSheetInfo.sheetNumber || checkSheetId}</h3>
-          <p>盘点仓库：{checkSheetInfo.warehouseName || '未知'} | 盘点日期：{checkSheetInfo.checkDate || '未知'} | 盘点人：{checkSheetInfo.operatorName || '未知'}</p>
-        </div>
-        
-        <div style={{ overflowX: 'auto' }}>
-          <Table 
-            columns={detailColumns} 
-            dataSource={checkDetails} 
-            loading={loading}
-            pagination={{ 
-              pageSize: 10,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total) => `共 ${total} 条记录`,
-              style: {
-                display: 'flex',
-                justifyContent: 'center',
-                marginTop: '16px'
-              }
-            }}
-            rowKey="key"
-            size="small"
-          />
-        </div>
-      
-        <div style={{ marginTop: 16, textAlign: 'right' }}>
-          <Space>
-            <Button onClick={() => message.success('保存成功')}>保存</Button>
-            <Button type="primary" onClick={handleSubmit}>提交审核</Button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+          <Space wrap>
+            <Tag color="orange">待处理差异 {pendingDiffRecords.length}</Tag>
+            <Tag color="green">已归档 {historyRecords.length}</Tag>
+          </Space>
+          <Space wrap>
+            <Button onClick={() => navigate('/inventory-check-detail')}>返回盘点明细</Button>
+            <Button onClick={loadDiffData}>刷新</Button>
           </Space>
         </div>
+
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              key: 'pending',
+              label: `待处理差异 (${pendingDiffRecords.length})`,
+              children: (
+                <Table
+                  rowKey="id"
+                  columns={detailColumns}
+                  dataSource={focusedPendingRecords}
+                  loading={loading}
+                  scroll={{ x: 1900 }}
+                  pagination={{
+                    pageSize: 10,
+                    showSizeChanger: true,
+                    showQuickJumper: true,
+                    showTotal: (total) => `共 ${total} 条记录`,
+                    style: {
+                      display: 'flex',
+                      justifyContent: 'center',
+                      marginTop: '16px'
+                    }
+                  }}
+                  size="small"
+                />
+              ),
+            },
+            {
+              key: 'history',
+              label: `已处理记录 (${historyRecords.length})`,
+              children: (
+                <Table
+                  rowKey="id"
+                  columns={historyColumns}
+                  dataSource={historyRecords}
+                  loading={loading}
+                  scroll={{ x: 1900 }}
+                  pagination={{
+                    pageSize: 10,
+                    showSizeChanger: true,
+                    showQuickJumper: true,
+                    showTotal: (total) => `共 ${total} 条记录`,
+                    style: {
+                      display: 'flex',
+                      justifyContent: 'center',
+                      marginTop: '16px'
+                    }
+                  }}
+                  size="small"
+                />
+              ),
+            },
+          ]}
+        />
       </Card>
     </div>
   );
