@@ -394,8 +394,8 @@
   aa.diff_reason diffReason,
   aa.che_status cheStatus
   from check_inventory aa join scm_inventory bb on aa.inventory_id=bb.id
-  where aa.status=1
-  order  by cdate desc
+  where aa.status=1 and aa.dep_id=#{depid}
+  order  by aa.cdate desc
 </select>
 
 </mapper>

@@ -20,7 +20,7 @@ public interface CheckInventoryMapper {
 
     List<CheckInventory> selectByExample(CheckInventoryExample example);
     //盘点
-    List<CheckInventoryVo> selectpdxyModelList();
+    List<CheckInventoryVo> selectpdxyModelList(@Param("depid") Integer depid);
 
     CheckInventory selectByPrimaryKey(Integer id);
 

@@ -4,6 +4,7 @@ package com.yunsheng.yzb.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import com.yunsheng.yzb.common.ScmCodeGenerator;
 import com.yunsheng.yzb.mapper.CheckInventoryMapper;
 import com.yunsheng.yzb.mapper.scm.InventoryMapper;
 import com.yunsheng.yzb.model.*;
@@ -11,6 +12,7 @@ import com.yunsheng.yzb.model.scm.InventoryEntity;
 import com.yunsheng.yzb.utils.AjaxResult;
 import com.yunsheng.yzb.utils.ClassCastUtil;
 import com.yunsheng.yzb.utils.LoginCacheUtil;
+import com.yunsheng.yzb.utils.SnGenerateUtil;
 import com.yunsheng.yzb.vo.CheckInventoryVo;
 import com.yunsheng.yzb.vo.scm.ScmRequest;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +42,16 @@ public class CheckInventoryController {
      */
     @PostMapping("/addCheckInventory")
     public AjaxResult addCheckInventory(@RequestBody CheckInventory model){
+        //判断该创库是否盘点
+        List<Integer> statusList = new ArrayList<>();
+        statusList.add(1);
+        statusList.add(0);
+        CheckInventoryExample example = new CheckInventoryExample();
+        example.createCriteria().andStatusIn(statusList);
+        List<CheckInventory> checkInventoryList = checkInventoryMapper.selectByExample(example);
+        if(checkInventoryList!=null&&checkInventoryList.size()>0){
+            return AjaxResult.res(0,"该仓库已经在盘点中，不能再盘点",model);
+        }
         YsUser user = LoginCacheUtil.getCurrentAccount();//获取当前登录人信息
         InventoryEntity inventoryEntity = inventoryMapper.selectById(model.getInventoryId());
         model.setInventoryId(Integer.valueOf(inventoryEntity.getId()+""));//转化数据格式
@@ -50,8 +62,17 @@ public class CheckInventoryController {
         model.setDepId(user.getDepId());
         model.setDepName(user.getUserDep());
         model.setSysNum(inventoryEntity.getCurrentStock());
+        CheckInventoryExample example1 = new CheckInventoryExample();
+        example1.setOrderByClause("id desc");
+        List<CheckInventory> checkInventoryList1 = checkInventoryMapper.selectByExample(example1);
+        String newcode=null;
+        if(checkInventoryList1.size()>0){
+            newcode=checkInventoryList1.get(0).getCheCode();
+        }
+
+        String nextCode=SnGenerateUtil.generate("PD",newcode);
         //String nextCode = ScmCodeGenerator.nextCode(checkInventoryMapper, "PD", "che_code");
-        model.setCheCode(model.getCheCode());
+        model.setCheCode(nextCode);
         checkInventoryMapper.insertSelective(model);
         return AjaxResult.res(1,"新增成功",model);
     }
@@ -147,7 +168,7 @@ public class CheckInventoryController {
         YsUser user = LoginCacheUtil.getCurrentAccount();//获取当前登录人信息
         PageHelper.startPage(model.getPageNum(), model.getPageSize());
        //链表查询
-        List<CheckInventoryVo> list = checkInventoryMapper.selectpdxyModelList();
+        List<CheckInventoryVo> list = checkInventoryMapper.selectpdxyModelList(user.getDepId());
         PageInfo<CheckInventoryVo> pageInfo = new PageInfo<>(list);
         return AjaxResult.res(1,"成功", ClassCastUtil.pageInfoToPageOutputDto(pageInfo));
     }

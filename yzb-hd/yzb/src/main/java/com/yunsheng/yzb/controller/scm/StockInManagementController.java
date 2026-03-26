@@ -51,6 +51,15 @@ public class StockInManagementController {
     }
 
     /**
+     * 仓库入库汇总
+     */
+    @GetMapping("/SummaryStock")
+    public AjaxResult<PageResult<StockInItemEntity>> summaryStock(ScmRequest.StockInQuery query) {
+        return AjaxResult.success(stockInManagementService.queryStockInItems(query));
+    }
+
+
+    /**
      * 查询入库单详情。
      *
      * @param stockInOrderId 入库单主键
