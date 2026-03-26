@@ -27,6 +27,11 @@
         create_by, create_time, update_by, update_time, is_deleted
     </sql>
 
+    <sql id="Base_Column_List_With_Alias">
+        d.id, d.parent_id, d.dept_name, d.org_type, d.dept_code, d.address, d.leader, d.phone, d.email, d.remark, d.status, d.sort_order,
+        d.create_by, d.create_time, d.update_by, d.update_time, d.is_deleted
+    </sql>
+
     <select id="selectById" resultMap="BaseResultMap">
         SELECT <include refid="Base_Column_List"/>
         FROM sys_department
@@ -48,7 +53,7 @@
     </select>
 
     <select id="selectByRoleId" resultMap="BaseResultMap">
-        SELECT d.<include refid="Base_Column_List"/>
+        SELECT <include refid="Base_Column_List_With_Alias"/>
         FROM sys_department d
         INNER JOIN sys_role_dept rd ON d.id = rd.dept_id
         WHERE rd.role_id = #{roleId} AND d.is_deleted = 0

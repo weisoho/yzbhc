@@ -369,8 +369,8 @@ const ProductPriceAdjustment = () => {
 
   const handleAdjustOk = async () => {
     try {
+      const values = await form.validateFields();
       setLoading(true);
-      const values = form.getFieldsValue();
       
       const { newPrice } = pricePreview;
       const currentPrice = editingProduct.currentPrice;
@@ -379,8 +379,8 @@ const ProductPriceAdjustment = () => {
 
       // 处理调价原因
       let finalReason = values.reason || '手动调整';
-      if (values.reason === '其他原因' && values.otherReason) {
-        finalReason = `其他原因: ${values.otherReason}`;
+      if (values.reason === '其他原因') {
+        finalReason = `其他原因: ${values.otherReason.trim()}`;
       }
 
       // 构建调价数据
@@ -406,6 +406,9 @@ const ProductPriceAdjustment = () => {
       setAdjustModalVisible(false);
       setShowOtherReasonInput(false);
     } catch (error) {
+      if (error?.errorFields) {
+        return;
+      }
       console.error('调价失败:', error);
       message.error('调价失败，请检查网络连接或联系管理员');
     } finally {
@@ -654,7 +657,21 @@ const ProductPriceAdjustment = () => {
             </Select>
           </Form.Item>
           {showOtherReasonInput && (
-            <Form.Item name="otherReason" label="具体原因" rules={[{ required: true, message: '请输入具体原因' }]}>
+            <Form.Item
+              name="otherReason"
+              label="具体原因"
+              rules={[
+                { required: true, message: '请输入具体原因' },
+                {
+                  validator: (_, value) => {
+                    if (!value || value.trim()) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(new Error('请输入具体原因'));
+                  }
+                }
+              ]}
+            >
               <Input placeholder="请输入具体的调价原因" />
             </Form.Item>
           )}

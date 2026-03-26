@@ -1,5 +1,5 @@
 import React from 'react';
-import { TabProvider, useTabContext } from '../contexts/TabContext';
+import { useTabContext } from '../contexts/TabContext';
 import DraggableTabNavigation from './DraggableTabNavigation';
 
 const AppContent = ({ children }) => {
@@ -24,11 +24,9 @@ const AppContent = ({ children }) => {
 
 const AppWithTabs = ({ children }) => {
   return (
-    <TabProvider>
-      <AppContent>
-        {children}
-      </AppContent>
-    </TabProvider>
+    <AppContent>
+      {children}
+    </AppContent>
   );
 };
 

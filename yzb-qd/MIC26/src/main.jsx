@@ -1,3 +1,11 @@
+/*
+ * @Author: 2301_77658829 2301_77658829@noreply.gitcode.com
+ * @Date: 2026-03-19 17:07:09
+ * @LastEditors: 2301_77658829 2301_77658829@noreply.gitcode.com
+ * @LastEditTime: 2026-03-26 10:33:01
+ * @FilePath: \yzbhc\yzb-qd\MIC26\src\main.jsx
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 /**
  * 应用入口文件
  * 负责初始化React应用，配置路由和全局上下文
@@ -44,7 +52,6 @@ if (!styleTarget) {
  * 使用Router提供路由功能
  */
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
     <PageVisibilityProvider>
       <CampusProvider>
         <AppProvider>
@@ -59,5 +66,4 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         </AppProvider>
       </CampusProvider>
     </PageVisibilityProvider>
-  </React.StrictMode>
 );

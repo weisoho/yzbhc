@@ -1,566 +1,319 @@
-import React, { useState } from 'react';
-import { Card, Table, Form, Input, Select, Button, Space, Modal, message, Tag, Row, Col } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SettingOutlined } from '@ant-design/icons';
+import { useEffect, useMemo, useState } from 'react';
+import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag, Tree, message } from 'antd';
+import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
+import api from '../utils/api';
+import { normalizeDepartmentTree } from '../utils/departmentTree';
 
-const { Option } = Select;
+const DATA_SCOPE_OPTIONS = [
+  { label: '全部数据', value: 1 },
+  { label: '本部门及以下', value: 2 },
+  { label: '本部门', value: 3 },
+  { label: '仅本人', value: 4 },
+  { label: '自定义部门', value: 5 },
+];
+
+const STATUS_OPTIONS = [
+  { label: '启用', value: 1 },
+  { label: '禁用', value: 0 },
+];
 
 const UserRoleTemplate = () => {
-  const [visible, setVisible] = useState(false);
-  const [editVisible, setEditVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [currentTemplate, setCurrentTemplate] = useState(null);
+  const [roles, setRoles] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [selectedDepartmentKeys, setSelectedDepartmentKeys] = useState([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState(null);
+  const [filters, setFilters] = useState({ keyword: '', status: undefined });
   const [form] = Form.useForm();
+  const selectedDataScope = Form.useWatch('dataScope', form);
 
-  const roles = ['超级管理员', '仓库管理员', '科室操作员', '普通用户'];
-  const accountTypes = ['管理员', '操作员'];
-  const departments = ['运营组', '内科', '外科', '儿科', '妇产科', '放射科'];
-  const warehouses = ['全部仓库', '仓库1', '仓库2', '仓库3'];
+  const departmentTreeData = useMemo(() => normalizeDepartmentTree(departments), [departments]);
 
-  const permissionModules = [
-    { key: 'dashboard', label: '首页仪表盘' },
-    { key: 'stockIn', label: '入库管理' },
-    { key: 'inventory', label: '库存查询' },
-    { key: 'stockOut', label: '出库管理' },
-    { key: 'inventoryCheck', label: '盘点管理' },
-    { key: 'reports', label: '报表管理' },
-    { key: 'masterData', label: '主档维护' },
-    { key: 'operation', label: '运营组管理' }
-  ];
-
-  const permissionActions = [
-    { key: 'view', label: '查看' },
-    { key: 'add', label: '新增' },
-    { key: 'edit', label: '编辑' },
-    { key: 'delete', label: '删除' },
-    { key: 'audit', label: '审核' }
-  ];
-
-  // 模拟数据
-  const mockTemplates = [
-    {
-      key: '1',
-      templateName: '超级管理员模板',
-      role: '超级管理员',
-      accountType: '管理员',
-      department: '运营组',
-      warehouse: '全部仓库',
-      permissions: {
-        modules: {
-          dashboard: true,
-          stockIn: true,
-          inventory: true,
-          stockOut: true,
-          inventoryCheck: true,
-          reports: true,
-          masterData: true,
-          operation: true
-        },
-        actions: {
-          view: true,
-          add: true,
-          edit: true,
-          delete: true,
-          audit: true
-        }
-      }
-    },
-    {
-      key: '2',
-      templateName: '仓库管理员模板',
-      role: '仓库管理员',
-      accountType: '操作员',
-      department: '运营组',
-      warehouse: '仓库1',
-      permissions: {
-        modules: {
-          dashboard: true,
-          stockIn: true,
-          inventory: true,
-          stockOut: false,
-          inventoryCheck: true,
-          reports: true,
-          masterData: false,
-          operation: false
-        },
-        actions: {
-          view: true,
-          add: true,
-          edit: true,
-          delete: false,
-          audit: false
-        }
-      }
-    },
-    {
-      key: '3',
-      templateName: '科室操作员模板',
-      role: '科室操作员',
-      accountType: '操作员',
-      department: '内科',
-      warehouse: '仓库1',
-      permissions: {
-        modules: {
-          dashboard: true,
-          stockIn: false,
-          inventory: true,
-          stockOut: true,
-          inventoryCheck: false,
-          reports: false,
-          masterData: false,
-          operation: false
-        },
-        actions: {
-          view: true,
-          add: false,
-          edit: false,
-          delete: false,
-          audit: false
-        }
-      }
+  const loadRoles = async () => {
+    const response = await api.get('/api/role/list');
+    if (response.code !== 1 || !Array.isArray(response.data)) {
+      throw new Error(response.message || '加载角色失败');
     }
-  ];
-
-  const [templateList, setTemplateList] = useState(mockTemplates);
-
-  // 权限模块配置
-  const PermissionConfig = ({ permissions, onChange }) => (
-    <div style={{ marginTop: 16 }}>
-      <h4>模块权限</h4>
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        {permissionModules.map(module => (
-          <Col span={6} key={module.key}>
-            <div style={{ marginBottom: 8 }}>
-              <input
-                type="checkbox"
-                checked={permissions.modules[module.key] || false}
-                onChange={(e) => onChange('modules', module.key, e.target.checked)}
-              />
-              <span style={{ marginLeft: 8 }}>{module.label}</span>
-            </div>
-          </Col>
-        ))}
-      </Row>
-      
-      <h4>操作权限</h4>
-      <Row gutter={16}>
-        {permissionActions.map(action => (
-          <Col span={4} key={action.key}>
-            <div style={{ marginBottom: 8 }}>
-              <input
-                type="checkbox"
-                checked={permissions.actions[action.key] || false}
-                onChange={(e) => onChange('actions', action.key, e.target.checked)}
-              />
-              <span style={{ marginLeft: 8 }}>{action.label}</span>
-            </div>
-          </Col>
-        ))}
-      </Row>
-    </div>
-  );
-
-  // 处理权限变更
-  const handlePermissionChange = (type, key, value) => {
-    setCurrentTemplate(prev => ({
-      ...prev,
-      permissions: {
-        ...prev.permissions,
-        [type]: {
-          ...prev.permissions[type],
-          [key]: value
-        }
-      }
-    }));
+    setRoles(response.data);
+    return response.data;
   };
 
-  // 创建模板
-  const handleCreateTemplate = async (values) => {
+  const loadDepartments = async () => {
+    const response = await api.get('/api/department/tree');
+    if (response.code !== 1 || !Array.isArray(response.data)) {
+      throw new Error(response.message || '加载部门树失败');
+    }
+    setDepartments(response.data);
+  };
+
+  const loadPageData = async () => {
     try {
       setLoading(true);
-      
-      const templateData = {
-        key: Date.now().toString(),
-        templateName: values.templateName,
-        role: values.role,
-        accountType: values.accountType,
-        department: values.department,
-        warehouse: values.warehouse,
-        permissions: currentTemplate?.permissions || {
-          modules: {},
-          actions: {}
-        }
-      };
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setTemplateList(prev => [...prev, templateData]);
-      
-      message.success('角色模板创建成功');
-      setVisible(false);
-      form.resetFields();
-      setCurrentTemplate(null);
-      
+      await Promise.all([loadRoles(), loadDepartments()]);
     } catch (error) {
-      message.error('创建角色模板失败');
+      message.error(error.message || '加载角色模板失败');
     } finally {
       setLoading(false);
     }
   };
 
-  // 编辑模板
-  const handleEditTemplate = (record) => {
-    setCurrentTemplate(record);
-    setEditVisible(true);
-    
-    form.setFieldsValue({
-      templateName: record.templateName,
-      role: record.role,
-      accountType: record.accountType,
-      department: record.department,
-      warehouse: record.warehouse
+  useEffect(() => {
+    loadPageData();
+  }, []);
+
+  const filteredRoles = useMemo(() => {
+    const keyword = filters.keyword.trim().toLowerCase();
+    return roles.filter((role) => {
+      const hitKeyword = !keyword || [role.roleName, role.roleCode, role.roleDesc]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(keyword));
+      const hitStatus = filters.status === undefined || Number(role.status) === Number(filters.status);
+      return hitKeyword && hitStatus;
     });
+  }, [filters, roles]);
+
+  const openCreateModal = () => {
+    setEditingRole(null);
+    setSelectedDepartmentKeys([]);
+    form.resetFields();
+    form.setFieldsValue({ dataScope: 4, status: 1, sortOrder: roles.length + 1 });
+    setModalOpen(true);
   };
 
-  // 更新模板
-  const handleUpdateTemplate = async (values) => {
+  const openEditModal = async (role) => {
     try {
       setLoading(true);
-
-      const updateData = {
-        ...currentTemplate,
-        templateName: values.templateName,
-        role: values.role,
-        accountType: values.accountType,
-        department: values.department,
-        warehouse: values.warehouse
-      };
-
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      setTemplateList(prev => 
-        prev.map(template => 
-          template.key === currentTemplate.key 
-            ? updateData
-            : template
-        )
-      );
-
-      message.success('模板更新成功');
-      setEditVisible(false);
-      form.resetFields();
-      setCurrentTemplate(null);
-
+      setEditingRole(role);
+      form.setFieldsValue({
+        roleName: role.roleName,
+        roleCode: role.roleCode,
+        roleDesc: role.roleDesc,
+        dataScope: role.dataScope,
+        status: role.status,
+        sortOrder: role.sortOrder,
+      });
+      if (role.dataScope === 5) {
+        const response = await api.get(`/api/department/role/${role.id}/selected-ids`);
+        if (response.code !== 1) {
+          throw new Error(response.message || '加载角色部门范围失败');
+        }
+        setSelectedDepartmentKeys(Array.from(response.data || []).map((item) => String(item)));
+      } else {
+        setSelectedDepartmentKeys([]);
+      }
+      setModalOpen(true);
     } catch (error) {
-      message.error('更新模板失败');
+      message.error(error.message || '加载角色失败');
     } finally {
       setLoading(false);
     }
   };
 
-  // 删除模板
-  const handleDeleteTemplate = (record) => {
-    setTemplateList(prev => prev.filter(template => template.key !== record.key));
-    message.success('模板删除成功');
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      setLoading(true);
+
+      let response;
+      if (editingRole) {
+        response = await api.put(`/api/role/${editingRole.id}`, values);
+      } else {
+        response = await api.post('/api/role', values);
+      }
+
+      if (response.code !== 1) {
+        throw new Error(response.message || '保存角色失败');
+      }
+
+      const latestRoles = await loadRoles();
+      const targetRole = editingRole || latestRoles.find((role) => role.roleCode === values.roleCode) || null;
+      if (targetRole?.id) {
+        const departmentResponse = await api.post(
+          `/api/role/${targetRole.id}/departments`,
+          values.dataScope === 5 ? selectedDepartmentKeys.map((key) => Number(key)) : [],
+        );
+        if (departmentResponse.code !== 1) {
+          throw new Error(departmentResponse.message || '保存角色部门范围失败');
+        }
+      }
+
+      message.success(editingRole ? '角色模板更新成功' : '角色模板创建成功');
+      setModalOpen(false);
+      setEditingRole(null);
+      form.resetFields();
+      setSelectedDepartmentKeys([]);
+    } catch (error) {
+      if (error?.errorFields) {
+        return;
+      }
+      message.error(error.message || '保存角色失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const templateColumns = [
-    { 
-      title: '模板名称', 
-      dataIndex: 'templateName', 
-      key: 'templateName',
-      render: (text, record) => (
-        <div>
-          <div style={{ fontWeight: 'bold' }}>{text}</div>
-          <div style={{ fontSize: '12px', color: '#666' }}>
-            {record.role} - {record.accountType}
-          </div>
-        </div>
-      )
-    },
-    { title: '所属部门', dataIndex: 'department', key: 'department' },
-    { title: '管理仓库', dataIndex: 'warehouse', key: 'warehouse' },
-    { 
-      title: '权限概览', 
-      key: 'permissions',
-      render: (_, record) => {
-        const moduleCount = Object.values(record.permissions.modules).filter(Boolean).length;
-        const actionCount = Object.values(record.permissions.actions).filter(Boolean).length;
-        return (
-          <div>
-            <Tag color="blue">模块: {moduleCount}</Tag>
-            <Tag color="green">操作: {actionCount}</Tag>
-          </div>
-        );
+  const handleDeleteRole = async (role) => {
+    try {
+      setLoading(true);
+      const response = await api.delete(`/api/role/${role.id}`);
+      if (response.code !== 1) {
+        throw new Error(response.message || '删除角色失败');
       }
+      await loadRoles();
+      message.success('角色模板删除成功');
+    } catch (error) {
+      message.error(error.message || '删除角色失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const columns = [
+    {
+      title: '模板名称',
+      dataIndex: 'roleName',
+      key: 'roleName',
+      width: 180,
     },
-    { 
-      title: '操作', 
+    {
+      title: '模板编码',
+      dataIndex: 'roleCode',
+      key: 'roleCode',
+      width: 180,
+    },
+    {
+      title: '数据范围',
+      dataIndex: 'dataScope',
+      key: 'dataScope',
+      width: 140,
+      render: (value) => DATA_SCOPE_OPTIONS.find((item) => item.value === value)?.label || '-',
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (value) => <Tag color={value === 1 ? 'green' : 'default'}>{value === 1 ? '启用' : '禁用'}</Tag>,
+    },
+    {
+      title: '说明',
+      dataIndex: 'roleDesc',
+      key: 'roleDesc',
+      ellipsis: true,
+    },
+    {
+      title: '操作',
       key: 'action',
+      width: 180,
       render: (_, record) => (
         <Space size="middle">
-          <a onClick={() => handleEditTemplate(record)}><EditOutlined />编辑</a>
-          <a onClick={() => handleDeleteTemplate(record)} style={{ color: 'red' }}><DeleteOutlined />删除</a>
+          <a onClick={() => openEditModal(record)}><EditOutlined />编辑</a>
+          <Popconfirm
+            title="确定删除该角色模板吗？"
+            okText="确定"
+            cancelText="取消"
+            onConfirm={() => handleDeleteRole(record)}
+          >
+            <a style={{ color: 'red' }}><DeleteOutlined />删除</a>
+          </Popconfirm>
         </Space>
-      )
+      ),
     },
   ];
 
   return (
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>用户角色模板</h1>
-      
+
       <Card style={{ marginBottom: 16 }}>
         <Space wrap style={{ width: '100%' }}>
-          <Input placeholder="模板名称" style={{ width: 200, minWidth: '120px' }} />
-          <Select placeholder="角色" style={{ width: 150, minWidth: '100px' }}>
-            {roles.map((role, index) => (
-              <Option key={index} value={role}>{role}</Option>
-            ))}
-          </Select>
-          <Select placeholder="账号属性" style={{ width: 120, minWidth: '80px' }}>
-            {accountTypes.map((type, index) => (
-              <Option key={index} value={type}>{type}</Option>
-            ))}
-          </Select>
-          <Button type="primary" icon={<SettingOutlined />}>查询</Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setVisible(true)}>
-            新建模板
-          </Button>
+          <Input
+            placeholder="模板名称/编码/说明"
+            value={filters.keyword}
+            onChange={(event) => setFilters((prev) => ({ ...prev, keyword: event.target.value }))}
+            style={{ width: 240 }}
+          />
+          <Select
+            allowClear
+            placeholder="状态"
+            value={filters.status}
+            onChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
+            style={{ width: 160 }}
+            options={STATUS_OPTIONS}
+          />
+          <Button onClick={() => setFilters({ keyword: '', status: undefined })}>重置</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>新建模板</Button>
         </Space>
       </Card>
-      
-      <div style={{ overflowX: 'auto' }}>
-        <Table 
-          columns={templateColumns} 
-          dataSource={templateList} 
-          loading={loading}
-          pagination={{ 
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-            style: {
-              display: 'flex',
-              justifyContent: 'center',
-              marginTop: '16px'
-            }
-          }}
-          rowKey="key"
-          size="small"
-        />
-      </div>
 
-      {/* 新建模板模态框 */}
-      <Modal
-        title="新建角色模板"
-        open={visible}
-        onOk={() => {
-          form.validateFields().then((values) => {
-            if (!currentTemplate?.permissions) {
-              message.warning('请配置权限信息');
-              return;
-            }
-            handleCreateTemplate(values);
-          });
+      <Table
+        rowKey="id"
+        columns={columns}
+        dataSource={filteredRoles}
+        loading={loading}
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total) => `共 ${total} 条记录`,
         }}
+        scroll={{ x: 1000 }}
+        size="small"
+      />
+
+      <Modal
+        title={editingRole ? '编辑角色模板' : '新建角色模板'}
+        open={modalOpen}
+        onOk={handleSubmit}
         onCancel={() => {
-          setVisible(false);
+          setModalOpen(false);
+          setEditingRole(null);
           form.resetFields();
-          setCurrentTemplate(null);
+          setSelectedDepartmentKeys([]);
         }}
         okText="确定"
         cancelText="取消"
         confirmLoading={loading}
+        width={760}
         destroyOnHidden
-        width={800}
       >
         <Form form={form} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="templateName"
-                label="模板名称"
-                rules={[{ required: true, message: '请输入模板名称' }]}
-              >
-                <Input placeholder="请输入模板名称" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="role"
-                label="角色"
-                rules={[{ required: true, message: '请选择角色' }]}
-              >
-                <Select placeholder="请选择角色" showSearch>
-                  {roles.map((role, index) => (
-                    <Option key={index} value={role}>{role}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="accountType"
-                label="账号属性"
-                rules={[{ required: true, message: '请选择账号属性' }]}
-              >
-                <Select placeholder="请选择账号属性" showSearch>
-                  {accountTypes.map((type, index) => (
-                    <Option key={index} value={type}>{type}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="department"
-                label="所属部门"
-                rules={[{ required: true, message: '请选择所属部门' }]}
-              >
-                <Select placeholder="请选择所属部门" showSearch>
-                  {departments.map((dept, index) => (
-                    <Option key={index} value={dept}>{dept}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="warehouse"
-                label="管理仓库"
-                rules={[{ required: true, message: '请选择管理仓库' }]}
-              >
-                <Select placeholder="请选择管理仓库" showSearch>
-                  {warehouses.map((warehouse, index) => (
-                    <Option key={index} value={warehouse}>{warehouse}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+          <Form.Item name="roleName" label="模板名称" rules={[{ required: true, message: '请输入模板名称' }]}>
+            <Input placeholder="请输入模板名称" />
+          </Form.Item>
+          <Form.Item name="roleCode" label="模板编码" rules={[{ required: true, message: '请输入模板编码' }]}>
+            <Input placeholder="请输入模板编码，如 SUPER_ADMIN" disabled={Boolean(editingRole)} />
+          </Form.Item>
+          <Form.Item name="roleDesc" label="模板说明">
+            <Input.TextArea rows={3} placeholder="请输入模板说明" />
+          </Form.Item>
+          <Form.Item name="dataScope" label="数据范围" rules={[{ required: true, message: '请选择数据范围' }]}>
+            <Select options={DATA_SCOPE_OPTIONS} onChange={(value) => {
+              if (value !== 5) {
+                setSelectedDepartmentKeys([]);
+              }
+            }} />
+          </Form.Item>
+          <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+            <Select options={STATUS_OPTIONS} />
+          </Form.Item>
+          <Form.Item name="sortOrder" label="排序">
+            <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="请输入排序值" />
+          </Form.Item>
 
-          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 16 }}>
-            <h4>权限配置</h4>
-            <Button 
-              type="dashed" 
-              onClick={() => {
-                setCurrentTemplate({
-                  permissions: {
-                    modules: {},
-                    actions: {}
-                  }
-                });
-              }}
-              style={{ marginBottom: 16 }}
-            >
-              配置权限
-            </Button>
-            
-            {currentTemplate?.permissions && (
-              <PermissionConfig 
-                permissions={currentTemplate.permissions}
-                onChange={handlePermissionChange}
+          {selectedDataScope === 5 ? (
+            <div>
+              <div style={{ marginBottom: 8, fontWeight: 600 }}>自定义部门范围</div>
+              <Tree
+                checkable
+                checkedKeys={selectedDepartmentKeys}
+                onCheck={(keys) => setSelectedDepartmentKeys(Array.isArray(keys) ? keys : keys.checked)}
+                treeData={departmentTreeData}
+                height={280}
               />
-            )}
-          </div>
-        </Form>
-      </Modal>
-
-      {/* 编辑模板模态框 */}
-      <Modal
-        title="编辑角色模板"
-        open={editVisible}
-        onOk={() => {
-          form.validateFields().then((values) => {
-            handleUpdateTemplate(values);
-          });
-        }}
-        onCancel={() => {
-          setEditVisible(false);
-          form.resetFields();
-          setCurrentTemplate(null);
-        }}
-        okText="确定"
-        cancelText="取消"
-        confirmLoading={loading}
-        destroyOnHidden
-        width={800}
-      >
-        <Form form={form} layout="vertical">
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="templateName"
-                label="模板名称"
-                rules={[{ required: true, message: '请输入模板名称' }]}
-              >
-                <Input placeholder="请输入模板名称" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="role"
-                label="角色"
-                rules={[{ required: true, message: '请选择角色' }]}
-              >
-                <Select placeholder="请选择角色" showSearch>
-                  {roles.map((role, index) => (
-                    <Option key={index} value={role}>{role}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="accountType"
-                label="账号属性"
-                rules={[{ required: true, message: '请选择账号属性' }]}
-              >
-                <Select placeholder="请选择账号属性" showSearch>
-                  {accountTypes.map((type, index) => (
-                    <Option key={index} value={type}>{type}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="department"
-                label="所属部门"
-                rules={[{ required: true, message: '请选择所属部门' }]}
-              >
-                <Select placeholder="请选择所属部门" showSearch>
-                  {departments.map((dept, index) => (
-                    <Option key={index} value={dept}>{dept}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="warehouse"
-                label="管理仓库"
-                rules={[{ required: true, message: '请选择管理仓库' }]}
-              >
-                <Select placeholder="请选择管理仓库" showSearch>
-                  {warehouses.map((warehouse, index) => (
-                    <Option key={index} value={warehouse}>{warehouse}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+            </div>
+          ) : null}
         </Form>
       </Modal>
     </div>

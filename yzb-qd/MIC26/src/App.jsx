@@ -78,6 +78,7 @@ import FixedAssetsMaintenanceRecord from './pages/FixedAssetsMaintenanceRecord';
 import SampleQuantityManagement from './pages/SampleQuantityManagement';
 import SampleProjectManagement from './pages/SampleProjectManagement';
 import Login from './pages/Login';
+import api from './utils/api';
 
 // 导入图标
 import {
@@ -129,6 +130,8 @@ const AppContent = () => {
   
   // 侧边栏折叠状态
   const [collapsed, setCollapsed] = useState(false);
+  const [backendMenuItems, setBackendMenuItems] = useState([]);
+  const [backendMenuLoaded, setBackendMenuLoaded] = useState(false);
   
   // 科室选择模态框可见状态
   const [isDepartmentModalVisible, setIsDepartmentModalVisible] = useState(false);
@@ -324,7 +327,7 @@ const AppContent = () => {
       'supplier-business-certificate': '营业执照',
       'product-catalog': '物资字典维护',
       'product-price-adjustment': '物资调价',
-      'user-account-creation': '用户角色模板',
+      'user-role-template': '用户角色模板',
       'user-permission-settings': '用户权限设定',
       'user-account-management': '用户账户管理',
       'department-management': '部门管理',
@@ -351,6 +354,92 @@ const AppContent = () => {
     };
     return titles[key] || key;
   };
+
+  const resolveMenuIcon = useCallback((iconName) => {
+    const iconMap = {
+      apartment: <TeamOutlined />,
+      'bar-chart': <BarChartOutlined />,
+      'bar-chart-outlined': <BarChartOutlined />,
+      control: <ControlOutlined />,
+      dashboard: <DashboardOutlined />,
+      database: <DatabaseOutlined />,
+      desktop: <DesktopOutlined />,
+      export: <ExportOutlined />,
+      file: <FileTextOutlined />,
+      home: <HomeOutlined />,
+      import: <ImportOutlined />,
+      inbox: <InboxOutlined />,
+      lock: <SettingOutlined />,
+      setting: <SettingOutlined />,
+      shopping: <ShoppingOutlined />,
+      team: <TeamOutlined />,
+      user: <UserOutlined />,
+      warning: <WarningOutlined />,
+      'clock-circle': <ClockCircleOutlined />,
+    };
+
+    return iconMap[String(iconName || '').toLowerCase()] || undefined;
+  }, []);
+
+  const mapBackendMenuTree = useCallback((menuTree) => {
+    return (menuTree || []).map((item) => {
+      const key = item.path || item.code || `menu-${item.id}`;
+      const children = mapBackendMenuTree(item.children || []);
+      const hasRoute = typeof item.path === 'string' && item.path.startsWith('/');
+
+      return {
+        key,
+        icon: resolveMenuIcon(item.icon),
+        label: children.length > 0 || !hasRoute ? item.name : <Link to={item.path}>{item.name}</Link>,
+        children: children.length > 0 ? children : undefined,
+      };
+    });
+  }, [resolveMenuIcon]);
+
+  const containsLegacyMenuPath = useCallback((menuTree) => {
+    return (menuTree || []).some((item) => {
+      if (typeof item.path === 'string' && item.path.startsWith('/system')) {
+        return true;
+      }
+      return containsLegacyMenuPath(item.children || []);
+    });
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadBackendMenuTree = async () => {
+      try {
+        const response = await api.get('/api/permission/menu/tree');
+        if (!active) {
+          return;
+        }
+
+        if (response.code === 1 && Array.isArray(response.data) && !containsLegacyMenuPath(response.data)) {
+          const mappedMenus = mapBackendMenuTree(response.data);
+          setBackendMenuItems(mappedMenus);
+        } else {
+          setBackendMenuItems([]);
+        }
+      } catch (error) {
+        if (active) {
+          setBackendMenuItems([]);
+        }
+      } finally {
+        if (active) {
+          setBackendMenuLoaded(true);
+        }
+      }
+    };
+
+    if (isLoggedIn) {
+      loadBackendMenuTree();
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [containsLegacyMenuPath, isLoggedIn, mapBackendMenuTree]);
 
   /**
    * 根据选中的key过滤菜单项
@@ -846,6 +935,10 @@ const AppContent = () => {
                     },
                   ];
 
+                  const menuSource = backendMenuLoaded && backendMenuItems.length > 0
+                    ? [originalMenuItems[0], ...backendMenuItems.filter((item) => item.key !== '/')]
+                    : originalMenuItems;
+
                   // 如果页面可见性未初始化，显示加载状态
                   if (!isInitialized) {
                     return (
@@ -861,7 +954,7 @@ const AppContent = () => {
                   }
                   
                   // 过滤菜单项
-                  const filteredMenuItems = filterMenuItems(originalMenuItems, homeFeatureSettings.checkedKeys);
+                  const filteredMenuItems = filterMenuItems(menuSource, homeFeatureSettings.checkedKeys);
 
                   return (
                     <Menu

@@ -8,6 +8,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 // 创建标签页上下文
 const TabContext = createContext();
+const TAB_EXCLUDED_PATHS = ['/login'];
 
 /**
  * 使用标签页上下文的Hook
@@ -40,6 +41,8 @@ export const TabProvider = ({ children }) => {
   ]);
   // 当前激活的标签页
   const [activeTab, setActiveTab] = useState({ key: '/', title: '首页', path: '/' });
+
+  const isTabEnabledPath = (path) => !TAB_EXCLUDED_PATHS.includes(path);
 
   /**
    * 根据路径获取菜单标题
@@ -117,6 +120,10 @@ export const TabProvider = ({ children }) => {
     if (!isInitialized) return;
     
     const currentPath = location.pathname;
+    if (!isTabEnabledPath(currentPath)) {
+      return;
+    }
+
     const title = getMenuTitle(currentPath);
     
     if (currentPath === '/') {
@@ -145,6 +152,13 @@ export const TabProvider = ({ children }) => {
    */
   useEffect(() => {
     if (isInitialized) return;
+
+    if (!isTabEnabledPath(location.pathname)) {
+      setTabs([{ key: '/', title: '首页', path: '/' }]);
+      setActiveTab({ key: '/', title: '首页', path: '/' });
+      setIsInitialized(true);
+      return;
+    }
     
     setTabs([{ key: '/', title: '首页', path: '/' }]);
     setActiveTab({ key: '/', title: '首页', path: '/' });

@@ -627,7 +627,6 @@ const SupplierQualificationWarning = () => {
 				<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
 					<div>
 						<Title level={3} style={{ marginBottom: 8 }}>资质预警</Title>
-						<Text type="secondary">供应商、厂商、产品页均已切换为真实接口数据。</Text>
 						<div style={{ marginTop: 8 }}>
 							<Text type="secondary">当前院区：{currentCampus || '--'}，当前科室：{currentDepartmentLabel}</Text>
 						</div>

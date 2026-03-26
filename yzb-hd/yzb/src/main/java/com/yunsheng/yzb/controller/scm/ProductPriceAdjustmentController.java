@@ -5,6 +5,7 @@ import com.yunsheng.yzb.common.Result;
 import com.yunsheng.yzb.model.ScmProductPriceAdjustment;
 import com.yunsheng.yzb.service.scm.ProductPriceAdjustmentService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -40,12 +41,42 @@ public class ProductPriceAdjustmentController {
     // 保存调价记录
     @PostMapping
     public Result savePriceAdjustment(@RequestBody ScmProductPriceAdjustment adjustment) {
+        String validationMessage = validateAdjustmentReason(adjustment);
+        if (validationMessage != null) {
+            return Result.error(validationMessage);
+        }
+
         boolean success = productPriceAdjustmentService.savePriceAdjustment(adjustment);
         if (success) {
             return Result.success("调价成功");
         } else {
             return Result.error("调价失败");
         }
+    }
+
+    private String validateAdjustmentReason(ScmProductPriceAdjustment adjustment) {
+        if (adjustment == null || !StringUtils.hasText(adjustment.getAdjustmentReason())) {
+            return "调价原因不能为空";
+        }
+
+        String reason = adjustment.getAdjustmentReason().trim();
+        adjustment.setAdjustmentReason(reason);
+
+        if ("其他原因".equals(reason)) {
+            return "选择其他原因时必须填写具体原因";
+        }
+
+        if (reason.startsWith("其他原因")) {
+            String detail = reason.substring("其他原因".length()).trim();
+            if (detail.startsWith(":") || detail.startsWith("：")) {
+                detail = detail.substring(1).trim();
+            }
+            if (!StringUtils.hasText(detail)) {
+                return "选择其他原因时必须填写具体原因";
+            }
+        }
+
+        return null;
     }
 
     // 获取调价历史

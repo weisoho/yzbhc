@@ -1,405 +1,499 @@
-import { useState, useEffect } from 'react';
-import { Card, Table, Form, Input, Select, Button, Space, Modal, Popconfirm, Switch, message, Tooltip } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Button,
+  Card,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Switch,
+  Table,
+  Tag,
+  message,
+} from 'antd';
+import {
+  DeleteOutlined,
+  EditOutlined,
+  ExclamationCircleOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from '@ant-design/icons';
 import api from '../utils/api';
+import { useCampusContext } from '../contexts/CampusContext';
+import {
+  findDepartmentById,
+  flattenDepartmentTree,
+  getCampusNodes,
+  getDepartmentOptionsByCampus,
+  normalizeDepartmentTree,
+} from '../utils/departmentTree';
 
-const { Option } = Select;
+const DEFAULT_PASSWORD = '000000';
+
+const STATUS_OPTIONS = [
+  { label: '启用', value: 1 },
+  { label: '禁用', value: 0 },
+];
 
 const UserAccountManagement = () => {
-  const [visible, setVisible] = useState(false);
-  const [editVisible, setEditVisible] = useState(false);
-  const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [filters, setFilters] = useState({ keyword: '', depId: undefined, roleId: undefined });
+  const [modalMode, setModalMode] = useState('create');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [currentPassword, setCurrentPassword] = useState('');
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
+  const selectedCampusId = Form.useWatch('campusId', form);
+  const { currentCampusNode } = useCampusContext();
 
-  const departments = ['运营组', '内科', '外科', '儿科', '妇产科', '放射科'];
-  const roles = ['超级管理员', '仓库管理员', '科室操作员', '普通用户'];
-  const accountTypes = ['管理员', '操作员'];
-  const warehouses = ['全部仓库', '仓库1', '仓库2', '仓库3'];
-
-  // 加载用户列表
-  const loadUsers = async () => {
+  const normalizedDepartments = useMemo(() => normalizeDepartmentTree(departments), [departments]);
+  const campusOptions = useMemo(() => getCampusNodes(normalizedDepartments), [normalizedDepartments]);
+  const loggedInUserInfo = useMemo(() => {
     try {
-      setLoading(true);
-      // 调用实际的API
-      const response = await api.get('/api/user/list');
-      if (response.code === 1 && response.data) {
-        // 转换数据格式以匹配前端需求
-        const users = response.data.map(user => ({
-          key: user.id,
-          username: user.userName,
-          name: user.realName,
-          department: user.userDep || '未知部门',
-          role: '普通用户', // 从角色表获取，暂时默认
-          accountType: user.accountType || '操作员',
-          status: user.status === 1 ? '启用' : '禁用',
-          warehouse: user.warehouseScope || '全部仓库'
-        }));
-        setUsers(users);
-      } else {
-        message.error('加载用户列表失败');
-      }
+      return JSON.parse(localStorage.getItem('userInfo') || '{}');
     } catch (error) {
-      message.error('加载用户列表失败');
-    } finally {
-      setLoading(false);
+      return {};
     }
-  };
-
-  // 检查用户名是否已存在
-  const checkUsernameExists = async (username) => {
-    try {
-      // 调用实际的API检查用户名
-      const response = await api.get(`/api/user/check-username?username=${username}`);
-      return response.code === 1 && response.data;
-    } catch (error) {
-      return false;
-    }
-  };
-
-  // 密码强度验证
-  const validatePassword = (rule, value) => {
-    if (!value) {
-      return Promise.reject(new Error('请输入密码'));
-    }
-    if (value.length < 6) {
-      return Promise.reject(new Error('密码长度不能少于6位'));
-    }
-    return Promise.resolve();
-  };
-
-  // 确认密码验证
-  const validateConfirmPassword = ({ getFieldValue }) => ({
-    validator(_, value) {
-      if (!value || getFieldValue('password') === value) {
-        return Promise.resolve();
-      }
-      return Promise.reject(new Error('两次输入的密码不一致'));
-    },
-  });
-
-  // 组件加载时获取用户列表
-  useEffect(() => {
-    loadUsers();
   }, []);
 
-  // 切换用户状态
-  const handleToggleStatus = async (record) => {
-    try {
-      const newStatus = record.status === '启用' ? 0 : 1;
-      const newStatusText = record.status === '启用' ? '禁用' : '启用';
-      
-      // 调用实际的API
-      const response = await api.put(`/api/user/${record.key}/status`, newStatus);
-      
-      if (response.code === 1) {
-        // 更新本地状态
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.key === record.key 
-              ? { ...user, status: newStatusText }
-              : user
-          )
-        );
-        
-        message.success(`用户已${newStatusText}`);
-      } else {
-        message.error('状态切换失败');
-      }
-    } catch (error) {
-      message.error('状态切换失败');
-    }
-  };
+  const departmentOptions = useMemo(() => {
+    return flattenDepartmentTree(normalizedDepartments).filter((item) => item.orgType !== 'CAMPUS');
+  }, [normalizedDepartments]);
 
-  // 删除用户
-  const handleDeleteUser = async (record) => {
-    try {
-      // 调用实际的API
-      const response = await api.delete(`/api/user/${record.key}`);
-      
-      if (response.code === 1) {
-        setUsers(prevUsers => prevUsers.filter(user => user.key !== record.key));
-        message.success('用户删除成功');
-      } else {
-        message.error('用户删除失败');
-      }
-    } catch (error) {
-      message.error('用户删除失败');
+  const currentLoginUser = useMemo(() => {
+    const loginUserId = Number(loggedInUserInfo.id);
+    if (loginUserId) {
+      return users.find((item) => Number(item.id) === loginUserId) || null;
     }
-  };
+    return users.find((item) => item.userName === loggedInUserInfo.userName) || null;
+  }, [loggedInUserInfo.id, loggedInUserInfo.userName, users]);
 
-  // 打开编辑用户弹窗
-  const handleEditUser = (record) => {
-    setCurrentUser(record);
-    setEditVisible(true);
-    
-    // 填充表单数据
-    form.setFieldsValue({
-      username: record.username,
-      name: record.name,
-      department: record.department,
-      role: record.role,
-      accountType: record.accountType,
-      warehouse: record.warehouse,
-      status: record.status
+  const currentUserRoleCodes = useMemo(() => {
+    if (!currentLoginUser) {
+      return [];
+    }
+    return (currentLoginUser.roleIds || [])
+      .map((roleId) => roles.find((role) => Number(role.id) === Number(roleId))?.roleCode)
+      .filter(Boolean);
+  }, [currentLoginUser, roles]);
+
+  const isSuperAdmin = currentUserRoleCodes.includes('SUPER_ADMIN');
+
+  const modalDepartmentOptions = useMemo(() => {
+    if (!campusOptions.length) {
+      return departmentOptions;
+    }
+    const selectedCampus = campusOptions.find((item) => Number(item.id) === Number(selectedCampusId));
+    if (selectedCampus) {
+      return getDepartmentOptionsByCampus(selectedCampus);
+    }
+    if (!isSuperAdmin && currentCampusNode) {
+      return getDepartmentOptionsByCampus(currentCampusNode);
+    }
+    return [];
+  }, [campusOptions, currentCampusNode, departmentOptions, isSuperAdmin, selectedCampusId]);
+
+  const roleOptions = useMemo(() => {
+    return roles.filter((role) => {
+      const enabled = role.status === 1 || role.status === undefined;
+      if (!enabled) {
+        return false;
+      }
+      if (!isSuperAdmin && role.roleCode === 'SUPER_ADMIN') {
+        return false;
+      }
+      return true;
     });
+  }, [isSuperAdmin, roles]);
+
+  function resolveCampusIdByDepartmentId(deptId, campusTree = campusOptions) {
+    if (!deptId) {
+      return undefined;
+    }
+    const targetDepartmentId = Number(deptId);
+    for (const campus of campusTree) {
+      const campusDepartments = getDepartmentOptionsByCampus(campus);
+      if (campusDepartments.some((item) => Number(item.id) === targetDepartmentId) || Number(campus.id) === targetDepartmentId) {
+        return Number(campus.id);
+      }
+    }
+    return undefined;
+  }
+
+  const loadUsers = async () => {
+    const response = await api.get('/api/user/list');
+    if (response.code !== 1 || !Array.isArray(response.data)) {
+      throw new Error(response.message || '加载用户失败');
+    }
+    setUsers(response.data);
+    return response.data;
   };
 
-  // 保存编辑后的用户信息
-  const handleUpdateUser = async (values) => {
+  const loadRoles = async () => {
+    const response = await api.get('/api/role/list');
+    if (response.code !== 1 || !Array.isArray(response.data)) {
+      throw new Error(response.message || '加载角色失败');
+    }
+    setRoles(response.data);
+  };
+
+  const loadDepartments = async () => {
+    const response = await api.get('/api/department/tree');
+    if (response.code !== 1 || !Array.isArray(response.data)) {
+      throw new Error(response.message || '加载部门失败');
+    }
+    setDepartments(response.data);
+  };
+
+  const loadPageData = async () => {
     try {
       setLoading(true);
-
-      // 构建更新的用户数据
-      const updateData = {
-        userName: values.username,
-        realName: values.name,
-        userDep: values.department,
-        accountType: values.accountType,
-        warehouseScope: values.warehouse,
-        status: values.status === '启用' ? 1 : 0
-      };
-
-      // 调用实际的API
-      const response = await api.put(`/api/user/${currentUser.key}`, updateData);
-
-      if (response.code === 1) {
-        // 更新用户列表
-        setUsers(prevUsers => 
-          prevUsers.map(user => 
-            user.key === currentUser.key 
-              ? { 
-                  ...user, 
-                  username: values.username,
-                  name: values.name,
-                  department: values.department,
-                  accountType: values.accountType,
-                  warehouse: values.warehouse,
-                  status: values.status
-                }
-              : user
-          )
-        );
-
-        message.success('用户信息更新成功');
-        setEditVisible(false);
-        form.resetFields();
-        setCurrentUser(null);
-      } else {
-        message.error('更新用户信息失败');
-      }
+      await Promise.all([loadUsers(), loadRoles(), loadDepartments()]);
     } catch (error) {
-      message.error('更新用户信息失败');
+      message.error(error.message || '加载系统管理数据失败');
     } finally {
       setLoading(false);
     }
   };
 
-  // 打开修改密码弹窗
-  const handleChangePassword = (record) => {
-    setCurrentUser(record);
-    setPasswordVisible(true);
-    
-    // 模拟获取当前密码（实际应该从API获取）
-    // const response = await api.get(`/users/${record.key}/password`);
-    const mockPassword = 'password123'; // 模拟当前密码
-    setCurrentPassword(mockPassword);
-    
-    // 重置表单
+  useEffect(() => {
+    loadPageData();
+  }, []);
+
+  const filteredUsers = useMemo(() => {
+    const keyword = filters.keyword.trim().toLowerCase();
+    return users.filter((user) => {
+      const hitKeyword = !keyword || [user.userName, user.realName, user.userDep, ...(user.roleNames || [])]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(keyword));
+      const hitDepartment = !filters.depId || Number(user.depId) === Number(filters.depId);
+      const hitRole = !filters.roleId || (user.roleIds || []).some((roleId) => Number(roleId) === Number(filters.roleId));
+      const userCampusId = resolveCampusIdByDepartmentId(user.depId, campusOptions);
+      const hitCampusScope = isSuperAdmin || !currentCampusNode || Number(userCampusId) === Number(currentCampusNode.id);
+      return hitKeyword && hitDepartment && hitRole && hitCampusScope;
+    });
+  }, [campusOptions, currentCampusNode, filters, isSuperAdmin, users]);
+
+  const openCreateModal = () => {
+    setModalMode('create');
+    setCurrentUser(null);
+    form.resetFields();
+    form.setFieldsValue({
+      password: DEFAULT_PASSWORD,
+      status: 1,
+      roleIds: [],
+      campusId: currentCampusNode?.id,
+    });
+    setModalOpen(true);
+  };
+
+  const openEditModal = (user) => {
+    const userCampusId = resolveCampusIdByDepartmentId(user.depId);
+    setModalMode('edit');
+    setCurrentUser(user);
+    form.setFieldsValue({
+      userName: user.userName,
+      realName: user.realName,
+      campusId: userCampusId || currentCampusNode?.id,
+      depId: user.depId,
+      phone: user.phone,
+      email: user.email,
+      accountType: user.accountType,
+      warehouseScope: user.warehouseScope,
+      status: user.status,
+      roleIds: user.roleIds || [],
+    });
+    setModalOpen(true);
+  };
+
+  const openPasswordModal = (user) => {
+    setCurrentUser(user);
     passwordForm.resetFields();
+    setPasswordModalOpen(true);
   };
 
-  // 修改密码
-  const handleUpdatePassword = async (values) => {
-    try {
-      setLoading(true);
+  const checkUsernameExists = async (userName, excludeId) => {
+    const response = await api.get('/api/user/check-username', { username: userName, excludeId });
+    return response.code === 1 && response.data === true;
+  };
 
-      // 调用实际的API
-      const response = await api.put(`/api/user/${currentUser.key}/password`, values.newPassword);
-
-      if (response.code === 1) {
-        message.success('密码修改成功');
-        setPasswordVisible(false);
-        passwordForm.resetFields();
-        setCurrentUser(null);
-        setCurrentPassword('');
-      } else {
-        message.error('密码修改失败');
-      }
-    } catch (error) {
-      message.error('密码修改失败');
-    } finally {
-      setLoading(false);
+  const assignRoles = async (userId, roleIds) => {
+    const response = await api.post(`/api/role/user/${userId}/roles`, roleIds || []);
+    if (response.code !== 1) {
+      throw new Error(response.message || '角色分配失败');
     }
   };
 
-  // 重置密码为默认值
-  const handleResetPassword = async () => {
+  const handleSubmitUser = async () => {
     try {
+      const values = await form.validateFields();
       setLoading(true);
-      const defaultPassword = '000000';
 
-      // 调用实际的API
-      const response = await api.put(`/api/user/${currentUser.key}/password/reset`);
-
-      if (response.code === 1) {
-        message.success(`密码已重置为：${defaultPassword}`);
-        setPasswordVisible(false);
-        passwordForm.resetFields();
-        setCurrentUser(null);
-        setCurrentPassword('');
-      } else {
-        message.error('密码重置失败');
-      }
-    } catch (error) {
-      message.error('密码重置失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 创建新用户
-  const handleCreateUser = async (values) => {
-    try {
-      setLoading(true);
-      
-      // 检查用户名是否已存在
-      const usernameExists = await checkUsernameExists(values.username);
+      const usernameExists = await checkUsernameExists(values.userName, currentUser?.id);
       if (usernameExists) {
-        message.error('用户名已存在，请选择其他用户名');
+        form.setFields([{ name: 'userName', errors: ['用户名已存在'] }]);
         return;
       }
 
-      // 构建用户数据
-      const userData = {
-        userName: values.username,
-        realName: values.name,
+      const selectedDepartment = modalDepartmentOptions.find((item) => Number(item.id) === Number(values.depId))
+        || findDepartmentById(departmentOptions, values.depId);
+      const payload = {
+        userName: values.userName,
+        realName: values.realName,
         password: values.password,
-        userDep: values.department,
+        userDep: selectedDepartment?.deptName || '',
+        depId: values.depId,
+        phone: values.phone,
+        email: values.email,
         accountType: values.accountType,
-        warehouseScope: values.warehouse,
-        status: 1 // 启用状态
+        warehouseScope: values.warehouseScope,
+        status: values.status,
       };
 
-      // 调用实际的API
-      const response = await api.post('/api/user', userData);
-      
-      if (response.code === 1) {
-        // 重新加载用户列表以获取新用户
-        await loadUsers();
-        message.success('用户创建成功');
-        setVisible(false);
-        form.resetFields();
+      if (modalMode === 'create') {
+        const response = await api.post('/api/user', payload);
+        if (response.code !== 1) {
+          throw new Error(response.message || '创建用户失败');
+        }
+        const refreshedUsers = await loadUsers();
+        const createdUser = refreshedUsers.find((item) => item.userName === values.userName);
+        if (!createdUser) {
+          throw new Error('未能定位新创建的用户');
+        }
+        await assignRoles(createdUser.id, values.roleIds);
+        message.success(`用户创建成功，初始密码为 ${payload.password || DEFAULT_PASSWORD}`);
       } else {
-        message.error('创建用户失败');
+        delete payload.password;
+        const response = await api.put(`/api/user/${currentUser.id}`, payload);
+        if (response.code !== 1) {
+          throw new Error(response.message || '更新用户失败');
+        }
+        await assignRoles(currentUser.id, values.roleIds);
+        message.success('用户更新成功');
       }
+
+      setModalOpen(false);
+      setCurrentUser(null);
+      form.resetFields();
+      await loadUsers();
     } catch (error) {
-      message.error('创建用户失败');
+      if (error?.errorFields) {
+        return;
+      }
+      message.error(error.message || '保存用户失败');
     } finally {
       setLoading(false);
     }
   };
 
-  const userColumns = [
-    { title: '用户名', dataIndex: 'username', key: 'username' },
-    { title: '姓名', dataIndex: 'name', key: 'name' },
-    { title: '所属部门', dataIndex: 'department', key: 'department' },
-    { title: '角色', dataIndex: 'role', key: 'role' },
-    { title: '账号属性', dataIndex: 'accountType', key: 'accountType' },
-    { title: '管理仓库', dataIndex: 'warehouse', key: 'warehouse' },
-    { 
-      title: '状态', 
-      dataIndex: 'status', 
-      key: 'status',
-      render: (status, record) => (
-        <Tooltip title="点击切换状态">
-          <Switch 
-            checked={status === '启用'} 
-            onChange={() => handleToggleStatus(record)}
-          />
-        </Tooltip>
-      )
+  const handleToggleStatus = async (user) => {
+    try {
+      setLoading(true);
+      const nextStatus = user.status === 1 ? 0 : 1;
+      const response = await api.put(`/api/user/${user.id}/status`, nextStatus);
+      if (response.code !== 1) {
+        throw new Error(response.message || '切换状态失败');
+      }
+      await loadUsers();
+      message.success(nextStatus === 1 ? '用户已启用' : '用户已禁用');
+    } catch (error) {
+      message.error(error.message || '切换状态失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async (user) => {
+    try {
+      setLoading(true);
+      const response = await api.delete(`/api/user/${user.id}`);
+      if (response.code !== 1) {
+        throw new Error(response.message || '删除用户失败');
+      }
+      await loadUsers();
+      message.success('用户删除成功');
+    } catch (error) {
+      message.error(error.message || '删除用户失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    try {
+      setLoading(true);
+      const response = await api.put(`/api/user/${currentUser.id}/password/reset`);
+      if (response.code !== 1) {
+        throw new Error(response.message || '重置密码失败');
+      }
+      message.success(`密码已重置为 ${DEFAULT_PASSWORD}`);
+      setPasswordModalOpen(false);
+      setCurrentUser(null);
+    } catch (error) {
+      message.error(error.message || '重置密码失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    try {
+      const values = await passwordForm.validateFields();
+      setLoading(true);
+      const response = await api.put(`/api/user/${currentUser.id}/password`, values.newPassword);
+      if (response.code !== 1) {
+        throw new Error(response.message || '修改密码失败');
+      }
+      message.success('密码修改成功');
+      setPasswordModalOpen(false);
+      setCurrentUser(null);
+      passwordForm.resetFields();
+    } catch (error) {
+      if (error?.errorFields) {
+        return;
+      }
+      message.error(error.message || '修改密码失败');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const columns = [
+    {
+      title: '用户名',
+      dataIndex: 'userName',
+      key: 'userName',
+      width: 140,
     },
-    { 
-      title: '操作', 
+    {
+      title: '姓名',
+      dataIndex: 'realName',
+      key: 'realName',
+      width: 120,
+    },
+    {
+      title: '所属部门',
+      dataIndex: 'userDep',
+      key: 'userDep',
+      width: 140,
+    },
+    {
+      title: '角色',
+      key: 'roles',
+      width: 220,
+      render: (_, record) => (
+        <Space size={[4, 4]} wrap>
+          {(record.roleNames || []).length ? record.roleNames.map((roleName) => <Tag key={roleName}>{roleName}</Tag>) : <Tag>未分配</Tag>}
+        </Space>
+      ),
+    },
+    {
+      title: '账号属性',
+      dataIndex: 'accountType',
+      key: 'accountType',
+      width: 120,
+    },
+    {
+      title: '仓库范围',
+      dataIndex: 'warehouseScope',
+      key: 'warehouseScope',
+      width: 140,
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (value, record) => (
+        <Switch checked={value === 1} onChange={() => handleToggleStatus(record)} />
+      ),
+    },
+    {
+      title: '操作',
       key: 'action',
+      width: 220,
       render: (_, record) => (
         <Space size="middle">
-          <a onClick={() => handleEditUser(record)}><EditOutlined />编辑</a>
-          <a onClick={() => handleChangePassword(record)}>修改密码</a>
+          <a onClick={() => openEditModal(record)}><EditOutlined />编辑</a>
+          <a onClick={() => openPasswordModal(record)}>修改密码</a>
           <Popconfirm
             title="确定要删除这个用户吗？"
-            onConfirm={() => handleDeleteUser(record)}
+            description="删除后不可恢复，请谨慎操作。"
             okText="确定"
             cancelText="取消"
-            description="删除后无法恢复，请谨慎操作"
             icon={<ExclamationCircleOutlined style={{ color: 'red' }} />}
+            onConfirm={() => handleDeleteUser(record)}
           >
             <a style={{ color: 'red' }}><DeleteOutlined />删除</a>
           </Popconfirm>
         </Space>
-      )
+      ),
     },
   ];
 
   return (
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>用户账户管理</h1>
-      
+
       <Card style={{ marginBottom: 16 }}>
         <Space wrap style={{ width: '100%' }}>
-          <Input placeholder="用户名/姓名" style={{ width: 200, minWidth: '120px' }} />
-          <Select placeholder="所属部门" style={{ width: 150, minWidth: '100px' }}>
-            {departments.map((dept, index) => (
-              <Option key={index} value={dept}>{dept}</Option>
-            ))}
-          </Select>
-          <Select placeholder="角色" style={{ width: 150, minWidth: '100px' }}>
-            {roles.map((role, index) => (
-              <Option key={index} value={role}>{role}</Option>
-            ))}
-          </Select>
-          <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => setVisible(true)}>
-            新增用户
-          </Button>
+          <Input
+            placeholder="用户名/姓名/部门/角色"
+            value={filters.keyword}
+            onChange={(event) => setFilters((prev) => ({ ...prev, keyword: event.target.value }))}
+            style={{ width: 240 }}
+          />
+          <Select
+            allowClear
+            placeholder="所属部门"
+            value={filters.depId}
+            onChange={(value) => setFilters((prev) => ({ ...prev, depId: value }))}
+            style={{ width: 180 }}
+            options={departmentOptions.map((item) => ({ label: item.deptName, value: item.id }))}
+          />
+          <Select
+            allowClear
+            placeholder="角色"
+            value={filters.roleId}
+            onChange={(value) => setFilters((prev) => ({ ...prev, roleId: value }))}
+            style={{ width: 180 }}
+            options={roles.map((role) => ({ label: role.roleName, value: role.id }))}
+          />
+          <Button icon={<SearchOutlined />} onClick={() => setFilters((prev) => ({ ...prev }))}>查询</Button>
+          <Button icon={<ReloadOutlined />} onClick={() => setFilters({ keyword: '', depId: undefined, roleId: undefined })}>重置</Button>
+          <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>新增用户</Button>
         </Space>
       </Card>
-      
-      <div style={{ overflowX: 'auto' }}>
-        <Table 
-          columns={userColumns} 
-          dataSource={users} 
-          loading={loading}
-          pagination={{ 
-            pageSize: 10,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-            style: {
-              display: 'flex',
-              justifyContent: 'center',
-              marginTop: '16px'
-            }
-          }}
-          size="small"
-        />
-      </div>
+
+      <Table
+        rowKey="id"
+        columns={columns}
+        dataSource={filteredUsers}
+        loading={loading}
+        pagination={{
+          pageSize: 10,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total) => `共 ${total} 条记录`,
+        }}
+        scroll={{ x: 1200 }}
+        size="small"
+      />
 
       <Modal
-        title="新增用户"
-        open={visible}
-        onOk={() => {
-          form.validateFields().then((values) => {
-            handleCreateUser(values);
-          });
-        }}
+        title={modalMode === 'create' ? '新增用户' : '编辑用户'}
+        open={modalOpen}
+        onOk={handleSubmitUser}
         onCancel={() => {
-          setVisible(false);
+          setModalOpen(false);
+          setCurrentUser(null);
           form.resetFields();
         }}
         okText="确定"
@@ -409,263 +503,111 @@ const UserAccountManagement = () => {
       >
         <Form form={form} layout="vertical">
           <Form.Item
-            name="username"
+            name="userName"
             label="用户名"
             rules={[
               { required: true, message: '请输入用户名' },
-              { min: 3, max: 20, message: '用户名长度应在3-20个字符之间' },
+              { min: 3, max: 20, message: '用户名长度需在 3 到 20 个字符之间' },
               { pattern: /^[a-zA-Z0-9_]+$/, message: '用户名只能包含字母、数字和下划线' },
-              {
-                validator: async (_, value) => {
-                  if (value && value.length >= 3) {
-                    const exists = await checkUsernameExists(value);
-                    if (exists) {
-                      throw new Error('用户名已存在，请选择其他用户名');
-                    }
-                  }
-                }
-              }
             ]}
-            validateTrigger="onBlur"
           >
             <Input placeholder="请输入用户名" />
           </Form.Item>
-          
-          <Form.Item
-            name="name"
-            label="姓名"
-            rules={[
-              { required: true, message: '请输入姓名' },
-              { min: 2, max: 10, message: '姓名长度应在2-10个字符之间' }
-            ]}
-          >
+          <Form.Item name="realName" label="姓名" rules={[{ required: true, message: '请输入姓名' }]}>
             <Input placeholder="请输入姓名" />
           </Form.Item>
-          
+          {modalMode === 'create' ? (
+            <Form.Item
+              name="password"
+              label="初始密码"
+              rules={[{ required: true, message: '请输入初始密码' }, { min: 6, message: '密码至少 6 位' }]}
+            >
+              <Input.Password placeholder="请输入初始密码" />
+            </Form.Item>
+          ) : null}
           <Form.Item
-            name="password"
-            label="密码"
-            rules={[
-              { validator: validatePassword }
-            ]}
-            hasFeedback
+            name="campusId"
+            label="所属院区"
+            rules={[{ required: true, message: '请选择所属院区' }]}
+            extra={isSuperAdmin ? '系统超管可切换院区后再选择部门。' : '当前账号仅能在当前院区内创建和维护用户。'}
           >
-            <Input.Password 
-              placeholder="请输入密码（至少6位）" 
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder="请选择所属院区"
+              disabled={!isSuperAdmin}
+              onChange={() => form.setFieldValue('depId', undefined)}
+              options={(isSuperAdmin ? campusOptions : (currentCampusNode ? [currentCampusNode] : [])).map((item) => ({
+                label: item.deptName,
+                value: item.id,
+              }))}
             />
           </Form.Item>
-          
-          <Form.Item
-            name="confirmPassword"
-            label="确认密码"
-            dependencies={['password']}
-            rules={[
-              { required: true, message: '请确认密码' },
-              validateConfirmPassword
-            ]}
-            hasFeedback
-          >
-            <Input.Password placeholder="请再次输入密码" />
+          <Form.Item name="depId" label="所属部门" rules={[{ required: true, message: '请选择所属部门' }]}>
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder="请选择所属部门"
+              options={modalDepartmentOptions.map((item) => ({ label: item.deptName, value: item.id }))}
+            />
           </Form.Item>
-          
-          <Form.Item
-            name="department"
-            label="所属部门"
-            rules={[{ required: true, message: '请选择所属部门' }]}
-          >
-            <Select placeholder="请选择所属部门" showSearch>
-              {departments.map((dept, index) => (
-                <Option key={index} value={dept}>{dept}</Option>
-              ))}
-            </Select>
+          <Form.Item name="roleIds" label="角色" rules={[{ required: true, message: '请至少选择一个角色' }]}>
+            <Select
+              mode="multiple"
+              showSearch
+              optionFilterProp="label"
+              placeholder="请选择角色"
+              options={roleOptions.map((role) => ({ label: role.roleName, value: role.id }))}
+            />
           </Form.Item>
-          
-          <Form.Item
-            name="role"
-            label="角色"
-            rules={[{ required: true, message: '请选择角色' }]}
-          >
-            <Select placeholder="请选择角色" showSearch>
-              {roles.map((role, index) => (
-                <Option key={index} value={role}>{role}</Option>
-              ))}
-            </Select>
+          <Form.Item name="accountType" label="账号属性" rules={[{ required: true, message: '请输入账号属性' }]}> 
+            <Input placeholder="如：管理员、科室管理员、操作员" />
           </Form.Item>
-          
-          <Form.Item
-            name="accountType"
-            label="账号属性"
-            rules={[{ required: true, message: '请选择账号属性' }]}
-          >
-            <Select placeholder="请选择账号属性" showSearch>
-              {accountTypes.map((type, index) => (
-                <Option key={index} value={type}>{type}</Option>
-              ))}
-            </Select>
+          <Form.Item name="warehouseScope" label="仓库范围" rules={[{ required: true, message: '请输入仓库范围' }]}> 
+            <Input placeholder="如：全部仓库、仓库1" />
           </Form.Item>
-          
-          <Form.Item
-            name="warehouse"
-            label="可管理仓库"
-            rules={[{ required: true, message: '请选择可管理仓库' }]}
-          >
-            <Select placeholder="请选择可管理仓库" showSearch>
-              {warehouses.map((warehouse, index) => (
-                <Option key={index} value={warehouse}>{warehouse}</Option>
-              ))}
-            </Select>
+          <Form.Item name="phone" label="联系电话">
+            <Input placeholder="请输入联系电话" />
+          </Form.Item>
+          <Form.Item name="email" label="邮箱">
+            <Input placeholder="请输入邮箱" />
+          </Form.Item>
+          <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}> 
+            <Select options={STATUS_OPTIONS} />
           </Form.Item>
         </Form>
       </Modal>
 
-      {/* 编辑用户模态框 */}
       <Modal
-        title="编辑用户"
-        open={editVisible}
-        onOk={() => {
-          form.validateFields().then((values) => {
-            handleUpdateUser(values);
-          });
-        }}
+        title={`修改密码${currentUser ? ` - ${currentUser.realName}` : ''}`}
+        open={passwordModalOpen}
         onCancel={() => {
-          setEditVisible(false);
-          form.resetFields();
+          setPasswordModalOpen(false);
           setCurrentUser(null);
-        }}
-        okText="确定"
-        cancelText="取消"
-        confirmLoading={loading}
-        destroyOnHidden
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="username"
-            label="用户名"
-            rules={[
-              { required: true, message: '请输入用户名' },
-              { min: 3, max: 20, message: '用户名长度应在3-20个字符之间' },
-              { pattern: /^[a-zA-Z0-9_]+$/, message: '用户名只能包含字母、数字和下划线' }
-            ]}
-            validateTrigger="onBlur"
-          >
-            <Input placeholder="请输入用户名" />
-          </Form.Item>
-          
-          <Form.Item
-            name="name"
-            label="姓名"
-            rules={[
-              { required: true, message: '请输入姓名' },
-              { min: 2, max: 10, message: '姓名长度应在2-10个字符之间' }
-            ]}
-          >
-            <Input placeholder="请输入姓名" />
-          </Form.Item>
-          
-          <Form.Item
-            name="department"
-            label="所属部门"
-            rules={[{ required: true, message: '请选择所属部门' }]}
-          >
-            <Select placeholder="请选择所属部门" showSearch>
-              {departments.map((dept, index) => (
-                <Option key={index} value={dept}>{dept}</Option>
-              ))}
-            </Select>
-          </Form.Item>
-          
-          <Form.Item
-            name="role"
-            label="角色"
-            rules={[{ required: true, message: '请选择角色' }]}
-          >
-            <Select placeholder="请选择角色" showSearch>
-              {roles.map((role, index) => (
-                <Option key={index} value={role}>{role}</Option>
-              ))}
-            </Select>
-          </Form.Item>
-          
-          <Form.Item
-            name="accountType"
-            label="账号属性"
-            rules={[{ required: true, message: '请选择账号属性' }]}
-          >
-            <Select placeholder="请选择账号属性" showSearch>
-              {accountTypes.map((type, index) => (
-                <Option key={index} value={type}>{type}</Option>
-              ))}
-            </Select>
-          </Form.Item>
-          
-          <Form.Item
-            name="warehouse"
-            label="可管理仓库"
-            rules={[{ required: true, message: '请选择可管理仓库' }]}
-          >
-            <Select placeholder="请选择可管理仓库" showSearch>
-              {warehouses.map((warehouse, index) => (
-                <Option key={index} value={warehouse}>{warehouse}</Option>
-              ))}
-            </Select>
-          </Form.Item>
-          
-          <Form.Item
-            name="status"
-            label="用户状态"
-            rules={[{ required: true, message: '请选择用户状态' }]}
-          >
-            <Select placeholder="请选择用户状态">
-              <Option value="启用">启用</Option>
-              <Option value="禁用">禁用</Option>
-            </Select>
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* 修改密码模态框 */}
-      <Modal
-        title={`修改密码 - ${currentUser?.name || ''}`}
-        open={passwordVisible}
-        onCancel={() => {
-          setPasswordVisible(false);
           passwordForm.resetFields();
-          setCurrentUser(null);
-          setCurrentPassword('');
         }}
         footer={null}
         destroyOnHidden
       >
         <Form form={passwordForm} layout="vertical">
-          <Form.Item
-            label="当前密码"
-          >
-            <Input.Password 
-              value={currentPassword} 
-              disabled 
-              placeholder="当前密码"
-            />
+          <Form.Item label="重置说明">
+            <Input value={`默认密码为 ${DEFAULT_PASSWORD}`} disabled />
           </Form.Item>
-          
           <Form.Item
             name="newPassword"
             label="新密码"
-            rules={[
-              { validator: validatePassword }
-            ]}
+            rules={[{ required: true, message: '请输入新密码' }, { min: 6, message: '密码至少 6 位' }]}
             hasFeedback
           >
-            <Input.Password 
-              placeholder="请输入新密码（至少6位）" 
-            />
+            <Input.Password placeholder="请输入新密码" />
           </Form.Item>
-          
           <Form.Item
-            name="confirmNewPassword"
+            name="confirmPassword"
             label="确认新密码"
             dependencies={['newPassword']}
+            hasFeedback
             rules={[
-              { required: true, message: '请确认新密码' },
+              { required: true, message: '请再次输入新密码' },
               ({ getFieldValue }) => ({
                 validator(_, value) {
                   if (!value || getFieldValue('newPassword') === value) {
@@ -675,49 +617,22 @@ const UserAccountManagement = () => {
                 },
               }),
             ]}
-            hasFeedback
           >
             <Input.Password placeholder="请再次输入新密码" />
           </Form.Item>
-          
-          <div style={{ display: 'flex', gap: '8px', marginTop: '24px' }}>
-            <Button 
-              type="primary" 
-              onClick={() => {
-                passwordForm.validateFields().then((values) => {
-                  handleUpdatePassword(values);
-                });
-              }}
-              loading={loading}
-            >
-              修改密码
-            </Button>
-            
+          <Space>
+            <Button type="primary" onClick={handleUpdatePassword} loading={loading}>修改密码</Button>
             <Popconfirm
               title="确定要重置密码吗？"
-              description="重置后密码将变为：000000"
-              onConfirm={handleResetPassword}
+              description={`重置后密码将恢复为 ${DEFAULT_PASSWORD}`}
               okText="确定"
               cancelText="取消"
               icon={<ExclamationCircleOutlined style={{ color: 'red' }} />}
+              onConfirm={handleResetPassword}
             >
-              <Button 
-                danger 
-                loading={loading}
-              >
-                重置密码
-              </Button>
+              <Button danger loading={loading}>重置密码</Button>
             </Popconfirm>
-            
-            <Button onClick={() => {
-              setPasswordVisible(false);
-              passwordForm.resetFields();
-              setCurrentUser(null);
-              setCurrentPassword('');
-            }}>
-              取消
-            </Button>
-          </div>
+          </Space>
         </Form>
       </Modal>
     </div>
