@@ -1,5 +1,12 @@
 package com.yunsheng.yzb.controller.scm;
 
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
+import com.yunsheng.yzb.dto.StockDto;
+import com.yunsheng.yzb.mapper.scm.StockInItemMapper;
+import com.yunsheng.yzb.model.SampleItem;
+import com.yunsheng.yzb.model.SampleMan;
+import com.yunsheng.yzb.utils.ClassCastUtil;
 import com.yunsheng.yzb.vo.scm.PageResult;
 import com.yunsheng.yzb.vo.scm.ScmRequest;
 import com.yunsheng.yzb.vo.scm.ScmView;
@@ -7,11 +14,14 @@ import com.yunsheng.yzb.model.scm.StockInOrderEntity;
 import com.yunsheng.yzb.model.scm.StockInItemEntity;
 import com.yunsheng.yzb.service.scm.StockInManagementService;
 import com.yunsheng.yzb.utils.AjaxResult;
+import com.yunsheng.yzb.vo.scm.StockInItemVo;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.validation.Valid;
+import java.util.List;
 
 /**
  * 入库管理控制器。
@@ -27,6 +37,8 @@ public class StockInManagementController {
      */
     @Resource
     private StockInManagementService stockInManagementService;
+    @Autowired
+    private StockInItemMapper stockInItemMapper;
 
     /**
      * 分页查询入库单。
@@ -103,5 +115,17 @@ public class StockInManagementController {
     @GetMapping("/pending-items")
     public AjaxResult<PageResult<ScmView.PendingStockInItem>> pendingItems(ScmRequest.StockInQuery query) {
         return AjaxResult.success(stockInManagementService.queryPendingStockInItems(query));
+    }
+
+    /**
+     * 统计入库明细
+     */
+    @PostMapping("/countStock")
+    public AjaxResult countStock(@RequestBody StockDto dto) {
+        PageHelper.startPage(dto.getPageNum(), dto.getPageSize());
+        List<StockInItemVo> stockInItemVoList = stockInItemMapper.selectStockCountByInventory();
+
+        PageInfo<StockInItemVo> pageInfo = new PageInfo<>(stockInItemVoList);
+        return AjaxResult.res(1,"成功", ClassCastUtil.pageInfoToPageOutputDto(pageInfo));
     }
 }

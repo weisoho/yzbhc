@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunsheng.yzb.mapper.scm.StockInItemMapper">
+    <select id="selectStockCountByInventory" resultType="com.yunsheng.yzb.vo.scm.StockInItemVo">
+        select  (select warehouse from scm_inventory where id= inventory_id) inventory,
+
+(select supplier_name from   scm_material where id=  material_id) supplierName,
+
+(select name from   scm_material where id=  material_id) materialName,
+(select specification from   scm_material where id=  material_id) specification,
+
+(select model from   scm_material where id=  material_id) model,
+
+(select unit from   scm_material where id=  material_id) unit,
+
+sum(stock_in_quantity)
+
+as allStockNum from scm_stock_in_item
+
+
+GROUP BY inventory_id,material_id
+    </select>
+</mapper>
