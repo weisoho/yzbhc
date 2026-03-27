@@ -161,7 +161,7 @@ public class CheckInventoryController {
     }
 
     /**
-     * 盘点顺义露露
+     * 盘点损溢录入
      */
     @PostMapping("/selectpdxyModelList")
     public AjaxResult selectpdxyModelList(@RequestBody CheckInventory model){

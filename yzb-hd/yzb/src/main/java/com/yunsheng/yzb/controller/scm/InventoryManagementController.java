@@ -72,4 +72,12 @@ public class InventoryManagementController {
     public AjaxResult<PageResult<InventoryTransactionEntity>> transactions(ScmRequest.InventoryQuery query) {
         return AjaxResult.success(inventoryManagementService.queryTransactions(query));
     }
+
+    /**
+     * 损耗汇总
+     */
+     @GetMapping("/shcountpage")
+    public AjaxResult<PageResult<ScmView.InventoryDetail>> shpage(ScmRequest.InventoryQuery query) {
+        return AjaxResult.success(inventoryManagementService.queryInventory(query));
+    }
 }
