@@ -397,5 +397,8 @@
   where aa.status=1 and aa.dep_id=#{depid}
   order  by aa.cdate desc
 </select>
+  <select id="sumpdnum" resultType="java.lang.Integer">
+
+  </select>
 
 </mapper>

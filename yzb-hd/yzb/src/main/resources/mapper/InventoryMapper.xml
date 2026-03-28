@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.yunsheng.yzb.mapper.scm.InventoryMapper">
+    <select id="lossCountPage" resultType="com.yunsheng.yzb.vo.LossVo">
+        select
+        id inventoryId,
+        material_name materialName,
+        specification ,
+        model,
+        unit,
+        warehouse
+         from  scm_inventory where 1=1
+        <if test="id != null" >
+           and  id = #{id},
+        </if>
+    </select>
+</mapper>

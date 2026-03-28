@@ -173,6 +173,11 @@ public class CheckInventoryController {
         return AjaxResult.res(1,"成功", ClassCastUtil.pageInfoToPageOutputDto(pageInfo));
     }
 
+    /**
+     * 确认盘点
+     * @param model
+     * @return
+     */
     @PostMapping("/reCheck")
     public AjaxResult reCheck(@RequestBody CheckInventory model){
         CheckInventory checkInventory = checkInventoryMapper.selectByPrimaryKey(model.getId());
