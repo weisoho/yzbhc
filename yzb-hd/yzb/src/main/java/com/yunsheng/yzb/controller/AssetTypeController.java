@@ -20,7 +20,7 @@ import java.util.List;
  * 资产类型
  */
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/assetType")
 public class AssetTypeController {
     @Autowired
     private AssetTypeMapper assetTypeMapper;

@@ -3,6 +3,7 @@
 <mapper namespace="com.yunsheng.yzb.mapper.AssetMapper" >
   <resultMap id="BaseResultMap" type="com.yunsheng.yzb.model.Asset" >
     <id column="id" property="id" jdbcType="INTEGER" />
+    <id column="inventory_id" property="inventoryId" jdbcType="INTEGER" />
     <result column="asset_code" property="assetCode" jdbcType="VARCHAR" />
     <result column="asset_name" property="assetName" jdbcType="VARCHAR" />
     <result column="asset_typeid" property="assetTypeid" jdbcType="INTEGER" />
@@ -85,7 +86,7 @@
   <sql id="Base_Column_List" >
     id, asset_code, asset_name, asset_typeid, asset_typename, spe_model, manufacturer, 
     purchase_date, orig_value, service_life, dep_id, dep_name, sto_location, resp_person, 
-    asset_state, depr_method, serial_num, asset_desc, attachment, cdate, udate
+    asset_state, depr_method, serial_num, asset_desc, attachment, cdate, udate,inventory_id
   </sql>
   <select id="selectByExample" resultMap="BaseResultMap" parameterType="com.yunsheng.yzb.model.AssetExample" >
     select
@@ -201,6 +202,9 @@
       <if test="udate != null" >
         udate,
       </if>
+      <if test="inventoryId != null" >
+        inventory_id,
+      </if>
     </trim>
     <trim prefix="values (" suffix=")" suffixOverrides="," >
       <if test="id != null" >
@@ -265,6 +269,9 @@
       </if>
       <if test="udate != null" >
         #{udate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="inventoryId != null" >
+        #{inventoryId,jdbcType=INTEGER},
       </if>
     </trim>
   </insert>
@@ -340,6 +347,9 @@
       <if test="record.udate != null" >
         udate = #{record.udate,jdbcType=TIMESTAMP},
       </if>
+      <if test="record.inventoryId != null" >
+        inventory_id = #{record.inventoryId,jdbcType=INTEGER},
+      </if>
     </set>
     <if test="_parameter != null" >
       <include refid="Update_By_Example_Where_Clause" />
@@ -368,6 +378,7 @@
       attachment = #{record.attachment,jdbcType=VARCHAR},
       cdate = #{record.cdate,jdbcType=TIMESTAMP},
       udate = #{record.udate,jdbcType=TIMESTAMP}
+      inventory_id = #{record.inventoryId,jdbcType=INTEGER}
     <if test="_parameter != null" >
       <include refid="Update_By_Example_Where_Clause" />
     </if>
@@ -434,6 +445,9 @@
       </if>
       <if test="udate != null" >
         udate = #{udate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="inventoryId != null" >
+        inventory_id = #{inventoryId,jdbcType=INTEGER},
       </if>
     </set>
     where id = #{id,jdbcType=INTEGER}

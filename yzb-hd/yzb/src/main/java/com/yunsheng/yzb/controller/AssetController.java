@@ -20,7 +20,7 @@ import java.util.List;
  * 资产
  */
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/asset")
 public class AssetController {
     @Autowired
     private AssetMapper assetMapper;
@@ -57,11 +57,5 @@ public class AssetController {
         PageInfo<Asset> pageInfo = new PageInfo<>(list);
         return AjaxResult.res(1,"成功", ClassCastUtil.pageInfoToPageOutputDto(pageInfo));
     }
-    /**
-     * 导出
-     */
 
-    /**
-     * 打印
-     */
 }
