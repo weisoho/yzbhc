@@ -1,660 +1,316 @@
-import React, { useState } from 'react';
-import { 
-  Card, 
-  Table, 
-  Button, 
-  Space, 
-  Input, 
-  Select, 
-  DatePicker, 
-  Modal, 
-  Form, 
-  message, 
-  Tag,
-  Row,
-  Col,
-  Descriptions,
-  Upload,
-  Steps,
-  Timeline,
-  Tabs,
-  Divider,
-  Radio,
-  Checkbox,
-  Rate
-} from 'antd';
-import { 
-  SearchOutlined, 
-  PlusOutlined, 
-  EyeOutlined, 
-  EditOutlined, 
-  DeleteOutlined,
-  DownloadOutlined,
-  UploadOutlined,
-  FileTextOutlined,
-  WarningOutlined,
-  CheckCircleOutlined,
-  ClockCircleOutlined,
-  UserOutlined,
-  MedicineBoxOutlined,
-  SafetyOutlined,
-  FileAddOutlined
-} from '@ant-design/icons';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Button, Card, Descriptions, Form, Input, InputNumber, Modal, Space, Table, message } from 'antd';
+import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
 
-const { RangePicker } = DatePicker;
-const { Option } = Select;
-const { TextArea } = Input;
-const { Step } = Steps;
-const { TabPane } = Tabs;
+const normalizeList = (payload) => {
+  if (Array.isArray(payload?.records)) {
+    return payload.records;
+  }
+  if (Array.isArray(payload?.list)) {
+    return payload.list;
+  }
+  return [];
+};
+
+const formatDate = (value) => (value ? String(value).replace('T', ' ').slice(0, 19) : '-');
 
 const MedicalDeviceAdverseEvent = () => {
   const [form] = Form.useForm();
+  const [eventForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [visible, setVisible] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState(null);
-  const [searchParams, setSearchParams] = useState({});
-  const [activeTab, setActiveTab] = useState('1');
-  const [addModalVisible, setAddModalVisible] = useState(false);
-  const [addForm] = Form.useForm();
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [records, setRecords] = useState([]);
+  const [detailRecord, setDetailRecord] = useState(null);
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [detailVisible, setDetailVisible] = useState(false);
+  const [editVisible, setEditVisible] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [lastQuery, setLastQuery] = useState({});
 
-  // 模拟数据
-  const adverseEvents = [
-    {
-      key: '1',
-      eventName: '心脏起搏器故障',
-      patientName: '张三',
-      gender: '男',
-      age: 45,
-      barcode: 'BC202401001',
-      involvedProject: '心内科手术',
-      occurrenceDate: '2024-01-15',
-      eventSummary: '心脏起搏器突然停止工作',
-      investigationSituation: '设备科进行了初步调查',
-      eventAnalysis: '电池异常放电导致',
-      eventSummaryDetail: '已更换电池，设备恢复正常',
-      handlingResult: '设备已修复',
-      rectificationMeasures: '加强设备定期检查',
-      attachment: '事件报告.pdf'
-    },
-    {
-      key: '2',
-      eventName: '呼吸机使用错误',
-      patientName: '李四',
-      gender: '女',
-      age: 62,
-      barcode: 'BC202401002',
-      involvedProject: 'ICU治疗',
-      occurrenceDate: '2024-01-12',
-      eventSummary: '呼吸机参数设置错误',
-      investigationSituation: '护理部进行了调查',
-      eventAnalysis: '操作人员培训不足',
-      eventSummaryDetail: '已重新培训操作人员',
-      handlingResult: '已制定操作规范',
-      rectificationMeasures: '加强操作培训',
-      attachment: '调查报告.docx'
-    },
-    {
-      key: '3',
-      eventName: '输液泵不良反应',
-      patientName: '王五',
-      gender: '男',
-      age: 38,
-      barcode: 'BC202401003',
-      involvedProject: '外科手术',
-      occurrenceDate: '2024-01-10',
-      eventSummary: '患者对输液泵材料过敏',
-      investigationSituation: '过敏反应科进行了调查',
-      eventAnalysis: '材料材质问题',
-      eventSummaryDetail: '更换了输液泵型号',
-      handlingResult: '患者症状缓解',
-      rectificationMeasures: '更换所有同型号输液泵',
-      attachment: '医疗记录.pdf'
-    },
-    {
-      key: '4',
-      eventName: '监护仪设备损坏',
-      patientName: '赵六',
-      gender: '女',
-      age: 55,
-      barcode: 'BC202401004',
-      involvedProject: '急诊治疗',
-      occurrenceDate: '2024-01-08',
-      eventSummary: '监护仪显示屏损坏',
-      investigationSituation: '设备科进行了调查',
-      eventAnalysis: '意外碰撞导致',
-      eventSummaryDetail: '已更换显示屏',
-      handlingResult: '设备已修复',
-      rectificationMeasures: '加强设备保护措施',
-      attachment: '设备检查报告.pdf'
-    },
-    {
-      key: '5',
-      eventName: '除颤仪性能异常',
-      patientName: '孙七',
-      gender: '男',
-      age: 28,
-      barcode: 'BC202401005',
-      involvedProject: '手术室',
-      occurrenceDate: '2024-01-05',
-      eventSummary: '除颤仪放电异常',
-      investigationSituation: '设备科进行了调查',
-      eventAnalysis: '内部电路故障',
-      eventSummaryDetail: '已维修电路',
-      handlingResult: '设备已修复',
-      rectificationMeasures: '加强定期维护',
-      attachment: '性能测试报告.pdf'
+  const loadRecords = useCallback(async (query = {}, page = 1, size = 10) => {
+    setLoading(true);
+    try {
+      const response = await api.post('/api/adverseEvent/selectModelList', {
+        pageNum: page,
+        pageSize: size,
+        eventName: query.eventName,
+        patientName: query.patientName,
+        involvedProject: query.involvedProject,
+      });
+      if (response.code !== 1) {
+        message.error(getApiResponseMessage(response, '加载不良事件失败'));
+        setRecords([]);
+        setTotal(0);
+        return;
+      }
+      const list = normalizeList(response.data).map((item) => ({ ...item, key: item.id }));
+      setRecords(list);
+      setTotal(response.data?.total || list.length);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '加载不良事件失败'));
+      setRecords([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
     }
-  ];
+  }, []);
+
+  useEffect(() => {
+    loadRecords(lastQuery, currentPage, pageSize);
+  }, [currentPage, lastQuery, loadRecords, pageSize]);
+
+  const handleSearch = async (values) => {
+    setLastQuery(values);
+    setCurrentPage(1);
+    await loadRecords(values, 1, pageSize);
+  };
+
+  const handleReset = async () => {
+    form.resetFields();
+    setLastQuery({});
+    setCurrentPage(1);
+    await loadRecords({}, 1, pageSize);
+  };
+
+  const openCreateModal = () => {
+    setEditingRecord(null);
+    eventForm.resetFields();
+    eventForm.setFieldsValue({ occurrenceDate: new Date().toISOString().slice(0, 19) });
+    setEditVisible(true);
+  };
+
+  const openEditModal = (record) => {
+    setEditingRecord(record);
+    eventForm.setFieldsValue({
+      patientName: record.patientName,
+      gender: record.gender,
+      age: record.age,
+      patientId: record.patientId,
+      hospitalizationNo: record.hospitalizationNo,
+      involvedProject: record.involvedProject,
+      eventName: record.eventName,
+      occurrenceDate: record.occurrenceDate ? String(record.occurrenceDate).slice(0, 19) : undefined,
+      eventSummary: record.eventSummary,
+      investigationSituation: record.investigationSituation,
+      eventAnalysis: record.eventAnalysis,
+      eventSummaryDetail: record.eventSummaryDetail,
+      handlingResult: record.handlingResult,
+      rectificationMeasures: record.rectificationMeasures,
+      attachment: record.attachment,
+    });
+    setEditVisible(true);
+  };
+
+  const handleSubmit = async (values) => {
+    setSubmitLoading(true);
+    try {
+      const response = await api.post('/api/adverseEvent/addOrUpdate', {
+        id: editingRecord?.id,
+        patientName: values.patientName,
+        gender: values.gender,
+        age: values.age,
+        patientId: values.patientId,
+        hospitalizationNo: values.hospitalizationNo,
+        involvedProject: values.involvedProject,
+        eventName: values.eventName,
+        occurrenceDate: values.occurrenceDate,
+        eventSummary: values.eventSummary,
+        investigationSituation: values.investigationSituation,
+        eventAnalysis: values.eventAnalysis,
+        eventSummaryDetail: values.eventSummaryDetail,
+        handlingResult: values.handlingResult,
+        rectificationMeasures: values.rectificationMeasures,
+        attachment: values.attachment,
+      });
+      if (response.code !== 1) {
+        message.error(getApiResponseMessage(response, editingRecord ? '修改失败' : '新增失败'));
+        return;
+      }
+      message.success(editingRecord ? '修改成功' : '新增成功');
+      setEditVisible(false);
+      eventForm.resetFields();
+      setEditingRecord(null);
+      await loadRecords(lastQuery, currentPage, pageSize);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, editingRecord ? '修改失败' : '新增失败'));
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleDelete = async (record) => {
+    try {
+      const response = await api.request('/api/adverseEvent/delete', {
+        method: 'POST',
+        params: { id: record.id },
+      });
+      if (response.code !== 1) {
+        message.error(getApiResponseMessage(response, '删除失败'));
+        return;
+      }
+      message.success('删除成功');
+      await loadRecords(lastQuery, currentPage, pageSize);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '删除失败'));
+    }
+  };
 
   const columns = [
+    { title: '事件编号', dataIndex: 'eventNo', key: 'eventNo', width: 150 },
+    { title: '事件名称', dataIndex: 'eventName', key: 'eventName', width: 180 },
+    { title: '患者姓名', dataIndex: 'patientName', key: 'patientName', width: 120 },
+    { title: '性别', dataIndex: 'gender', key: 'gender', width: 80 },
+    { title: '年龄', dataIndex: 'age', key: 'age', width: 80 },
+    { title: '患者/条码号', dataIndex: 'patientId', key: 'patientId', width: 160 },
+    { title: '涉及项目', dataIndex: 'involvedProject', key: 'involvedProject', width: 160 },
+    { title: '发生时间', dataIndex: 'occurrenceDate', key: 'occurrenceDate', width: 180, render: formatDate },
+    { title: '事件概述', dataIndex: 'eventSummary', key: 'eventSummary', ellipsis: true },
     {
-      title: '序号',
-      dataIndex: 'key',
-      key: 'key',
-      width: 80,
-      fixed: 'left',
-      render: (text) => text
-    },
-    { 
-      title: '事件名称', 
-      dataIndex: 'eventName', 
-      key: 'eventName', 
-      width: 150,
-      ellipsis: true
-    },
-    { 
-      title: '患者姓名', 
-      dataIndex: 'patientName', 
-      key: 'patientName', 
-      width: 100 
-    },
-    { 
-      title: '性别', 
-      dataIndex: 'gender', 
-      key: 'gender', 
-      width: 60 
-    },
-    { 
-      title: '年龄', 
-      dataIndex: 'age', 
-      key: 'age', 
-      width: 60 
-    },
-    { 
-      title: '条码号', 
-      dataIndex: 'barcode', 
-      key: 'barcode', 
-      width: 120 
-    },
-    { 
-      title: '涉及项目', 
-      dataIndex: 'involvedProject', 
-      key: 'involvedProject', 
-      width: 120,
-      ellipsis: true
-    },
-    { 
-      title: '发生日期', 
-      dataIndex: 'occurrenceDate', 
-      key: 'occurrenceDate', 
-      width: 120,
-      sorter: (a, b) => new Date(a.occurrenceDate) - new Date(b.occurrenceDate)
-    },
-    { 
-      title: '事件概述', 
-      dataIndex: 'eventSummary', 
-      key: 'eventSummary', 
-      width: 150,
-      ellipsis: true
-    },
-    { 
-      title: '调查情况', 
-      dataIndex: 'investigationSituation', 
-      key: 'investigationSituation', 
-      width: 150,
-      ellipsis: true
-    },
-    { 
-      title: '事件分析', 
-      dataIndex: 'eventAnalysis', 
-      key: 'eventAnalysis', 
-      width: 150,
-      ellipsis: true
-    },
-    { 
-      title: '事件总结', 
-      dataIndex: 'eventSummaryDetail', 
-      key: 'eventSummaryDetail', 
-      width: 150,
-      ellipsis: true
-    },
-    { 
-      title: '处理结果', 
-      dataIndex: 'handlingResult', 
-      key: 'handlingResult', 
-      width: 120,
-      ellipsis: true
-    },
-    { 
-      title: '整改措施', 
-      dataIndex: 'rectificationMeasures', 
-      key: 'rectificationMeasures', 
-      width: 150,
-      ellipsis: true
-    },
-    { 
-      title: '附件', 
-      dataIndex: 'attachment', 
-      key: 'attachment', 
-      width: 120,
-      render: (attachment) => (
-        <Button type="link" size="small" icon={<FileTextOutlined />}>
-          {attachment}
-        </Button>
-      )
-    },
-    { 
-      title: '操作', 
+      title: '操作',
       key: 'action',
-      width: 180,
+      width: 220,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)}>详情</Button>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
-          <Button type="link" size="small" icon={<DeleteOutlined />} onClick={() => handleDelete(record)} style={{ color: '#f5222d' }}>删除</Button>
+          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => { setDetailRecord(record); setDetailVisible(true); }}>
+            详情
+          </Button>
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEditModal(record)}>
+            编辑
+          </Button>
+          <Button type="link" size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)}>
+            删除
+          </Button>
         </Space>
-      )
-    }
-  ];
-
-  const handleSearch = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      message.success('查询成功');
-    }, 500);
-  };
-
-  const handleReset = () => {
-    form.resetFields();
-    setSearchParams({});
-    message.success('已重置搜索条件');
-  };
-
-  const handleViewDetail = (record) => {
-    setSelectedEvent(record);
-    setVisible(true);
-  };
-
-  const handleEdit = (record) => {
-    message.info(`编辑不良事件：${record.eventNo}`);
-  };
-
-  const handleDelete = (record) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除不良事件记录"${record.eventNo}"吗？`,
-      onOk: () => {
-        message.success(`已删除不良事件记录：${record.eventNo}`);
-      }
-    });
-  };
-
-  const handleAddNew = () => {
-    setAddModalVisible(true);
-  };
-
-  const handleAddSubmit = () => {
-    addForm.validateFields().then(values => {
-      console.log('表单数据:', values);
-      message.success('已新增不良事件记录');
-      setAddModalVisible(false);
-      addForm.resetFields();
-    }).catch(errorInfo => {
-      console.log('表单验证失败:', errorInfo);
-    });
-  };
-
-  const handleAddCancel = () => {
-    setAddModalVisible(false);
-    addForm.resetFields();
-  };
-
-  const handleAddReset = () => {
-    addForm.resetFields();
-  };
-
-  const handleExport = () => {
-    if (selectedRowKeys.length === 0) {
-      message.info('请选择要导出的记录');
-      return;
-    }
-    const selectedEvents = adverseEvents.filter(event => selectedRowKeys.includes(event.key));
-    console.log('导出选中的记录:', selectedEvents);
-    message.success(`成功导出 ${selectedEvents.length} 条记录`);
-  };
-
-  const handleUpload = () => {
-    message.info('上传附件功能');
-  };
-
-  // 处理步骤数据
-  const processSteps = [
-    {
-      title: '事件上报',
-      description: '2024-01-15 14:30',
-      content: '发现心脏起搏器故障，立即上报',
-      icon: <WarningOutlined />
+      ),
     },
-    {
-      title: '初步调查',
-      description: '2024-01-15 16:00',
- content     : '设备科进行初步调查，确认故障存在',
-      icon: <SearchOutlined />
-    },
-    {
-      title: '详细分析',
-      description: '进行中',
-      content: '分析故障原因，评估影响范围',
-      icon: <MedicineBoxOutlined />
-    },
-    {
-      title: '处理措施',
-      description: '未开始',
-      content: '制定并实施处理方案',
-      icon: <EditOutlined />
-    },
-    {
-      title: '事件关闭',
-      description: '未开始',
-      content: '问题解决后关闭记录',
-      icon: <CheckCircleOutlined />
-    }
   ];
 
   return (
     <div style={{ padding: '0 16px' }}>
-      <h1 style={{ marginBottom: 24 }}>异常事件记录</h1>
-      
       <Card style={{ marginBottom: 16 }}>
-        <Form form={form} layout="inline">
-          <Row gutter={[16, 16]} style={{ width: '100%' }}>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="eventName" label="事件名称">
-                <Input placeholder="请输入事件名称" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="patientName" label="患者姓名">
-                <Input placeholder="请输入患者姓名" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="involvedProject" label="涉及项目">
-                <Input placeholder="请输入涉及项目" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="barcode" label="条码号">
-                <Input placeholder="请输入条码号" />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={12} md={8} lg={6}>
-              <Form.Item name="dateRange" label="事件日期">
-                <RangePicker style={{ width: '100%' }} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={24} md={24} lg={24}>
-              <Form.Item>
-                <Space>
-                  <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} loading={loading}>
-                    查询
-                  </Button>
-                  <Button onClick={handleReset}>重置</Button>
-                  <Button type="primary" icon={<PlusOutlined />} onClick={handleAddNew}>
-                    新增异常事件
-                  </Button>
-                  <Button icon={<DownloadOutlined />} onClick={handleExport}>
-                    导出
-                  </Button>
-                  <Upload>
-                    <Button icon={<UploadOutlined />}>
-                      上传附件
-                    </Button>
-                  </Upload>
-                </Space>
-              </Form.Item>
-            </Col>
-          </Row>
+        <Form form={form} layout="inline" onFinish={handleSearch}>
+          <Form.Item name="eventName">
+            <Input placeholder="事件名称" allowClear />
+          </Form.Item>
+          <Form.Item name="patientName">
+            <Input placeholder="患者姓名" allowClear />
+          </Form.Item>
+          <Form.Item name="involvedProject">
+            <Input placeholder="涉及项目" allowClear />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
+                查询
+              </Button>
+              <Button onClick={handleReset}>重置</Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+                新增登记
+              </Button>
+            </Space>
+          </Form.Item>
         </Form>
       </Card>
-      
-      <div style={{ overflowX: 'auto' }}>
-        <Table 
-          columns={columns} 
-          dataSource={adverseEvents} 
+
+      <Card>
+        <Table
+          rowKey="id"
           loading={loading}
-          rowSelection={{
-            selectedRowKeys,
-            onChange: (keys) => setSelectedRowKeys(keys),
-          }}
-          pagination={{ 
-            pageSize: 10,
+          columns={columns}
+          dataSource={records}
+          scroll={{ x: 1580 }}
+          pagination={{
+            current: currentPage,
+            pageSize,
+            total,
             showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-            style: {
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              margin: '24px 0 0 0',
-            }
-          }} 
-          scroll={{ x: 2000 }}
+            onChange: (page, size) => {
+              setCurrentPage(page);
+              setPageSize(size);
+            },
+          }}
         />
-      </div>
+      </Card>
 
-      <Modal
-        title="异常事件记录详情"
-        open={visible}
-        onCancel={() => setVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setVisible(false)}>
-            关闭
-          </Button>
-        ]}
-        width={1200}
-      >
-        {selectedEvent && (
-          <div>
-            <Descriptions column={2} bordered style={{ marginBottom: 24 }}>
-              <Descriptions.Item label="事件名称" span={2}>
-                {selectedEvent.eventName}
-              </Descriptions.Item>
-              <Descriptions.Item label="患者姓名">
-                {selectedEvent.patientName}
-              </Descriptions.Item>
-              <Descriptions.Item label="性别">
-                {selectedEvent.gender}
-              </Descriptions.Item>
-              <Descriptions.Item label="年龄">
-                {selectedEvent.age}
-              </Descriptions.Item>
-              <Descriptions.Item label="条码号">
-                {selectedEvent.barcode}
-              </Descriptions.Item>
-              <Descriptions.Item label="涉及项目">
-                {selectedEvent.involvedProject}
-              </Descriptions.Item>
-              <Descriptions.Item label="发生日期">
-                {selectedEvent.occurrenceDate}
-              </Descriptions.Item>
-              <Descriptions.Item label="事件概述" span={2}>
-                {selectedEvent.eventSummary}
-              </Descriptions.Item>
-              <Descriptions.Item label="调查情况" span={2}>
-                {selectedEvent.investigationSituation}
-              </Descriptions.Item>
-              <Descriptions.Item label="事件分析" span={2}>
-                {selectedEvent.eventAnalysis}
-              </Descriptions.Item>
-              <Descriptions.Item label="事件总结" span={2}>
-                {selectedEvent.eventSummaryDetail}
-              </Descriptions.Item>
-              <Descriptions.Item label="处理结果" span={2}>
-                {selectedEvent.handlingResult}
-              </Descriptions.Item>
-              <Descriptions.Item label="整改措施" span={2}>
-                {selectedEvent.rectificationMeasures}
-              </Descriptions.Item>
-              <Descriptions.Item label="附件" span={2}>
-                <Button type="link" icon={<FileTextOutlined />}>
-                  {selectedEvent.attachment}
-                </Button>
-              </Descriptions.Item>
-            </Descriptions>
-          </div>
-        )}
-      </Modal>
-
-      <Modal
-        title="新增异常事件"
-        open={addModalVisible}
-        onCancel={handleAddCancel}
-        footer={[
-          <Button key="reset" onClick={handleAddReset}>
-            重置
-          </Button>,
-          <Button key="cancel" onClick={handleAddCancel}>
-            取消
-          </Button>,
-          <Button key="submit" type="primary" onClick={handleAddSubmit}>
-            提交
-          </Button>
-        ]}
-        width={800}
-      >
-        <Form form={addForm} layout="vertical">
-          <Form.Item
-            name="patientName"
-            label="患者姓名"
-          >
-            <Input placeholder="请输入患者姓名" />
+      <Modal title={editingRecord ? '编辑不良事件' : '新增不良事件'} open={editVisible} onCancel={() => setEditVisible(false)} onOk={() => eventForm.submit()} confirmLoading={submitLoading} width={860} destroyOnClose>
+        <Form form={eventForm} layout="vertical" onFinish={handleSubmit}>
+          <Space style={{ width: '100%' }} align="start">
+            <Form.Item name="patientName" label="患者姓名" rules={[{ required: true, message: '请输入患者姓名' }]} style={{ width: 240 }}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="gender" label="性别" style={{ width: 160 }}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="age" label="年龄" style={{ width: 160 }}>
+              <InputNumber min={0} style={{ width: '100%' }} />
+            </Form.Item>
+          </Space>
+          <Space style={{ width: '100%' }} align="start">
+            <Form.Item name="patientId" label="患者/条码号" style={{ width: 240 }}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="hospitalizationNo" label="住院号" style={{ width: 240 }}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="involvedProject" label="涉及项目" style={{ width: 240 }}>
+              <Input />
+            </Form.Item>
+          </Space>
+          <Space style={{ width: '100%' }} align="start">
+            <Form.Item name="eventName" label="事件名称" rules={[{ required: true, message: '请输入事件名称' }]} style={{ width: 360 }}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="occurrenceDate" label="发生时间" rules={[{ required: true, message: '请输入发生时间' }]} style={{ width: 360 }}>
+              <Input placeholder="例如 2026-03-30T09:00:00" />
+            </Form.Item>
+          </Space>
+          <Form.Item name="eventSummary" label="事件概述">
+            <Input.TextArea rows={3} />
           </Form.Item>
-
-          <Form.Item
-            name="gender"
-            label="性别"
-          >
-            <Select placeholder="请选择性别">
-              <Option value="男">男</Option>
-              <Option value="女">女</Option>
-            </Select>
+          <Form.Item name="investigationSituation" label="调查情况">
+            <Input.TextArea rows={3} />
           </Form.Item>
-
-          <Form.Item
-            name="age"
-            label="年龄"
-          >
-            <Input type="number" placeholder="请输入年龄" />
+          <Form.Item name="eventAnalysis" label="事件分析">
+            <Input.TextArea rows={3} />
           </Form.Item>
-
-          <Form.Item
-            name="barcode"
-            label="条码号"
-          >
-            <Input placeholder="请输入条码号" />
+          <Form.Item name="eventSummaryDetail" label="事件总结">
+            <Input.TextArea rows={3} />
           </Form.Item>
-
-          <Form.Item
-            name="involvedProject"
-            label="涉及项目"
-          >
-            <Input placeholder="请输入涉及项目" />
+          <Form.Item name="handlingResult" label="处理结果">
+            <Input.TextArea rows={3} />
           </Form.Item>
-
-          <Form.Item
-            name="eventName"
-            label="事件名称"
-          >
-            <Input placeholder="请输入事件名称" />
+          <Form.Item name="rectificationMeasures" label="整改措施">
+            <Input.TextArea rows={3} />
           </Form.Item>
-
-          <Form.Item
-            name="occurrenceDate"
-            label="发生日期"
-          >
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
-
-          <Form.Item
-            name="eventSummary"
-            label="事件概述"
-          >
-            <TextArea 
-              placeholder="请输入事件概述" 
-              rows={3}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="investigationSituation"
-            label="调查情况"
-          >
-            <TextArea 
-              placeholder="请输入调查情况" 
-              rows={3}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="eventAnalysis"
-            label="事件分析"
-          >
-            <TextArea 
-              placeholder="请输入事件分析" 
-              rows={3}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="eventSummaryDetail"
-            label="事件总结"
-          >
-            <TextArea 
-              placeholder="请输入事件总结" 
-              rows={3}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="handlingResult"
-            label="处理结果"
-          >
-            <TextArea 
-              placeholder="请输入处理结果" 
-              rows={3}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="rectificationMeasures"
-            label="整改措施"
-          >
-            <TextArea 
-              placeholder="请输入整改措施" 
-              rows={3}
-            />
-          </Form.Item>
-
-          <Form.Item label="上传附件">
-            <Upload>
-              <Button icon={<UploadOutlined />}>选择文件</Button>
-            </Upload>
+          <Form.Item name="attachment" label="附件">
+            <Input placeholder="可填写附件名称或路径" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal title="不良事件详情" open={detailVisible} footer={null} onCancel={() => setDetailVisible(false)} width={860}>
+        <Descriptions bordered column={2} size="small">
+          <Descriptions.Item label="事件编号">{detailRecord?.eventNo || '-'}</Descriptions.Item>
+          <Descriptions.Item label="事件名称">{detailRecord?.eventName || '-'}</Descriptions.Item>
+          <Descriptions.Item label="患者姓名">{detailRecord?.patientName || '-'}</Descriptions.Item>
+          <Descriptions.Item label="性别">{detailRecord?.gender || '-'}</Descriptions.Item>
+          <Descriptions.Item label="年龄">{detailRecord?.age ?? '-'}</Descriptions.Item>
+          <Descriptions.Item label="患者/条码号">{detailRecord?.patientId || '-'}</Descriptions.Item>
+          <Descriptions.Item label="住院号">{detailRecord?.hospitalizationNo || '-'}</Descriptions.Item>
+          <Descriptions.Item label="涉及项目">{detailRecord?.involvedProject || '-'}</Descriptions.Item>
+          <Descriptions.Item label="发生时间">{formatDate(detailRecord?.occurrenceDate)}</Descriptions.Item>
+          <Descriptions.Item label="附件">{detailRecord?.attachment || '-'}</Descriptions.Item>
+          <Descriptions.Item label="事件概述" span={2}>{detailRecord?.eventSummary || '-'}</Descriptions.Item>
+          <Descriptions.Item label="调查情况" span={2}>{detailRecord?.investigationSituation || '-'}</Descriptions.Item>
+          <Descriptions.Item label="事件分析" span={2}>{detailRecord?.eventAnalysis || '-'}</Descriptions.Item>
+          <Descriptions.Item label="事件总结" span={2}>{detailRecord?.eventSummaryDetail || '-'}</Descriptions.Item>
+          <Descriptions.Item label="处理结果" span={2}>{detailRecord?.handlingResult || '-'}</Descriptions.Item>
+          <Descriptions.Item label="整改措施" span={2}>{detailRecord?.rectificationMeasures || '-'}</Descriptions.Item>
+        </Descriptions>
       </Modal>
     </div>
   );

@@ -99,6 +99,11 @@ public class Asset {
     private String attachment;
 
     /**
+     * 仓库id
+     */
+    private Integer inventoryId;
+
+    /**
      * 创建时间
      */
     private Date cdate;
@@ -258,6 +263,14 @@ public class Asset {
 
     public void setAttachment(String attachment) {
         this.attachment = attachment == null ? null : attachment.trim();
+    }
+
+    public Integer getInventoryId() {
+        return inventoryId;
+    }
+
+    public void setInventoryId(Integer inventoryId) {
+        this.inventoryId = inventoryId;
     }
 
     public Date getCdate() {

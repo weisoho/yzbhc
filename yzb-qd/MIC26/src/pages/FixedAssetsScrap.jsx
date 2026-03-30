@@ -1,340 +1,342 @@
-import React, { useState } from 'react';
-import { Card, Table, Input, Select, DatePicker, Button, Space, Tag, Modal, Form, message, Popconfirm } from 'antd';
-import { SearchOutlined, DeleteOutlined, EyeOutlined, CheckOutlined, CloseOutlined } from '@ant-design/icons';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Button, Card, Descriptions, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, message } from 'antd';
+import { CheckOutlined, CloseOutlined, EyeOutlined, PlusOutlined, SearchOutlined, StopOutlined } from '@ant-design/icons';
+import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
 
-const { Option } = Select;
-const { TextArea } = Input;
+const normalizeList = (payload) => {
+  if (Array.isArray(payload?.records)) {
+    return payload.records;
+  }
+  if (Array.isArray(payload?.list)) {
+    return payload.list;
+  }
+  return [];
+};
+
+const auditStatusMeta = {
+  1: { label: '待审核', color: 'orange' },
+  2: { label: '已通过', color: 'green' },
+  3: { label: '已驳回', color: 'red' },
+  4: { label: '已撤销', color: 'default' },
+};
+
+const toRow = (item) => ({
+  key: item.id,
+  id: item.id,
+  assetId: item.assetId,
+  changeCode: item.changeCode || '-',
+  assetCode: item.assetCode || '-',
+  assetName: item.assetName || '-',
+  assetTypeName: item.assetTypeName || '-',
+  departmentName: item.depName || '-',
+  reason: item.changeReason || '-',
+  scrapValue: item.scrapValue || '-',
+  applicantName: item.applicantName || '-',
+  applyDate: item.applyDate,
+  auditStatus: item.auditStatus,
+  auditRemark: item.auditRemark || '-',
+  remark: item.remark || '-',
+});
+
+const formatDate = (value) => (value ? String(value).replace('T', ' ').slice(0, 19) : '-');
 
 const FixedAssetsScrap = () => {
-  const [visible, setVisible] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState(null);
   const [form] = Form.useForm();
+  const [applyForm] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [records, setRecords] = useState([]);
+  const [assets, setAssets] = useState([]);
+  const [detailRecord, setDetailRecord] = useState(null);
+  const [detailVisible, setDetailVisible] = useState(false);
+  const [applyVisible, setApplyVisible] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [lastQuery, setLastQuery] = useState({});
 
-  const scrapAssets = [
-    { 
-      key: '1', 
-      assetCode: 'FA2018001', 
-      assetName: '心电图机', 
-      assetType: '医疗设备', 
-      specification: '12导联',
-      manufacturer: '飞利浦',
-      purchaseDate: '2018-05-10',
-      originalValue: 80000,
-      netValue: 16000,
-      department: '心内科',
-      scrapReason: '设备老化，维修成本过高',
-      scrapDate: '2024-01-15',
-      scrapMethod: '报废',
-      scrapStatus: '待审核',
-      applicant: '张医生',
-      applyDate: '2024-01-10'
-    },
-    { 
-      key: '2', 
-      assetCode: 'FA2019001', 
-      assetName: '办公电脑', 
-      assetType: '办公设备', 
-      specification: '联想ThinkCentre',
-      manufacturer: '联想',
-      purchaseDate: '2019-03-15',
-      originalValue: 5000,
-      netValue: 1000,
-      department: '行政部',
-      scrapReason: '配置过低，无法满足工作需求',
-      scrapDate: '2024-01-20',
-      scrapMethod: '报废',
-      scrapStatus: '已审核',
-      applicant: '李主任',
-      applyDate: '2024-01-18'
-    },
-    { 
-      key: '3', 
-      assetCode: 'FA2020001', 
-      assetName: '打印机', 
-      assetType: '办公设备', 
-      specification: 'HP LaserJet',
-      manufacturer: '惠普',
-      purchaseDate: '2020-08-20',
-      originalValue: 3000,
-      netValue: 900,
-      department: '财务科',
-      scrapReason: '频繁卡纸，维修无效',
-      scrapDate: '2024-01-25',
-      scrapMethod: '报废',
-      scrapStatus: '已驳回',
-      applicant: '王会计',
-      applyDate: '2024-01-22'
-    },
-    { 
-      key: '4', 
-      assetCode: 'FA2017001', 
-      assetName: '文件柜', 
-      assetType: '家具', 
-      specification: '铁皮文件柜',
-      manufacturer: '得力',
-      purchaseDate: '2017-11-05',
-      originalValue: 800,
-      netValue: 80,
-      department: '档案室',
-      scrapReason: '柜体变形，无法正常使用',
-      scrapDate: '2024-02-01',
-      scrapMethod: '报废',
-      scrapStatus: '待审核',
-      applicant: '赵管理员',
-      applyDate: '2024-01-28'
-    },
-  ];
+  const loadAssets = useCallback(async (keyword) => {
+    try {
+      const response = await api.request('/api/asset/selectAsset', {
+        method: 'POST',
+        params: {
+          pageNum: 1,
+          pageSize: 200,
+          assetCode: keyword,
+          assetName: keyword,
+          assetState: 1,
+        },
+      });
+      if (response.code !== 1) {
+        return;
+      }
+      const list = normalizeList(response.data).map((item) => ({
+        label: `${item.assetCode || ''} / ${item.assetName || ''} / ${item.depName || '未分配部门'}`,
+        value: item.id,
+      }));
+      setAssets(list);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '加载可报废资产失败'));
+    }
+  }, []);
+
+  const loadRecords = useCallback(async (query = {}, page = 1, size = 10) => {
+    setLoading(true);
+    try {
+      const response = await api.post('/api/assetChange/selectModelList', {
+        pageNum: page,
+        pageSize: size,
+        changeType: 'SCRAP',
+        assetCode: query.assetCode,
+        assetName: query.assetName,
+        auditStatus: query.auditStatus,
+      });
+      if (response.code !== 1) {
+        message.error(getApiResponseMessage(response, '加载报废记录失败'));
+        setRecords([]);
+        setTotal(0);
+        return;
+      }
+      const list = normalizeList(response.data).map(toRow);
+      setRecords(list);
+      setTotal(response.data?.total || list.length);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '加载报废记录失败'));
+      setRecords([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAssets('');
+  }, [loadAssets]);
+
+  useEffect(() => {
+    loadRecords(lastQuery, currentPage, pageSize);
+  }, [currentPage, lastQuery, loadRecords, pageSize]);
+
+  const handleSearch = async (values) => {
+    setLastQuery(values);
+    setCurrentPage(1);
+    await loadRecords(values, 1, pageSize);
+  };
+
+  const handleReset = async () => {
+    form.resetFields();
+    setLastQuery({});
+    setCurrentPage(1);
+    await loadRecords({}, 1, pageSize);
+  };
+
+  const handleApply = async (values) => {
+    setSubmitLoading(true);
+    try {
+      const response = await api.post('/api/assetChange/applyScrap', {
+        assetId: values.assetId,
+        changeType: 'SCRAP',
+        changeReason: values.changeReason,
+        scrapValue: values.scrapValue,
+        remark: values.remark,
+      });
+      if (response.code !== 1) {
+        message.error(getApiResponseMessage(response, '提交报废申请失败'));
+        return;
+      }
+      message.success('报废申请已提交');
+      setApplyVisible(false);
+      applyForm.resetFields();
+      await loadRecords(lastQuery, currentPage, pageSize);
+      await loadAssets('');
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '提交报废申请失败'));
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleAudit = async (record, auditStatus) => {
+    try {
+      const response = await api.post('/api/assetChange/auditChange', {
+        id: record.id,
+        auditStatus,
+        auditRemark: auditStatus === 2 ? '报废申请审核通过' : '报废申请审核驳回',
+      });
+      if (response.code !== 1) {
+        message.error(getApiResponseMessage(response, '审核失败'));
+        return;
+      }
+      message.success(auditStatus === 2 ? '已审核通过' : '已驳回申请');
+      await loadRecords(lastQuery, currentPage, pageSize);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '审核失败'));
+    }
+  };
+
+  const handleRevoke = async (record) => {
+    try {
+      const response = await api.request('/api/assetChange/revokeChange', {
+        method: 'POST',
+        params: {
+          id: record.id,
+          auditRemark: '前端撤销报废申请',
+        },
+      });
+      if (response.code !== 1) {
+        message.error(getApiResponseMessage(response, '撤销失败'));
+        return;
+      }
+      message.success('报废申请已撤销');
+      await loadRecords(lastQuery, currentPage, pageSize);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '撤销失败'));
+    }
+  };
 
   const columns = [
-    { title: '资产编码', dataIndex: 'assetCode', key: 'assetCode', width: 120 },
-    { title: '资产名称', dataIndex: 'assetName', key: 'assetName', width: 150 },
-    { title: '资产类型', dataIndex: 'assetType', key: 'assetType', width: 100 },
-    { title: '规格型号', dataIndex: 'specification', key: 'specification', width: 120 },
-    { title: '使用部门', dataIndex: 'department', key: 'department', width: 100 },
-    { 
-      title: '原值（元）', 
-      dataIndex: 'originalValue', 
-      key: 'originalValue', 
-      width: 110,
-      render: (value) => value.toLocaleString()
-    },
-    { 
-      title: '净值（元）', 
-      dataIndex: 'netValue', 
-      key: 'netValue', 
-      width: 110,
-      render: (value) => value.toLocaleString()
-    },
-    { 
-      title: '报废原因', 
-      dataIndex: 'scrapReason', 
-      key: 'scrapReason', 
-      width: 200,
-      ellipsis: true
-    },
-    { 
-      title: '报废状态', 
-      dataIndex: 'scrapStatus', 
-      key: 'scrapStatus', 
-      width: 100,
-      render: (status) => {
-        let color = 'default';
-        if (status === '待审核') color = 'orange';
-        if (status === '已审核') color = 'green';
-        if (status === '已驳回') color = 'red';
-        return <Tag color={color}>{status}</Tag>;
-      }
-    },
-    { 
-      title: '操作', 
-      key: 'action',
+    { title: '报废单号', dataIndex: 'changeCode', key: 'changeCode', width: 150 },
+    { title: '资产编码', dataIndex: 'assetCode', key: 'assetCode', width: 140 },
+    { title: '资产名称', dataIndex: 'assetName', key: 'assetName', width: 160 },
+    { title: '资产类型', dataIndex: 'assetTypeName', key: 'assetTypeName', width: 140 },
+    { title: '使用部门', dataIndex: 'departmentName', key: 'departmentName', width: 140 },
+    { title: '报废原因', dataIndex: 'reason', key: 'reason', ellipsis: true },
+    { title: '净值/残值', dataIndex: 'scrapValue', key: 'scrapValue', width: 120 },
+    { title: '申请人', dataIndex: 'applicantName', key: 'applicantName', width: 120 },
+    {
+      title: '申请时间',
+      dataIndex: 'applyDate',
+      key: 'applyDate',
       width: 180,
+      render: formatDate,
+    },
+    {
+      title: '审核状态',
+      dataIndex: 'auditStatus',
+      key: 'auditStatus',
+      width: 120,
+      render: (value) => {
+        const meta = auditStatusMeta[value] || { label: '-', color: 'default' };
+        return <Tag color={meta.color}>{meta.label}</Tag>;
+      },
+    },
+    {
+      title: '操作',
+      key: 'action',
+      width: 260,
+      fixed: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Button 
-            type="link" 
-            size="small"
-            icon={<EyeOutlined />} 
-            onClick={() => handleViewDetail(record)}
-          >
+          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => { setDetailRecord(record); setDetailVisible(true); }}>
             详情
           </Button>
-          {record.scrapStatus === '待审核' && (
+          {record.auditStatus === 1 ? (
             <>
-              <Button 
-                type="link" 
-                size="small"
-                icon={<CheckOutlined />} 
-                onClick={() => handleApprove(record)}
-                style={{ color: '#52c41a' }}
-              >
+              <Button type="link" size="small" icon={<CheckOutlined />} onClick={() => handleAudit(record, 2)}>
                 通过
               </Button>
-              <Button 
-                type="link" 
-                size="small"
-                icon={<CloseOutlined />} 
-                onClick={() => handleReject(record)}
-                style={{ color: '#f5222d' }}
-              >
+              <Button type="link" size="small" icon={<CloseOutlined />} danger onClick={() => handleAudit(record, 3)}>
                 驳回
               </Button>
             </>
-          )}
-          <Popconfirm
-            title="确定要删除这条报废记录吗？"
-            onConfirm={() => handleDelete(record)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Button 
-              type="link" 
-              size="small"
-              icon={<DeleteOutlined />} 
-              style={{ color: '#f5222d' }}
-            >
-              删除
-            </Button>
-          </Popconfirm>
+          ) : null}
+          {record.auditStatus === 1 ? (
+            <Popconfirm title="确认撤销当前报废申请？" onConfirm={() => handleRevoke(record)}>
+              <Button type="link" size="small" icon={<StopOutlined />} danger>
+                撤销
+              </Button>
+            </Popconfirm>
+          ) : null}
         </Space>
-      )
+      ),
     },
   ];
 
-  const handleViewDetail = (record) => {
-    setSelectedAsset(record);
-    setVisible(true);
-  };
-
-  const handleApprove = (record) => {
-    Modal.confirm({
-      title: '确认审核通过',
-      content: `确定要通过资产"${record.assetName}"的报废申请吗？`,
-      onOk: () => {
-        message.success(`已通过"资产${record.assetName}"的报废申请`);
-      }
-    });
-  };
-
-  const handleReject = (record) => {
-    Modal.confirm({
-      title: '确认驳回申请',
-      content: `确定要驳回资产"${record.assetName}"的报废申请吗？`,
-      onOk: () => {
-        message.success(`已驳回资产"${record.assetName}"的报废申请`);
-      }
-    });
-  };
-
-  const handleDelete = (record) => {
-    message.success(`已删除资产"${record.assetName}"的报废记录`);
-  };
-
-  const handleSearch = () => {
-    message.success('查询成功！');
-  };
-
-  const handleReset = () => {
-    message.success('重置成功！');
-  };
-
-  const handleApplyScrap = () => {
-    message.success('已跳转到报废申请页面！');
-  };
-
   return (
     <div style={{ padding: '0 16px' }}>
-      <h1 style={{ marginBottom: 24 }}>资产报废</h1>
-      
       <Card style={{ marginBottom: 16 }}>
-        <Space wrap style={{ width: '100%' }}>
-          <Input placeholder="资产编码" style={{ width: 150, minWidth: '120px' }} />
-          <Input placeholder="资产名称" style={{ width: 150, minWidth: '120px' }} />
-          <Select placeholder="资产类型" style={{ width: 120, minWidth: '100px' }}>
-            <Option value="all">全部</Option>
-            <Option value="医疗设备">医疗设备</Option>
-            <Option value="办公设备">办公设备</Option>
-            <Option value="家具">家具</Option>
-            <Option value="车辆">车辆</Option>
-          </Select>
-          <Select placeholder="使用部门" style={{ width: 120, minWidth: '100px' }}>
-            <Option value="all">全部</Option>
-            <Option value="心内科">心内科</Option>
-            <Option value="行政部">行政部</Option>
-            <Option value="财务科">财务科</Option>
-            <Option value="档案室">档案室</Option>
-          </Select>
-          <Select placeholder="报废状态" style={{ width: 120, minWidth: '100px' }}>
-            <Option value="all">全部</Option>
-            <Option value="待审核">待审核</Option>
-            <Option value="已审核">已审核</Option>
-            <Option value="已驳回">已驳回</Option>
-          </Select>
-          <DatePicker placeholder="申请日期" style={{ width: 150 }} />
-          <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
-            查询
-          </Button>
-          <Button onClick={handleReset}>重置</Button>
-          <Button type="primary" onClick={handleApplyScrap}>
-            申请报废
-          </Button>
-        </Space>
+        <Form form={form} layout="inline" onFinish={handleSearch}>
+          <Form.Item name="assetCode">
+            <Input placeholder="资产编码" allowClear />
+          </Form.Item>
+          <Form.Item name="assetName">
+            <Input placeholder="资产名称" allowClear />
+          </Form.Item>
+          <Form.Item name="auditStatus">
+            <Select placeholder="审核状态" allowClear style={{ width: 140 }} options={Object.entries(auditStatusMeta).map(([value, meta]) => ({ value: Number(value), label: meta.label }))} />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>
+                查询
+              </Button>
+              <Button onClick={handleReset}>重置</Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setApplyVisible(true)}>
+                新增报废申请
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
       </Card>
-      
-      <div style={{ overflowX: 'auto' }}>
-        <Table 
-          columns={columns} 
-          dataSource={scrapAssets} 
-          pagination={{ 
-            pageSize: pageSize,
+
+      <Card>
+        <Table
+          rowKey="id"
+          loading={loading}
+          columns={columns}
+          dataSource={records}
+          scroll={{ x: 1500 }}
+          pagination={{
             current: currentPage,
+            pageSize,
+            total,
+            showSizeChanger: true,
             onChange: (page, size) => {
               setCurrentPage(page);
               setPageSize(size);
             },
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
-            style: {
-              display: 'flex',
-              justifyContent: 'center',
-              marginTop: '16px'
-            }
-          }} 
-          size="small"
+          }}
         />
-      </div>
+      </Card>
 
-      <Modal
-        title="报废申请详情"
-        open={visible}
-        onCancel={() => setVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setVisible(false)}>
-            关闭
-          </Button>
-        ]}
-        width={700}
-      >
-        {selectedAsset && (
-          <div>
-            <div style={{ marginBottom: 16 }}>
-              <h3>资产基本信息</h3>
-              <p><strong>资产编码：</strong>{selectedAsset.assetCode}</p>
-              <p><strong>资产名称：</strong>{selectedAsset.assetName}</p>
-              <p><strong>资产类型：</strong>{selectedAsset.assetType}</p>
-              <p><strong>规格型号：</strong>{selectedAsset.specification}</p>
-              <p><strong>生产厂商：</strong>{selectedAsset.manufacturer}</p>
-              <p><strong>购置日期：</strong>{selectedAsset.purchaseDate}</p>
-              <p><strong>原值：</strong>{selectedAsset.originalValue.toLocaleString()}元</p>
-              <p><strong>净值：</strong>{selectedAsset.netValue.toLocaleString()}元</p>
-              <p><strong>使用部门：</strong>{selectedAsset.department}</p>
-            </div>
-            
-            <div style={{ marginBottom: 16 }}>
-              <h3>报废申请信息</h3>
-              <p><strong>申请人：</strong>{selectedAsset.applicant}</p>
-              <p><strong>申请日期：</strong>{selectedAsset.applyDate}</p>
-              <p><strong>计划报废日期：</strong>{selectedAsset.scrapDate}</p>
-              <p><strong>报废方式：</strong>{selectedAsset.scrapMethod}</p>
-              <p><strong>报废状态：</strong>
-                <Tag color={
-                  selectedAsset.scrapStatus === '待审核' ? 'orange' :
-                  selectedAsset.scrapStatus === '已审核' ? 'green' : 'red'
-                }>
-                  {selectedAsset.scrapStatus}
-                </Tag>
-              </p>
-            </div>
-            
-            <div>
-              <h3>报废原因</h3>
-              <p>{selectedAsset.scrapReason}</p>
-            </div>
-          </div>
-        )}
+      <Modal title="新增报废申请" open={applyVisible} onCancel={() => setApplyVisible(false)} onOk={() => applyForm.submit()} confirmLoading={submitLoading} width={720} destroyOnClose>
+        <Form form={applyForm} layout="vertical" onFinish={handleApply}>
+          <Form.Item name="assetId" label="选择资产" rules={[{ required: true, message: '请选择资产' }]}> 
+            <Select
+              showSearch
+              placeholder="输入资产编码或名称搜索"
+              filterOption={false}
+              onSearch={loadAssets}
+              options={assets}
+            />
+          </Form.Item>
+          <Form.Item name="changeReason" label="报废原因" rules={[{ required: true, message: '请输入报废原因' }]}> 
+            <Input.TextArea rows={4} placeholder="请输入报废原因" />
+          </Form.Item>
+          <Form.Item name="scrapValue" label="净值/残值"> 
+            <Input placeholder="如 1200.00" />
+          </Form.Item>
+          <Form.Item name="remark" label="备注"> 
+            <Input.TextArea rows={3} placeholder="可填写审批说明或补充信息" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal title="报废详情" open={detailVisible} footer={null} onCancel={() => setDetailVisible(false)} width={720}>
+        <Descriptions bordered column={2} size="small">
+          <Descriptions.Item label="报废单号">{detailRecord?.changeCode || '-'}</Descriptions.Item>
+          <Descriptions.Item label="资产编码">{detailRecord?.assetCode || '-'}</Descriptions.Item>
+          <Descriptions.Item label="资产名称">{detailRecord?.assetName || '-'}</Descriptions.Item>
+          <Descriptions.Item label="资产类型">{detailRecord?.assetTypeName || '-'}</Descriptions.Item>
+          <Descriptions.Item label="使用部门">{detailRecord?.departmentName || '-'}</Descriptions.Item>
+          <Descriptions.Item label="申请人">{detailRecord?.applicantName || '-'}</Descriptions.Item>
+          <Descriptions.Item label="申请时间">{formatDate(detailRecord?.applyDate)}</Descriptions.Item>
+          <Descriptions.Item label="审核状态">{auditStatusMeta[detailRecord?.auditStatus]?.label || '-'}</Descriptions.Item>
+          <Descriptions.Item label="净值/残值">{detailRecord?.scrapValue || '-'}</Descriptions.Item>
+          <Descriptions.Item label="审核意见">{detailRecord?.auditRemark || '-'}</Descriptions.Item>
+          <Descriptions.Item label="报废原因" span={2}>{detailRecord?.reason || '-'}</Descriptions.Item>
+          <Descriptions.Item label="备注" span={2}>{detailRecord?.remark || '-'}</Descriptions.Item>
+        </Descriptions>
       </Modal>
     </div>
   );

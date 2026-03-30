@@ -1,110 +1,287 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Card,
-  Table,
-  Button,
-  Space,
-  Form,
-  Input,
-  Select,
-  Modal,
-  Tag,
-  Row,
-  Col,
-  message
-} from 'antd';
-import {
-  SearchOutlined,
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  DownloadOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined
-} from '@ant-design/icons';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Card, Table, Button, Space, Form, Input, Select, Modal, Tag, Row, Col, message } from 'antd';
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, DownloadOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
 
-const { Option } = Select;
 const { TextArea } = Input;
+
+const statusOptions = [
+  { label: '启用', value: 1, color: 'green' },
+  { label: '停用', value: 0, color: 'red' },
+];
+
+const getStatusMeta = (value) => statusOptions.find((item) => item.value === value) || { label: '-', color: 'default' };
+
+const normalizeList = (payload) => {
+  if (Array.isArray(payload?.records)) {
+    return payload.records;
+  }
+  if (Array.isArray(payload?.list)) {
+    return payload.list;
+  }
+  return [];
+};
+
+const mapDepartmentOption = (item) => ({
+  label: item.deptName || `部门${item.id}`,
+  value: item.id,
+});
+
+const mapProject = (item, departmentMap) => ({
+  key: item.id,
+  id: item.id,
+  projectCode: item.itemCode || '-',
+  projectName: item.itemName || '-',
+  department: item.depId,
+  departmentName: item.depName || departmentMap.get(item.depId) || '-',
+  status: item.itemState,
+  isCharge: item.isCharge,
+  chargeCode: item.chargeCode || '-',
+  remark: item.remark || '-',
+});
 
 const SampleProjectManagement = () => {
   const [form] = Form.useForm();
   const [projectForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
   const [projects, setProjects] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [projectModalVisible, setProjectModalVisible] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [lastQuery, setLastQuery] = useState({});
 
-  // 模拟检验科数据
-  const departments = [
-    { value: 'clinical', label: '临床检验科' },
-    { value: 'microbiology', label: '微生物检验科' },
-    { value: 'biochemistry', label: '生化检验科' },
-    { value: 'immunology', label: '免疫检验科' },
-    { value: 'hematology', label: '血液检验科' },
-    { value: 'pathology', label: '病理检验科' },
-  ];
+  const departmentMap = useMemo(() => {
+    return new Map(departments.map((item) => [item.value, item.label]));
+  }, [departments]);
 
-  // 模拟项目数据
-  const mockProjects = [
-    { key: '1', projectCode: 'PROJ001', projectName: '血常规', department: 'clinical', departmentName: '临床检验科', status: 'active', remark: '常规检测项目' },
-    { key: '2', projectCode: 'PROJ002', projectName: '尿常规', department: 'clinical', departmentName: '临床检验科', status: 'active', remark: '常规检测项目' },
-    { key: '3', projectCode: 'PROJ003', projectName: '肝功能', department: 'biochemistry', departmentName: '生化检验科', status: 'active', remark: '生化检测项目' },
-    { key: '4', projectCode: 'PROJ004', projectName: '肾功能', department: 'biochemistry', departmentName: '生化检验科', status: 'active', remark: '生化检测项目' },
-    { key: '5', projectCode: 'PROJ005', projectName: '细菌培养', department: 'microbiology', departmentName: '微生物检验科', status: 'active', remark: '微生物检测项目' },
-    { key: '6', projectCode: 'PROJ006', projectName: 'HIV抗体检测', department: 'immunology', departmentName: '免疫检验科', status: 'inactive', remark: '特殊检测项目' },
-    { key: '7', projectCode: 'PROJ007', projectName: '血型鉴定', department: 'hematology', departmentName: '血液检验科', status: 'active', remark: '血液检测项目' },
-    { key: '8', projectCode: 'PROJ008', projectName: '病理切片', department: 'pathology', departmentName: '病理检验科', status: 'active', remark: '病理检测项目' },
-  ];
-
-  // 组件加载时初始化数据
-  useEffect(() => {
-    setProjects(mockProjects);
+  const loadDepartments = useCallback(async () => {
+    try {
+      const response = await api.get('/api/department/list');
+      if (response.code === 1 && Array.isArray(response.data)) {
+        const options = response.data
+          .filter((item) => item?.id && item?.status === 1 && item?.orgType === 'DEPARTMENT')
+          .map(mapDepartmentOption);
+        setDepartments(options);
+      }
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '加载检验科列表失败'));
+    }
   }, []);
 
-  // 项目管理列配置
+  const loadProjects = useCallback(async (query = {}, page = 1, size = 10) => {
+    setLoading(true);
+    try {
+      const response = await api.post('/api/sampleItem/selectModelList', {
+        pageNum: page,
+        pageSize: size,
+        itemCode: query.projectCode,
+        itemName: query.projectName,
+        depId: query.department,
+        itemState: query.status,
+      });
+
+      if (response.code !== 1) {
+        message.error(getApiResponseMessage(response, '加载项目字典失败'));
+        setProjects([]);
+        setTotal(0);
+        return;
+      }
+
+      const list = normalizeList(response.data).map((item) => mapProject(item, departmentMap));
+      setProjects(list);
+      setTotal(response.data?.total || list.length);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '加载项目字典失败'));
+      setProjects([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [departmentMap]);
+
+  useEffect(() => {
+    loadDepartments();
+  }, [loadDepartments]);
+
+  useEffect(() => {
+    loadProjects(lastQuery, currentPage, pageSize);
+  }, [currentPage, lastQuery, loadProjects, pageSize]);
+
+  const handleSearch = async (values) => {
+    setCurrentPage(1);
+    setLastQuery(values);
+    await loadProjects(values, 1, pageSize);
+  };
+
+  const handleReset = async () => {
+    form.resetFields();
+    setLastQuery({});
+    setCurrentPage(1);
+    await loadProjects({}, 1, pageSize);
+  };
+
+  const handleExport = async () => {
+    try {
+      const response = await api.post('/api/sampleItem/export', {
+        pageNum: 1,
+        pageSize: 10000,
+        itemCode: lastQuery.projectCode,
+        itemName: lastQuery.projectName,
+        depId: lastQuery.department,
+        itemState: lastQuery.status,
+      });
+      message.success(getApiResponseMessage(response, '导出成功'));
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '导出失败'));
+    }
+  };
+
+  const openCreateModal = () => {
+    setSelectedProject(null);
+    projectForm.resetFields();
+    projectForm.setFieldsValue({
+      status: 1,
+      isCharge: 0,
+    });
+    setProjectModalVisible(true);
+  };
+
+  const handleEditProject = (record) => {
+    setSelectedProject(record);
+    projectForm.setFieldsValue({
+      projectCode: record.projectCode === '-' ? undefined : record.projectCode,
+      projectName: record.projectName === '-' ? undefined : record.projectName,
+      department: record.department,
+      status: record.status,
+      isCharge: record.isCharge ?? 0,
+      chargeCode: record.chargeCode === '-' ? undefined : record.chargeCode,
+      remark: record.remark === '-' ? undefined : record.remark,
+    });
+    setProjectModalVisible(true);
+  };
+
+  const handleToggleStatus = async (record) => {
+    const nextState = record.status === 1 ? 0 : 1;
+    try {
+      const response = await api.request('/api/sampleItem/updateItemState', {
+        method: 'POST',
+        params: { id: record.id, itemState: nextState },
+      });
+      if (response.code !== 1) {
+        message.error(getApiResponseMessage(response, '状态更新失败'));
+        return;
+      }
+      message.success(nextState === 1 ? '项目已启用' : '项目已停用');
+      await loadProjects(lastQuery, currentPage, pageSize);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '状态更新失败'));
+    }
+  };
+
+  const handleDeleteProject = (record) => {
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除项目“${record.projectName}”吗？`,
+      okText: '确定',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          const response = await api.request('/api/sampleItem/deleteSampleItem', {
+            method: 'POST',
+            params: { id: record.id },
+          });
+          if (response.code !== 1) {
+            message.error(getApiResponseMessage(response, '删除失败'));
+            return;
+          }
+          message.success('项目删除成功');
+          await loadProjects(lastQuery, currentPage, pageSize);
+        } catch (error) {
+          message.error(getApiErrorMessage(error, '删除失败'));
+        }
+      },
+    });
+  };
+
+  const handleProjectSubmit = async (values) => {
+    setSubmitLoading(true);
+    try {
+      const departmentName = departmentMap.get(values.department);
+      const payload = {
+        id: selectedProject?.id,
+        itemCode: values.projectCode,
+        itemName: values.projectName,
+        depId: values.department,
+        depName: departmentName,
+        itemState: values.status,
+        isCharge: values.isCharge,
+        chargeCode: values.isCharge === 1 ? values.chargeCode : '',
+        remark: values.remark,
+      };
+
+      const response = await api.post('/api/sampleItem/addorupdateSampleItem', payload);
+      if (response.code !== 1) {
+        message.error(getApiResponseMessage(response, selectedProject ? '项目修改失败' : '项目新增失败'));
+        return;
+      }
+
+      message.success(selectedProject ? '项目修改成功' : '项目新增成功');
+      setProjectModalVisible(false);
+      projectForm.resetFields();
+      setSelectedProject(null);
+      await loadProjects(lastQuery, currentPage, pageSize);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, selectedProject ? '项目修改失败' : '项目新增失败'));
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
   const columns = [
-    {
-      title: '序号',
-      key: 'index',
-      width: 60,
-      render: (_, __, index) => index + 1,
-      fixed: 'left',
-    },
     {
       title: '项目编码',
       dataIndex: 'projectCode',
       key: 'projectCode',
-      width: 120,
-      sorter: (a, b) => a.projectCode.localeCompare(b.projectCode),
+      width: 140,
     },
     {
       title: '项目名称',
       dataIndex: 'projectName',
       key: 'projectName',
-      width: 150,
-      sorter: (a, b) => a.projectName.localeCompare(b.projectName),
+      width: 160,
     },
     {
       title: '所属检验科',
       dataIndex: 'departmentName',
       key: 'departmentName',
-      width: 150,
-      sorter: (a, b) => a.departmentName.localeCompare(b.departmentName),
+      width: 160,
+    },
+    {
+      title: '是否收费',
+      dataIndex: 'isCharge',
+      key: 'isCharge',
+      width: 100,
+      render: (value) => <Tag color={value === 1 ? 'blue' : 'default'}>{value === 1 ? '是' : '否'}</Tag>,
+    },
+    {
+      title: '收费编码',
+      dataIndex: 'chargeCode',
+      key: 'chargeCode',
+      width: 140,
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      render: (status) => (
-        <Tag color={status === 'active' ? 'green' : 'red'}>
-          {status === 'active' ? '启用' : '停用'}
-        </Tag>
-      ),
-      sorter: (a, b) => a.status.localeCompare(b.status),
+      render: (status) => {
+        const meta = getStatusMeta(status);
+        return <Tag color={meta.color}>{meta.label}</Tag>;
+      },
     },
     {
       title: '备注',
@@ -115,168 +292,33 @@ const SampleProjectManagement = () => {
     {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: 180,
       render: (_, record) => (
         <Space size="small">
           <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEditProject(record)}>
             编辑
           </Button>
-          <Button 
-            type="link" 
-            size="small" 
-            icon={record.status === 'active' ? <CloseCircleOutlined /> : <CheckCircleOutlined />}
+          <Button
+            type="link"
+            size="small"
+            icon={record.status === 1 ? <CloseCircleOutlined /> : <CheckCircleOutlined />}
             onClick={() => handleToggleStatus(record)}
-            style={{ color: record.status === 'active' ? '#ff4d4f' : '#52c41a' }}
+            style={{ color: record.status === 1 ? '#ff4d4f' : '#52c41a' }}
           >
-            {record.status === 'active' ? '停用' : '启用'}
+            {record.status === 1 ? '停用' : '启用'}
           </Button>
           <Button type="link" size="small" icon={<DeleteOutlined />} onClick={() => handleDeleteProject(record)} style={{ color: '#ff4d4f' }}>
             删除
           </Button>
         </Space>
-      )
-    }
+      ),
+    },
   ];
-
-  // 处理查询
-  const handleSearch = (values) => {
-    setLoading(true);
-    // 模拟查询
-    setTimeout(() => {
-      let filteredProjects = [...mockProjects];
-      
-      if (values.projectName) {
-        filteredProjects = filteredProjects.filter(project => 
-          project.projectName.includes(values.projectName)
-        );
-      }
-      
-      if (values.projectCode) {
-        filteredProjects = filteredProjects.filter(project => 
-          project.projectCode.includes(values.projectCode)
-        );
-      }
-      
-      if (values.department) {
-        filteredProjects = filteredProjects.filter(project => 
-          project.department === values.department
-        );
-      }
-      
-      if (values.status) {
-        filteredProjects = filteredProjects.filter(project => 
-          project.status === values.status
-        );
-      }
-      
-      setProjects(filteredProjects);
-      setLoading(false);
-    }, 500);
-  };
-
-  // 处理重置
-  const handleReset = () => {
-    form.resetFields();
-    setProjects(mockProjects);
-  };
-
-  // 处理导出
-  const handleExport = () => {
-    message.success('项目数据导出成功');
-  };
-
-  // 处理编辑项目
-  const handleEditProject = (record) => {
-    setSelectedProject(record);
-    projectForm.setFieldsValue({
-      projectCode: record.projectCode,
-      projectName: record.projectName,
-      department: record.department,
-      status: record.status,
-      remark: record.remark,
-    });
-    setProjectModalVisible(true);
-  };
-
-  // 处理切换项目状态
-  const handleToggleStatus = (record) => {
-    const newProjects = projects.map(project => {
-      if (project.key === record.key) {
-        return {
-          ...project,
-          status: project.status === 'active' ? 'inactive' : 'active'
-        };
-      }
-      return project;
-    });
-    setProjects(newProjects);
-    message.success(`项目${record.status === 'active' ? '已停用' : '已启用'}`);
-  };
-
-  // 处理删除项目
-  const handleDeleteProject = (record) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除项目 "${record.projectName}" 吗？`,
-      okText: '确定',
-      cancelText: '取消',
-      onOk: () => {
-        const newProjects = projects.filter(project => project.key !== record.key);
-        setProjects(newProjects);
-        message.success('项目删除成功');
-      },
-    });
-  };
-
-  // 处理新增/编辑项目提交
-  const handleProjectSubmit = (values) => {
-    setLoading(true);
-    setTimeout(() => {
-      if (selectedProject) {
-        // 编辑项目
-        const newProjects = projects.map(project => {
-          if (project.key === selectedProject.key) {
-            return {
-              ...project,
-              ...values,
-              departmentName: departments.find(dept => dept.value === values.department)?.label || values.department,
-            };
-          }
-          return project;
-        });
-        setProjects(newProjects);
-        message.success('项目修改成功');
-      } else {
-        // 新增项目
-        const newProject = {
-          key: `PROJ${String(projects.length + 1).padStart(3, '0')}`,
-          projectCode: values.projectCode,
-          projectName: values.projectName,
-          department: values.department,
-          departmentName: departments.find(dept => dept.value === values.department)?.label || values.department,
-          status: values.status,
-          remark: values.remark,
-        };
-        setProjects([...projects, newProject]);
-        message.success('项目新增成功');
-      }
-      
-      setProjectModalVisible(false);
-      projectForm.resetFields();
-      setSelectedProject(null);
-      setLoading(false);
-    }, 500);
-  };
-
-
 
   return (
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>项目字典</h1>
-      
 
-      
-      {/* 查询表单 */}
       <Card style={{ marginBottom: 16 }}>
         <Form form={form} layout="inline" onFinish={handleSearch}>
           <Row gutter={[16, 16]} style={{ width: '100%' }}>
@@ -292,29 +334,20 @@ const SampleProjectManagement = () => {
             </Col>
             <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item name="department" label="检验科">
-                <Select placeholder="请选择检验科" allowClear>
-                  {departments.map(dept => (
-                    <Option key={dept.value} value={dept.value}>{dept.label}</Option>
-                  ))}
-                </Select>
+                <Select placeholder="请选择检验科" allowClear options={departments} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item name="status" label="状态">
-                <Select placeholder="请选择状态" allowClear>
-                  <Option value="active">启用</Option>
-                  <Option value="inactive">停用</Option>
-                </Select>
+                <Select placeholder="请选择状态" allowClear options={statusOptions} />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={24} md={24} lg={24} style={{ textAlign: 'right' }}>
+            <Col xs={24} style={{ textAlign: 'right' }}>
               <Space>
                 <Button type="primary" icon={<SearchOutlined />} htmlType="submit" loading={loading}>
                   查询
                 </Button>
-                <Button onClick={handleReset}>
-                  重置
-                </Button>
+                <Button onClick={handleReset}>重置</Button>
                 <Button icon={<DownloadOutlined />} onClick={handleExport}>
                   导出
                 </Button>
@@ -323,49 +356,35 @@ const SampleProjectManagement = () => {
           </Row>
         </Form>
       </Card>
-      
-      {/* 项目管理操作栏 */}
+
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-          projectForm.resetFields();
-          setSelectedProject(null);
-          setProjectModalVisible(true);
-        }}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
           新增项目
         </Button>
       </div>
-      
-      {/* 项目管理表格 */}
+
       <Table
         columns={columns}
         dataSource={projects}
         loading={loading}
-        rowSelection={{
-          selectedRowKeys,
-          onChange: (keys) => setSelectedRowKeys(keys),
-        }}
+        rowKey="id"
         pagination={{
-          pageSize: pageSize,
           current: currentPage,
+          pageSize,
+          total,
           onChange: (page, size) => {
             setCurrentPage(page);
             setPageSize(size);
           },
           showSizeChanger: true,
           pageSizeOptions: ['10', '20', '50', '100'],
-          showTotal: (total) => `共 ${total} 条记录`,
-          style: {
-            display: 'flex',
-            justifyContent: 'center',
-            marginTop: '16px'
-          }
+          showTotal: (count) => `共 ${count} 条记录`,
         }}
-        scroll={{ x: 1000 }}
+        scroll={{ x: 1200 }}
       />
-      
-      {/* 新增/编辑项目模态框 */}
+
       <Modal
-        title={selectedProject ? "编辑项目" : "新增项目"}
+        title={selectedProject ? '编辑项目' : '新增项目'}
         open={projectModalVisible}
         onCancel={() => {
           setProjectModalVisible(false);
@@ -373,67 +392,66 @@ const SampleProjectManagement = () => {
           setSelectedProject(null);
         }}
         footer={null}
-        width={600}
+        width={680}
       >
-        <Form
-          form={projectForm}
-          layout="vertical"
-          onFinish={handleProjectSubmit}
-        >
+        <Form form={projectForm} layout="vertical" onFinish={handleProjectSubmit}>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="projectCode"
-                label="项目编码"
-                rules={[{ required: true, message: '请输入项目编码' }]}
-              >
-                <Input placeholder="请输入项目编码" />
+              <Form.Item name="projectCode" label="项目编码">
+                <Input placeholder="留空则自动生成" disabled={Boolean(selectedProject)} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="projectName"
-                label="项目名称"
-                rules={[{ required: true, message: '请输入项目名称' }]}
-              >
+              <Form.Item name="projectName" label="项目名称" rules={[{ required: true, message: '请输入项目名称' }]}>
                 <Input placeholder="请输入项目名称" />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="department"
-                label="所属检验科"
-                rules={[{ required: true, message: '请选择所属检验科' }]}
-              >
-                <Select placeholder="请选择所属检验科">
-                  {departments.map(dept => (
-                    <Option key={dept.value} value={dept.value}>{dept.label}</Option>
-                  ))}
-                </Select>
+              <Form.Item name="department" label="所属检验科" rules={[{ required: true, message: '请选择所属检验科' }]}>
+                <Select placeholder="请选择所属检验科" options={departments} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="status" label="状态" rules={[{ required: true, message: '请选择状态' }]}>
+                <Select placeholder="请选择状态" options={statusOptions} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="isCharge" label="是否收费" rules={[{ required: true, message: '请选择是否收费' }]}>
+                <Select
+                  placeholder="请选择"
+                  options={[
+                    { label: '否', value: 0 },
+                    { label: '是', value: 1 },
+                  ]}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                name="status"
-                label="状态"
-                rules={[{ required: true, message: '请选择状态' }]}
+                noStyle
+                shouldUpdate={(prevValues, currentValues) => prevValues.isCharge !== currentValues.isCharge}
               >
-                <Select placeholder="请选择状态">
-                  <Option value="active">启用</Option>
-                  <Option value="inactive">停用</Option>
-                </Select>
+                {({ getFieldValue }) => (
+                  <Form.Item
+                    name="chargeCode"
+                    label="收费编码"
+                    rules={getFieldValue('isCharge') === 1 ? [{ required: true, message: '收费项目必须填写收费编码' }] : []}
+                  >
+                    <Input placeholder="收费项目请填写收费编码" disabled={getFieldValue('isCharge') !== 1} />
+                  </Form.Item>
+                )}
               </Form.Item>
             </Col>
           </Row>
-          <Form.Item
-            name="remark"
-            label="备注"
-          >
+          <Form.Item name="remark" label="备注">
             <TextArea rows={4} placeholder="请输入备注信息" />
           </Form.Item>
-          <Form.Item style={{ textAlign: 'right' }}>
+          <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
             <Space>
               <Button onClick={() => {
                 setProjectModalVisible(false);
@@ -442,8 +460,8 @@ const SampleProjectManagement = () => {
               }}>
                 取消
               </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
-                {selectedProject ? "保存修改" : "新增项目"}
+              <Button type="primary" htmlType="submit" loading={submitLoading}>
+                {selectedProject ? '保存修改' : '新增项目'}
               </Button>
             </Space>
           </Form.Item>

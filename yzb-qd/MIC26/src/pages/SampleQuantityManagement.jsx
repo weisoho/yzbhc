@@ -1,187 +1,305 @@
-import React, { useState, useEffect } from 'react';
-import { Form, Input, Select, DatePicker, Button, Card, Table, Row, Col, Space, message, Modal, Tag } from 'antd';
+import React, { useEffect, useMemo, useState } from 'react';
+import moment from 'moment';
+import { Form, Input, Select, DatePicker, Button, Card, Table, Row, Col, Space, message, Modal, Tag, Alert } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, DownloadOutlined } from '@ant-design/icons';
+import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
 
-const { Option } = Select;
 const { RangePicker } = DatePicker;
 const { TextArea } = Input;
+
+const normalizeList = (payload) => {
+  if (Array.isArray(payload?.records)) {
+    return payload.records;
+  }
+  if (Array.isArray(payload?.list)) {
+    return payload.list;
+  }
+  return [];
+};
+
+const mapDepartmentOption = (item) => ({
+  label: item.deptName || `部门${item.id}`,
+  value: item.id,
+});
+
+const mapProjectOption = (item) => ({
+  label: `${item.itemName || '-'}${item.itemCode ? ` (${item.itemCode})` : ''}`,
+  value: item.id,
+  itemName: item.itemName,
+  depId: item.depId,
+  depName: item.depName,
+});
+
+const mapRecord = (item, projectMap) => {
+  const project = projectMap.get(item.itemId);
+  return {
+    key: item.id,
+    id: item.id,
+    date: item.sampleDate,
+    departmentId: item.depId,
+    departmentName: item.depName || '-',
+    projectId: item.itemId,
+    projectName: item.itemName || project?.itemName || '-',
+    quantity: item.detectionNum || 0,
+    operator: item.userName || '-',
+    remark: item.remark || '-',
+    canOperate: moment(item.sampleDate).isSame(moment(), 'day'),
+  };
+};
 
 const SampleQuantityManagement = () => {
   const [form] = Form.useForm();
   const [uploadForm] = Form.useForm();
-  const [projectForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
   const [data, setData] = useState([]);
   const [projects, setProjects] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
-  const [projectModalVisible, setProjectModalVisible] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
-  const [selectedProject, setSelectedProject] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [lastQuery, setLastQuery] = useState({});
 
-  // 模拟检验科数据
-  const departments = [
-    { value: 'clinical', label: '临床检验科' },
-    { value: 'microbiology', label: '微生物检验科' },
-    { value: 'biochemistry', label: '生化检验科' },
-    { value: 'immunology', label: '免疫检验科' },
-    { value: 'hematology', label: '血液检验科' },
-    { value: 'pathology', label: '病理检验科' }
-  ];
+  const currentDepartmentName = localStorage.getItem('currentDepartment') || '当前登录科室';
+  const currentUserName = localStorage.getItem('userName') || localStorage.getItem('username') || '当前登录用户';
 
-  // 模拟项目数据
-  const mockProjects = [
-    { key: '1', projectCode: 'PROJ001', projectName: '血常规', department: 'clinical', departmentName: '临床检验科', status: 'active', remark: '常规检测项目' },
-    { key: '2', projectCode: 'PROJ002', projectName: '尿常规', department: 'clinical', departmentName: '临床检验科', status: 'active', remark: '常规检测项目' },
-    { key: '3', projectCode: 'PROJ003', projectName: '肝功能', department: 'biochemistry', departmentName: '生化检验科', status: 'active', remark: '生化检测项目' },
-    { key: '4', projectCode: 'PROJ004', projectName: '肾功能', department: 'biochemistry', departmentName: '生化检验科', status: 'active', remark: '生化检测项目' },
-    { key: '5', projectCode: 'PROJ005', projectName: '细菌培养', department: 'microbiology', departmentName: '微生物检验科', status: 'active', remark: '微生物检测项目' },
-  ];
+  const departmentOptions = useMemo(() => departments.map(mapDepartmentOption), [departments]);
+  const projectOptions = useMemo(() => projects.map(mapProjectOption), [projects]);
+  const projectMap = useMemo(() => new Map(projectOptions.map((item) => [item.value, item])), [projectOptions]);
 
-  // 模拟样本量数据
-  const mockData = [
-    {
-      key: '1',
-      date: '2024-01-20',
-      department: 'clinical',
-      departmentName: '临床检验科',
-      totalProjects: 150,
-      testedProjects: 145,
-      completionRate: 96.67,
-      operator: '张三',
-      remark: '常规检测日，工作量正常'
-    },
-    {
-      key: '2',
-      date: '2024-01-19',
-      department: 'microbiology',
-      departmentName: '微生物检验科',
-      totalProjects: 80,
-      testedProjects: 78,
-      completionRate: 97.50,
-      operator: '李四',
-      remark: '有2个样本需要复查'
-    },
-    {
-      key: '3',
-      date: '2024-01-18',
-      department: 'biochemistry',
-      departmentName: '生化检验科',
-      totalProjects: 120,
-      testedProjects: 118,
-      completionRate: 98.33,
-      operator: '王五',
-      remark: '设备运行正常'
+  const loadDepartments = async () => {
+    try {
+      const response = await api.get('/api/department/list');
+      if (response.code === 1 && Array.isArray(response.data)) {
+        setDepartments(response.data.filter((item) => item?.id && item?.status === 1 && item?.orgType === 'DEPARTMENT'));
+      }
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '加载科室失败'));
     }
-  ];
+  };
 
-  // 组件加载时初始化数据
+  const loadProjects = async () => {
+    try {
+      const response = await api.post('/api/sampleItem/selectModelList', {
+        pageNum: 1,
+        pageSize: 1000,
+        itemState: 1,
+      });
+      if (response.code === 1) {
+        setProjects(normalizeList(response.data));
+      }
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '加载项目字典失败'));
+    }
+  };
+
+  const loadRecords = async (query = {}, page = currentPage, size = pageSize) => {
+    setLoading(true);
+    try {
+      const response = await api.post('/api/sampleMan/selectModelList', {
+        pageNum: page,
+        pageSize: size,
+        depId: query.department,
+        itemId: query.projectId,
+        itemName: query.projectName,
+        sdate: query.dateRange?.[0] ? query.dateRange[0].toISOString() : undefined,
+        edate: query.dateRange?.[1] ? query.dateRange[1].toISOString() : undefined,
+      });
+
+      if (response.code !== 1) {
+        message.error(getApiResponseMessage(response, '加载样本量记录失败'));
+        setData([]);
+        setTotal(0);
+        return;
+      }
+
+      const list = normalizeList(response.data).map((item) => mapRecord(item, projectMap));
+      setData(list);
+      setTotal(response.data?.total || list.length);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '加载样本量记录失败'));
+      setData([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setData(mockData);
-    setProjects(mockProjects);
+    loadDepartments();
+    loadProjects();
   }, []);
 
-  // 样本量管理列配置
+  useEffect(() => {
+    loadRecords(lastQuery, currentPage, pageSize);
+  }, [currentPage, pageSize, projectMap.size]);
+
+  const handleSearch = async (values) => {
+    const nextQuery = {
+      department: values.department,
+      projectId: values.projectId,
+      projectName: values.projectName,
+      dateRange: values.dateRange
+        ? [values.dateRange[0].toDate(), values.dateRange[1].toDate()]
+        : undefined,
+    };
+    setLastQuery(nextQuery);
+    setCurrentPage(1);
+    await loadRecords(nextQuery, 1, pageSize);
+  };
+
+  const handleReset = async () => {
+    form.resetFields();
+    setLastQuery({});
+    setCurrentPage(1);
+    await loadRecords({}, 1, pageSize);
+  };
+
+  const handleExport = async () => {
+    try {
+      const response = await api.post('/api/sampleMan/export', {
+        pageNum: 1,
+        pageSize: 10000,
+        depId: lastQuery.department,
+        itemId: lastQuery.projectId,
+        itemName: lastQuery.projectName,
+        sdate: lastQuery.dateRange?.[0] ? lastQuery.dateRange[0].toISOString() : undefined,
+        edate: lastQuery.dateRange?.[1] ? lastQuery.dateRange[1].toISOString() : undefined,
+      });
+      message.success(getApiResponseMessage(response, '导出成功'));
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '导出失败'));
+    }
+  };
+
+  const openCreateModal = () => {
+    setSelectedRow(null);
+    uploadForm.resetFields();
+    uploadForm.setFieldsValue({
+      date: moment(),
+    });
+    setUploadModalVisible(true);
+  };
+
+  const handleEdit = (record) => {
+    if (!record.canOperate) {
+      message.warning('仅当天记录允许编辑');
+      return;
+    }
+    setSelectedRow(record);
+    uploadForm.setFieldsValue({
+      date: record.date ? moment(record.date) : null,
+      projectId: record.projectId,
+      quantity: record.quantity,
+      remark: record.remark === '-' ? undefined : record.remark,
+    });
+    setUploadModalVisible(true);
+  };
+
+  const handleDelete = (record) => {
+    if (!record.canOperate) {
+      message.warning('仅当天记录允许删除');
+      return;
+    }
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除 ${moment(record.date).format('YYYY-MM-DD')} 的样本量记录吗？`,
+      onOk: async () => {
+        try {
+          const response = await api.request('/api/sampleMan/deleteSampleMan', {
+            method: 'POST',
+            params: { id: record.id },
+          });
+          if (response.code !== 1) {
+            message.error(getApiResponseMessage(response, '删除失败'));
+            return;
+          }
+          message.success('删除成功');
+          await loadRecords(lastQuery, currentPage, pageSize);
+        } catch (error) {
+          message.error(getApiErrorMessage(error, '删除失败'));
+        }
+      },
+    });
+  };
+
+  const handleUpload = async (values) => {
+    setSubmitLoading(true);
+    try {
+      const project = projectMap.get(values.projectId);
+      const payload = {
+        id: selectedRow?.id,
+        sampleDate: values.date ? values.date.toDate().toISOString() : undefined,
+        itemId: values.projectId,
+        itemName: project?.itemName,
+        detectionNum: Number(values.quantity),
+        remark: values.remark,
+      };
+
+      const response = await api.post('/api/sampleMan/addorupdateSampleMan', payload);
+      if (response.code !== 1) {
+        message.error(getApiResponseMessage(response, selectedRow ? '更新失败' : '上传失败'));
+        return;
+      }
+
+      message.success(selectedRow ? '记录更新成功' : '数据上传成功');
+      setUploadModalVisible(false);
+      uploadForm.resetFields();
+      setSelectedRow(null);
+      await loadRecords(lastQuery, currentPage, pageSize);
+    } catch (error) {
+      message.error(getApiErrorMessage(error, selectedRow ? '更新失败' : '上传失败'));
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
   const columns = [
     {
       title: '日期',
       dataIndex: 'date',
       key: 'date',
-      width: 120
+      width: 120,
+      render: (value) => (value ? moment(value).format('YYYY-MM-DD') : '-'),
     },
     {
       title: '检验科',
       dataIndex: 'departmentName',
       key: 'departmentName',
-      width: 150
-    },
-    {
-      title: '开展项目数',
-      dataIndex: 'totalProjects',
-      key: 'totalProjects',
-      width: 120
-    },
-    {
-      title: '检测项目数',
-      dataIndex: 'testedProjects',
-      key: 'testedProjects',
-      width: 120
-    },
-    {
-      title: '完成率',
-      dataIndex: 'completionRate',
-      key: 'completionRate',
-      width: 100,
-      render: (rate) => (
-        <Tag color={rate >= 95 ? 'green' : rate >= 90 ? 'blue' : 'orange'}>
-          {rate}%
-        </Tag>
-      )
-    },
-    {
-      title: '操作人',
-      dataIndex: 'operator',
-      key: 'operator',
-      width: 100
-    },
-    {
-      title: '备注',
-      dataIndex: 'remark',
-      key: 'remark',
-      ellipsis: true
-    },
-    {
-      title: '操作',
-      key: 'action',
-      width: 150,
-      render: (_, record) => (
-        <Space size="small">
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            编辑
-          </Button>
-          <Button type="link" size="small" icon={<DeleteOutlined />} onClick={() => handleDelete(record)} style={{ color: '#ff4d4f' }}>
-            删除
-          </Button>
-        </Space>
-      )
-    }
-  ];
-
-  // 项目管理列配置
-  const projectColumns = [
-    {
-      title: '项目编码',
-      dataIndex: 'projectCode',
-      key: 'projectCode',
-      width: 120
+      width: 160,
     },
     {
       title: '项目名称',
       dataIndex: 'projectName',
       key: 'projectName',
-      width: 150
+      width: 180,
     },
     {
-      title: '所属检验科',
-      dataIndex: 'departmentName',
-      key: 'departmentName',
-      width: 150
+      title: '检测项目数',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      width: 120,
     },
     {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
+      title: '操作人',
+      dataIndex: 'operator',
+      key: 'operator',
+      width: 120,
+    },
+    {
+      title: '可编辑',
+      dataIndex: 'canOperate',
+      key: 'canOperate',
       width: 100,
-      render: (status) => (
-        <Tag color={status === 'active' ? 'green' : 'red'}>
-          {status === 'active' ? '启用' : '停用'}
-        </Tag>
-      )
+      render: (value) => <Tag color={value ? 'green' : 'default'}>{value ? '当天' : '锁定'}</Tag>,
     },
     {
       title: '备注',
       dataIndex: 'remark',
       key: 'remark',
-      ellipsis: true
+      ellipsis: true,
     },
     {
       title: '操作',
@@ -189,480 +307,147 @@ const SampleQuantityManagement = () => {
       width: 150,
       render: (_, record) => (
         <Space size="small">
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleProjectEdit(record)}>
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} disabled={!record.canOperate}>
             编辑
           </Button>
-          <Button type="link" size="small" icon={<DeleteOutlined />} onClick={() => handleProjectDelete(record)} style={{ color: '#ff4d4f' }}>
+          <Button type="link" size="small" icon={<DeleteOutlined />} onClick={() => handleDelete(record)} style={{ color: '#ff4d4f' }} disabled={!record.canOperate}>
             删除
           </Button>
         </Space>
-      )
-    }
+      ),
+    },
   ];
-
-  // 处理上传
-  const handleUpload = (values) => {
-    setLoading(true);
-    
-    // 计算完成率
-    const completionRate = values.testedProjects > 0 
-      ? parseFloat(((values.testedProjects / values.totalProjects) * 100).toFixed(2)) 
-      : 0;
-    
-    // 查找对应科室名称
-    const departmentName = departments.find(dept => dept.value === values.department)?.label || values.department;
-    
-    // 构造新数据
-    const newRecord = {
-      key: Date.now().toString(),
-      date: values.date ? values.date.toISOString().split('T')[0] : '',
-      department: values.department,
-      departmentName,
-      totalProjects: values.totalProjects,
-      testedProjects: values.testedProjects,
-      completionRate,
-      operator: values.operator,
-      remark: values.remark || ''
-    };
-    
-    // 检查是否已存在该日期和科室的记录
-    const existingRecordIndex = data.findIndex(
-      item => item.date === newRecord.date && item.department === newRecord.department
-    );
-    
-    if (existingRecordIndex >= 0) {
-      // 更新现有记录
-      const updatedData = [...data];
-      updatedData[existingRecordIndex] = newRecord;
-      setData(updatedData);
-      message.success('数据更新成功');
-    } else {
-      // 添加新记录
-      setData([...data, newRecord]);
-      message.success('数据上传成功');
-    }
-    
-    setLoading(false);
-    setUploadModalVisible(false);
-    uploadForm.resetFields();
-  };
-
-  // 处理编辑
-  const handleEdit = (record) => {
-    setSelectedRow(record);
-    uploadForm.setFieldsValue({
-      date: record.date ? new Date(record.date) : null,
-      department: record.department,
-      totalProjects: record.totalProjects,
-      testedProjects: record.testedProjects,
-      operator: record.operator,
-      remark: record.remark
-    });
-    setUploadModalVisible(true);
-  };
-
-  // 处理删除
-  const handleDelete = (record) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除 ${record.date} ${record.departmentName} 的样本量记录吗？`,
-      onOk: () => {
-        setData(data.filter(item => item.key !== record.key));
-        message.success('删除成功');
-      }
-    });
-  };
-
-  // 处理查询
-  const handleSearch = (values) => {
-    setLoading(true);
-    setTimeout(() => {
-      let filteredData = [...data];
-      
-      if (values.department) {
-        filteredData = filteredData.filter(item => item.department === values.department);
-      }
-      
-      if (values.dateRange) {
-        const [startDate, endDate] = values.dateRange;
-        filteredData = filteredData.filter(item => {
-          const itemDate = new Date(item.date);
-          return itemDate >= startDate && itemDate <= endDate;
-        });
-      }
-      
-      setData(filteredData);
-      message.success('查询成功');
-      setLoading(false);
-    }, 500);
-  };
-
-  // 处理重置
-  const handleReset = () => {
-    form.resetFields();
-    setData(mockData);
-    message.success('已重置数据');
-  };
-
-  // 处理导出
-  const handleExport = () => {
-    message.success('导出功能开发中');
-  };
-
-  // 处理项目编辑
-  const handleProjectEdit = (record) => {
-    setSelectedProject(record);
-    projectForm.setFieldsValue({
-      projectCode: record.projectCode,
-      projectName: record.projectName,
-      department: record.department,
-      status: record.status,
-      remark: record.remark
-    });
-    setProjectModalVisible(true);
-  };
-
-  // 处理项目删除
-  const handleProjectDelete = (record) => {
-    Modal.confirm({
-      title: '确认删除',
-      content: `确定要删除项目 ${record.projectName} 吗？`,
-      onOk: () => {
-        setProjects(projects.filter(item => item.key !== record.key));
-        message.success('项目删除成功');
-      }
-    });
-  };
-
-  // 处理项目保存
-  const handleProjectSave = (values) => {
-    setLoading(true);
-    
-    // 查找对应科室名称
-    const departmentName = departments.find(dept => dept.value === values.department)?.label || values.department;
-    
-    // 构造项目数据
-    const projectData = {
-      ...values,
-      departmentName,
-      key: selectedProject ? selectedProject.key : Date.now().toString()
-    };
-    
-    if (selectedProject) {
-      // 更新现有项目
-      const updatedProjects = projects.map(item => 
-        item.key === selectedProject.key ? projectData : item
-      );
-      setProjects(updatedProjects);
-      message.success('项目更新成功');
-    } else {
-      // 添加新项目
-      setProjects([...projects, projectData]);
-      message.success('项目添加成功');
-    }
-    
-    setLoading(false);
-    setProjectModalVisible(false);
-    projectForm.resetFields();
-    setSelectedProject(null);
-  };
-
-  // 标签页状态
-  const [activeTab, setActiveTab] = useState('sample-quantity');
 
   return (
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>样本量管理</h1>
-      
-      {/* 标签页切换 */}
+
+      <Alert
+        type="info"
+        showIcon
+        style={{ marginBottom: 16 }}
+        message={`当前登记科室：${currentDepartmentName}，当前操作人：${currentUserName}`}
+        description="样本量记录以单条账单形式登记。根据业务规则，仅当天且由本人提交的记录允许修改或删除。"
+      />
+
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', borderBottom: '1px solid #f0f0f0', marginBottom: 16 }}>
-          <Button 
-            type={activeTab === 'sample-quantity' ? 'primary' : 'default'} 
-            onClick={() => setActiveTab('sample-quantity')}
-            style={{ marginRight: 8 }}
-          >
-            样本量管理
-          </Button>
-          <Button 
-            type={activeTab === 'project-management' ? 'primary' : 'default'} 
-            onClick={() => setActiveTab('project-management')}
-          >
-            项目管理
-          </Button>
-        </div>
-        
-        {/* 样本量管理标签页 */}
-        {activeTab === 'sample-quantity' && (
-          <>
-            {/* 查询表单 */}
-            <Card style={{ marginBottom: 16 }}>
-              <Form form={form} layout="inline" onFinish={handleSearch}>
-                <Row gutter={[16, 16]} style={{ width: '100%' }}>
-                  <Col xs={24} sm={12} md={8} lg={6}>
-                    <Form.Item name="department" label="检验科">
-                      <Select placeholder="请选择检验科" allowClear>
-                        {departments.map(dept => (
-                          <Option key={dept.value} value={dept.value}>{dept.label}</Option>
-                        ))}
-                      </Select>
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} sm={12} md={8} lg={8}>
-                    <Form.Item name="dateRange" label="日期范围">
-                      <RangePicker style={{ width: '100%' }} />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} sm={24} md={8} lg={10} style={{ textAlign: 'right' }}>
-                    <Space>
-                      <Button type="primary" icon={<SearchOutlined />} htmlType="submit" loading={loading}>
-                        查询
-                      </Button>
-                      <Button onClick={handleReset}>
-                        重置
-                      </Button>
-                      <Button icon={<DownloadOutlined />} onClick={handleExport}>
-                        导出
-                      </Button>
-                      <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-                        uploadForm.resetFields();
-                        setSelectedRow(null);
-                        setUploadModalVisible(true);
-                      }}>
-                        上传数据
-                      </Button>
-                    </Space>
-                  </Col>
-                </Row>
-              </Form>
-            </Card>
-            
-            {/* 数据表格 */}
-            <Table
-              columns={columns}
-              dataSource={data}
-              loading={loading}
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total) => `共 ${total} 条记录`,
-                style: {
-                  display: 'flex',
-                  justifyContent: 'center',
-                  marginTop: '16px'
-                }
-              }}
-              scroll={{ x: 1000 }}
-            />
-          </>
-        )}
-        
-        {/* 项目管理标签页 */}
-        {activeTab === 'project-management' && (
-          <>
-            {/* 项目管理操作栏 */}
-            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => {
-                projectForm.resetFields();
-                setSelectedProject(null);
-                setProjectModalVisible(true);
-              }}>
-                新增项目
-              </Button>
-            </div>
-            
-            {/* 项目管理表格 */}
-            <Table
-              columns={projectColumns}
-              dataSource={projects}
-              loading={loading}
-              pagination={{
-                pageSize: 10,
-                showSizeChanger: true,
-                showQuickJumper: true,
-                showTotal: (total) => `共 ${total} 条记录`
-              }}
-              scroll={{ x: 1000 }}
-            />
-          </>
-        )}
+        <Form form={form} layout="inline" onFinish={handleSearch}>
+          <Row gutter={[16, 16]} style={{ width: '100%' }}>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Form.Item name="department" label="检验科">
+                <Select placeholder="请选择检验科" allowClear options={departmentOptions} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Form.Item name="projectId" label="项目名称">
+                <Select placeholder="请选择项目" allowClear options={projectOptions} showSearch optionFilterProp="label" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12} md={8} lg={6}>
+              <Form.Item name="projectName" label="项目关键字">
+                <Input placeholder="输入项目名称模糊查询" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={24} md={12} lg={6}>
+              <Form.Item name="dateRange" label="日期范围">
+                <RangePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </Col>
+            <Col xs={24} style={{ textAlign: 'right' }}>
+              <Space>
+                <Button type="primary" icon={<SearchOutlined />} htmlType="submit" loading={loading}>
+                  查询
+                </Button>
+                <Button onClick={handleReset}>重置</Button>
+                <Button icon={<DownloadOutlined />} onClick={handleExport}>
+                  导出
+                </Button>
+                <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+                  上传数据
+                </Button>
+              </Space>
+            </Col>
+          </Row>
+        </Form>
       </Card>
-      
-      {/* 上传/编辑模态框 */}
+
+      <Table
+        columns={columns}
+        dataSource={data}
+        loading={loading}
+        rowKey="id"
+        pagination={{
+          current: currentPage,
+          pageSize,
+          total,
+          onChange: (page, size) => {
+            setCurrentPage(page);
+            setPageSize(size);
+          },
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (count) => `共 ${count} 条记录`,
+        }}
+        scroll={{ x: 1100 }}
+      />
+
       <Modal
-        title={selectedRow ? "编辑样本量数据" : "上传样本量数据"}
+        title={selectedRow ? '编辑样本量数据' : '上传样本量数据'}
         open={uploadModalVisible}
         onCancel={() => {
           setUploadModalVisible(false);
           uploadForm.resetFields();
+          setSelectedRow(null);
         }}
         footer={null}
-        width={600}
+        width={640}
       >
-        <Form
-          form={uploadForm}
-          layout="vertical"
-          onFinish={handleUpload}
-        >
+        <Form form={uploadForm} layout="vertical" onFinish={handleUpload}>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="date"
-                label="日期"
-                rules={[{ required: true, message: '请选择日期' }]}
-              >
+              <Form.Item label="所属科室">
+                <Input value={currentDepartmentName} disabled />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item label="操作人">
+                <Input value={currentUserName} disabled />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="date" label="日期" rules={[{ required: true, message: '请选择日期' }]}>
                 <DatePicker style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="department"
-                label="检验科"
-                rules={[{ required: true, message: '请选择检验科' }]}
-              >
-                <Select placeholder="请选择检验科">
-                  {departments.map(dept => (
-                    <Option key={dept.value} value={dept.value}>{dept.label}</Option>
-                  ))}
-                </Select>
+              <Form.Item name="projectId" label="项目" rules={[{ required: true, message: '请选择项目' }]}>
+                <Select placeholder="请选择项目" options={projectOptions} showSearch optionFilterProp="label" />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="totalProjects"
-                label="开展项目数"
-                rules={[{ required: true, message: '请输入开展项目数' }, { type: 'number', min: 0, message: '开展项目数不能为负数' }]}
-              >
-                <Input type="number" placeholder="请输入开展项目数" min={0} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="testedProjects"
-                label="检测项目数"
-                rules={[{ required: true, message: '请输入检测项目数' }, { type: 'number', min: 0, message: '检测项目数不能为负数' }]}
-              >
-                <Input type="number" placeholder="请输入检测项目数" min={0} />
+              <Form.Item name="quantity" label="检测项目数" rules={[{ required: true, message: '请输入检测项目数' }]}> 
+                <Input type="number" min={0} placeholder="请输入检测项目数" />
               </Form.Item>
             </Col>
           </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="operator"
-                label="操作人"
-                rules={[{ required: true, message: '请输入操作人' }]}
-              >
-                <Input placeholder="请输入操作人" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item
-            name="remark"
-            label="备注"
-          >
+          <Form.Item name="remark" label="备注">
             <TextArea rows={4} placeholder="请输入备注信息" />
           </Form.Item>
-          <Form.Item style={{ textAlign: 'right' }}>
+          <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
             <Space>
               <Button onClick={() => {
                 setUploadModalVisible(false);
                 uploadForm.resetFields();
+                setSelectedRow(null);
               }}>
                 取消
               </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
-                {selectedRow ? "保存修改" : "上传数据"}
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
-      
-      {/* 项目管理模态框 */}
-      <Modal
-        title={selectedProject ? "编辑项目" : "新增项目"}
-        open={projectModalVisible}
-        onCancel={() => {
-          setProjectModalVisible(false);
-          projectForm.resetFields();
-          setSelectedProject(null);
-        }}
-        footer={null}
-        width={600}
-      >
-        <Form
-          form={projectForm}
-          layout="vertical"
-          onFinish={handleProjectSave}
-        >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="projectCode"
-                label="项目编码"
-                rules={[{ required: true, message: '请输入项目编码' }]}
-              >
-                <Input placeholder="请输入项目编码" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="projectName"
-                label="项目名称"
-                rules={[{ required: true, message: '请输入项目名称' }]}
-              >
-                <Input placeholder="请输入项目名称" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="department"
-                label="所属检验科"
-                rules={[{ required: true, message: '请选择所属检验科' }]}
-              >
-                <Select placeholder="请选择所属检验科">
-                  {departments.map(dept => (
-                    <Option key={dept.value} value={dept.value}>{dept.label}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="status"
-                label="状态"
-                rules={[{ required: true, message: '请选择状态' }]}
-              >
-                <Select placeholder="请选择状态">
-                  <Option value="active">启用</Option>
-                  <Option value="inactive">停用</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Form.Item
-            name="remark"
-            label="备注"
-          >
-            <TextArea rows={4} placeholder="请输入备注信息" />
-          </Form.Item>
-          <Form.Item style={{ textAlign: 'right' }}>
-            <Space>
-              <Button onClick={() => {
-                setProjectModalVisible(false);
-                projectForm.resetFields();
-                setSelectedProject(null);
-              }}>
-                取消
-              </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
-                {selectedProject ? "保存修改" : "新增项目"}
+              <Button type="primary" htmlType="submit" loading={submitLoading}>
+                {selectedRow ? '保存修改' : '上传数据'}
               </Button>
             </Space>
           </Form.Item>

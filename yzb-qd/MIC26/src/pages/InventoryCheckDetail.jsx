@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
 import {
   CHECK_STATE_OPTIONS,
+  archiveCheckRecord,
   confirmCheckRecord,
   fetchCheckRecords,
   fetchInventoryCatalog,
@@ -158,7 +159,7 @@ const InventoryCheckDetail = () => {
     }
   };
 
-  const handleSubmitSheet = () => {
+  const handleSubmitSheet = async () => {
     if (uncheckedCount > 0) {
       message.warning(`还有 ${uncheckedCount} 条未盘点明细，请先完成盘点后再提交单据`);
       return;
@@ -169,13 +170,32 @@ const InventoryCheckDetail = () => {
       return;
     }
 
-    if (diffCount > 0) {
-      message.info('已根据当前盘点差异进入损溢录入页面。现阶段后端未提供独立的盘点提交接口，前端按已录入差异继续处理。');
-      navigate('/inventory-check-diff', { state: { source: 'detail-submit' } });
-      return;
-    }
+    const sameRecords = records.filter((item) => item.checkState === 'checked' && item.cheStatus === 0);
+    try {
+      setSubmitLoading(true);
+      if (sameRecords.length > 0) {
+        const responses = await Promise.all(sameRecords.map((item) => archiveCheckRecord(item.id)));
+        const failed = responses.find((item) => item.code !== 1);
+        if (failed) {
+          message.error(getApiResponseMessage(failed, '提交盘点单失败'));
+          return;
+        }
+      }
 
-    message.success('本次盘点无差异，当前后端无需进入损溢录入');
+      if (diffCount > 0) {
+        message.success('无差异明细已归档，存在差异的盘点明细已转入损溢录入');
+        await loadRecords();
+        navigate('/inventory-check-diff', { state: { source: 'detail-submit' } });
+        return;
+      }
+
+      message.success('本次盘点单已全部提交并归档');
+      await loadRecords();
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '提交盘点单失败'));
+    } finally {
+      setSubmitLoading(false);
+    }
   };
 
   const columns = [

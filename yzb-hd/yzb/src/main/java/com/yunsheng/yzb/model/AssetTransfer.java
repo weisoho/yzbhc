@@ -93,6 +93,10 @@ public class AssetTransfer {
      */
     private Integer status;
 
+    private Integer pageNum;
+
+    private Integer pageSize;
+
     public Integer getId() {
         return id;
     }
@@ -235,5 +239,21 @@ public class AssetTransfer {
 
     public void setStatus(Integer status) {
         this.status = status;
+    }
+
+    public Integer getPageNum() {
+        return pageNum;
+    }
+
+    public void setPageNum(Integer pageNum) {
+        this.pageNum = pageNum;
+    }
+
+    public Integer getPageSize() {
+        return pageSize;
+    }
+
+    public void setPageSize(Integer pageSize) {
+        this.pageSize = pageSize;
     }
 }
