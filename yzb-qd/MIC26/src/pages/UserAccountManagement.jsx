@@ -190,6 +190,9 @@ const UserAccountManagement = () => {
       status: 1,
       roleIds: [],
       campusId: currentCampusNode?.id,
+      depId: currentDepartment?.id,
+      accountType: '普通账号',
+      warehouseScope: '当前院区',
     });
     setModalOpen(true);
   };
@@ -267,16 +270,24 @@ const UserAccountManagement = () => {
         if (!createdUser) {
           throw new Error('未能定位新创建的用户');
         }
-        await assignRoles(createdUser.id, values.roleIds);
-        message.success(`用户创建成功，初始密码为 ${payload.password || DEFAULT_PASSWORD}`);
+        try {
+          await assignRoles(createdUser.id, values.roleIds);
+          message.success(`用户创建成功，初始密码为 ${payload.password || DEFAULT_PASSWORD}`);
+        } catch (assignError) {
+          message.warning(assignError.message || '用户已创建，但角色分配失败，请在用户列表中补充角色');
+        }
       } else {
         delete payload.password;
         const response = await api.put(`/api/user/${currentUser.id}`, payload);
         if (response.code !== 1) {
           throw new Error(response.message || '更新用户失败');
         }
-        await assignRoles(currentUser.id, values.roleIds);
-        message.success('用户更新成功');
+        try {
+          await assignRoles(currentUser.id, values.roleIds);
+          message.success('用户更新成功');
+        } catch (assignError) {
+          message.warning(assignError.message || '用户信息已更新，但角色分配失败，请稍后重试');
+        }
       }
 
       setModalOpen(false);
@@ -377,6 +388,16 @@ const UserAccountManagement = () => {
       dataIndex: 'realName',
       key: 'realName',
       width: 120,
+    },
+    {
+      title: '所属院区',
+      key: 'campusName',
+      width: 140,
+      render: (_, record) => {
+        const campusId = resolveCampusIdByDepartmentId(record.depId, campusOptions);
+        const campus = campusOptions.find((item) => Number(item.id) === Number(campusId));
+        return campus?.deptName || '-';
+      },
     },
     {
       title: '所属部门',
@@ -560,10 +581,10 @@ const UserAccountManagement = () => {
               options={roleOptions.map((role) => ({ label: role.roleName, value: role.id }))}
             />
           </Form.Item>
-          <Form.Item name="accountType" label="账号属性" rules={[{ required: true, message: '请输入账号属性' }]}> 
+          <Form.Item name="accountType" label="账号属性">
             <Input placeholder="如：管理员、科室管理员、操作员" />
           </Form.Item>
-          <Form.Item name="warehouseScope" label="仓库范围" rules={[{ required: true, message: '请输入仓库范围' }]}> 
+          <Form.Item name="warehouseScope" label="仓库范围">
             <Input placeholder="如：全部仓库、仓库1" />
           </Form.Item>
           <Form.Item name="phone" label="联系电话">

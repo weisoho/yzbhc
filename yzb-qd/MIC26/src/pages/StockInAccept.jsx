@@ -21,6 +21,43 @@ const StockInAccept = () => {
   const [createModalVisible, setCreateModalVisible] = useState(false);
   const [receipts, setReceipts] = useState([]);
   const [selectedReceipt, setSelectedReceipt] = useState(null);
+  const [receiptItems, setReceiptItems] = useState([]);
+  const [materialMetaMap, setMaterialMetaMap] = useState({});
+
+  const getCurrentUserName = () => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      return userInfo.realName || userInfo.name || userInfo.userName || '管理员';
+    } catch {
+      return '管理员';
+    }
+  };
+
+  const normalizeDateInput = (value) => {
+    if (!value) {
+      return '';
+    }
+    const trimmed = String(value).trim();
+    if (/^\d{8}$/.test(trimmed)) {
+      return `${trimmed.slice(0, 4)}-${trimmed.slice(4, 6)}-${trimmed.slice(6, 8)}`;
+    }
+    return trimmed;
+  };
+
+  const loadMaterialMetadata = async () => {
+    try {
+      const response = await api.get('/api/scm/materials/enabled');
+      if (response.code === 1 && Array.isArray(response.data)) {
+        const metadata = response.data.reduce((accumulator, item) => {
+          accumulator[item.materialCode] = item;
+          return accumulator;
+        }, {});
+        setMaterialMetaMap(metadata);
+      }
+    } catch (error) {
+      console.error('加载物资主档失败:', error);
+    }
+  };
 
   // 从后端获取数据
   useEffect(() => {
@@ -65,6 +102,7 @@ const StockInAccept = () => {
     };
 
     fetchData();
+    loadMaterialMetadata();
   }, []);
 
   // 搜索处理
@@ -160,7 +198,65 @@ const StockInAccept = () => {
   // 打开创建入库单模态框
   const handleOpenCreateModal = () => {
     loadPendingReceipts();
+    loadMaterialMetadata();
+    setSelectedReceipt(null);
+    setReceiptItems([]);
     setCreateModalVisible(true);
+  };
+
+  const handleSelectReceipt = async (receipt) => {
+    setSelectedReceipt(receipt);
+    try {
+      setLoading(true);
+      const response = await api.get(`/api/scm/purchases/receipts/${receipt.id}`);
+      if (response.code === 1 && response.data) {
+        const detailItems = (response.data.items || []).map((item, index) => {
+          const materialMeta = materialMetaMap[item.productCode] || {};
+          return {
+            key: item.id || `${receipt.id}_${index}`,
+            receiveItemId: item.id,
+            materialId: materialMeta.id,
+            materialCode: item.productCode,
+            materialName: item.productName,
+            materialType: materialMeta.materialType || '',
+            specification: item.specification,
+            model: item.model,
+            minPackage: materialMeta.minPackage || '1',
+            unit: item.unit,
+            supplierName: receipt.supplierName,
+            manufacturer: item.manufacturer,
+            registrationNumber: item.registrationNumber,
+            batchNumber: item.batchNumber || '',
+            productionDate: item.productionDate || '',
+            expiryDate: item.expiryDate || '',
+            purchasePrice: item.price,
+            orderQuantity: item.quantity,
+            stockInQuantity: item.actualReceivedQuantity,
+            remark: '',
+          };
+        });
+        setReceiptItems(detailItems);
+      } else {
+        message.error(response.message || '获取收货单明细失败');
+      }
+    } catch (error) {
+      console.error('获取收货单明细失败:', error);
+      message.error('获取收货单明细失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReceiptItemChange = (key, field, value) => {
+    setReceiptItems((prev) => prev.map((item) => {
+      if (item.key !== key) {
+        return item;
+      }
+      return {
+        ...item,
+        [field]: field === 'productionDate' || field === 'expiryDate' ? normalizeDateInput(value) : value,
+      };
+    }));
   };
 
   // 创建入库单
@@ -169,16 +265,49 @@ const StockInAccept = () => {
       message.warning('请选择收货单');
       return;
     }
+    if (receiptItems.length === 0) {
+      message.warning('当前收货单没有可入库明细');
+      return;
+    }
+    const invalidItem = receiptItems.find((item) => !item.batchNumber || !item.productionDate || !item.expiryDate || !item.stockInQuantity);
+    if (invalidItem) {
+      message.error(`请补全 ${invalidItem.materialName} 的批号、生产日期、失效日期和入库数量`);
+      return;
+    }
     try {
       setLoading(true);
       const stockInData = {
-        operatorName: '当前用户',
-        items: [] // 这里需要根据实际情况填写入库明细
+        stockInType: '采购入库',
+        operatorName: getCurrentUserName(),
+        remark: `采购收货单 ${selectedReceipt.receiptNumber} 入库`,
+        items: receiptItems.map((item) => ({
+          receiveItemId: item.receiveItemId,
+          materialId: item.materialId,
+          materialCode: item.materialCode,
+          materialName: item.materialName,
+          materialType: item.materialType,
+          specification: item.specification,
+          model: item.model,
+          minPackage: item.minPackage,
+          unit: item.unit,
+          supplierName: item.supplierName,
+          manufacturer: item.manufacturer,
+          registrationNumber: item.registrationNumber,
+          batchNumber: item.batchNumber,
+          productionDate: normalizeDateInput(item.productionDate),
+          expiryDate: normalizeDateInput(item.expiryDate),
+          purchasePrice: item.purchasePrice,
+          orderQuantity: item.orderQuantity,
+          stockInQuantity: item.stockInQuantity,
+          remark: item.remark,
+        }))
       };
       const response = await api.post(`/api/scm/stock-in/receipts/${selectedReceipt.id}`, stockInData);
       if (response.code === 1) {
         message.success('入库单创建成功');
         setCreateModalVisible(false);
+        setSelectedReceipt(null);
+        setReceiptItems([]);
         // 重新加载入库单列表
         const fetchData = async () => {
           setLoading(true);
@@ -570,9 +699,10 @@ const StockInAccept = () => {
                 if (selectedRowKeys.length > 0) {
                   const selectedKey = selectedRowKeys[0];
                   const receipt = receipts.find(item => item.key === selectedKey);
-                  setSelectedReceipt(receipt);
+                  handleSelectReceipt(receipt);
                 } else {
                   setSelectedReceipt(null);
+                  setReceiptItems([]);
                 }
               },
             }}
@@ -582,6 +712,71 @@ const StockInAccept = () => {
             }}
             loading={loading}
           />
+
+          {selectedReceipt && (
+            <div style={{ marginTop: 16 }}>
+              <h3>录入入库明细</h3>
+              <Table
+                rowKey="key"
+                loading={loading}
+                dataSource={receiptItems}
+                pagination={false}
+                scroll={{ x: 1800 }}
+                columns={[
+                  { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode', width: 120 },
+                  { title: '物资名称', dataIndex: 'materialName', key: 'materialName', width: 160 },
+                  { title: '规格', dataIndex: 'specification', key: 'specification', width: 140 },
+                  { title: '型号', dataIndex: 'model', key: 'model', width: 140 },
+                  { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
+                  { title: '待入库数量', dataIndex: 'stockInQuantity', key: 'stockInQuantityDisplay', width: 110 },
+                  {
+                    title: '批号',
+                    key: 'batchNumber',
+                    width: 140,
+                    render: (_, record) => (
+                      <Input value={record.batchNumber} onChange={(e) => handleReceiptItemChange(record.key, 'batchNumber', e.target.value)} placeholder="请输入批号" />
+                    )
+                  },
+                  {
+                    title: '生产日期',
+                    key: 'productionDate',
+                    width: 140,
+                    render: (_, record) => (
+                      <Input value={record.productionDate} onChange={(e) => handleReceiptItemChange(record.key, 'productionDate', e.target.value)} placeholder="支持 20250127" />
+                    )
+                  },
+                  {
+                    title: '失效日期',
+                    key: 'expiryDate',
+                    width: 140,
+                    render: (_, record) => (
+                      <Input value={record.expiryDate} onChange={(e) => handleReceiptItemChange(record.key, 'expiryDate', e.target.value)} placeholder="支持 20250127" />
+                    )
+                  },
+                  {
+                    title: '入库数量',
+                    key: 'stockInQuantityEdit',
+                    width: 120,
+                    render: (_, record) => (
+                      <Input
+                        value={record.stockInQuantity}
+                        onChange={(e) => handleReceiptItemChange(record.key, 'stockInQuantity', Number(e.target.value) || 0)}
+                        placeholder="请输入入库数量"
+                      />
+                    )
+                  },
+                  {
+                    title: '备注',
+                    key: 'remark',
+                    width: 180,
+                    render: (_, record) => (
+                      <Input value={record.remark} onChange={(e) => handleReceiptItemChange(record.key, 'remark', e.target.value)} placeholder="可选" />
+                    )
+                  },
+                ]}
+              />
+            </div>
+          )}
         </div>
       </Modal>
     </div>

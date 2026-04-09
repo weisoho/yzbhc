@@ -1,13 +1,28 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import moment from 'moment';
-import { Form, Input, Select, DatePicker, Button, Card, Table, Row, Col, Space, message, Modal, Tag, Alert } from 'antd';
+import { Form, Input, InputNumber, Select, DatePicker, Button, Card, Table, Row, Col, Space, message, Modal, Tag, Alert } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, DownloadOutlined } from '@ant-design/icons';
 import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
+import { useCampusContext } from '../contexts/CampusContext';
+import { flattenDepartmentTree, getDepartmentOptionsByCampus, normalizeDepartmentTree } from '../utils/departmentTree';
 
 const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 
 const normalizeList = (payload) => {
+  if (Array.isArray(payload?.records)) {
+    return payload.records;
+  }
+  if (Array.isArray(payload?.list)) {
+    return payload.list;
+  }
+  return [];
+};
+
+const normalizeDepartmentList = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
   if (Array.isArray(payload?.records)) {
     return payload.records;
   }
@@ -61,19 +76,42 @@ const SampleQuantityManagement = () => {
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [lastQuery, setLastQuery] = useState({});
+  const { currentCampusNode, currentDepartment } = useCampusContext();
 
-  const currentDepartmentName = localStorage.getItem('currentDepartment') || '当前登录科室';
-  const currentUserName = localStorage.getItem('userName') || localStorage.getItem('username') || '当前登录用户';
+  const currentDepartmentName = currentDepartment?.deptName || localStorage.getItem('currentDepartment') || '当前登录科室';
+  const currentDepartmentId = currentDepartment?.id ? Number(currentDepartment.id) : undefined;
+  const currentUserName = (() => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      return userInfo.realName || userInfo.name || userInfo.userName || localStorage.getItem('userName') || localStorage.getItem('username') || '当前登录用户';
+    } catch {
+      return localStorage.getItem('userName') || localStorage.getItem('username') || '当前登录用户';
+    }
+  })();
 
-  const departmentOptions = useMemo(() => departments.map(mapDepartmentOption), [departments]);
-  const projectOptions = useMemo(() => projects.map(mapProjectOption), [projects]);
+  const normalizedDepartmentTree = useMemo(() => normalizeDepartmentTree(departments), [departments]);
+  const scopedDepartments = useMemo(() => {
+    if (currentCampusNode) {
+      return getDepartmentOptionsByCampus(currentCampusNode).filter((item) => item.orgType === 'DEPARTMENT');
+    }
+    return flattenDepartmentTree(normalizedDepartmentTree).filter((item) => item.orgType === 'DEPARTMENT');
+  }, [currentCampusNode, normalizedDepartmentTree]);
+
+  const departmentOptions = useMemo(() => scopedDepartments.map(mapDepartmentOption), [scopedDepartments]);
+  const projectOptions = useMemo(() => {
+    const list = projects.map(mapProjectOption);
+    if (!currentDepartmentId) {
+      return list;
+    }
+    return list.filter((item) => !item.depId || Number(item.depId) === Number(currentDepartmentId));
+  }, [currentDepartmentId, projects]);
   const projectMap = useMemo(() => new Map(projectOptions.map((item) => [item.value, item])), [projectOptions]);
 
   const loadDepartments = async () => {
     try {
       const response = await api.get('/api/department/list');
-      if (response.code === 1 && Array.isArray(response.data)) {
-        setDepartments(response.data.filter((item) => item?.id && item?.status === 1 && item?.orgType === 'DEPARTMENT'));
+      if (response.code === 1) {
+        setDepartments(normalizeDepartmentList(response.data).filter((item) => item?.id && item?.status === 1));
       }
     } catch (error) {
       message.error(getApiErrorMessage(error, '加载科室失败'));
@@ -101,7 +139,7 @@ const SampleQuantityManagement = () => {
       const response = await api.post('/api/sampleMan/selectModelList', {
         pageNum: page,
         pageSize: size,
-        depId: query.department,
+        depId: query.department || currentDepartmentId,
         itemId: query.projectId,
         itemName: query.projectName,
         sdate: query.dateRange?.[0] ? query.dateRange[0].toISOString() : undefined,
@@ -134,11 +172,18 @@ const SampleQuantityManagement = () => {
 
   useEffect(() => {
     loadRecords(lastQuery, currentPage, pageSize);
-  }, [currentPage, pageSize, projectMap.size]);
+  }, [currentDepartmentId, currentPage, pageSize, projectMap.size]);
+
+  useEffect(() => {
+    if (currentDepartmentId && !lastQuery.department) {
+      form.setFieldValue('department', currentDepartmentId);
+      setLastQuery((prev) => ({ ...prev, department: currentDepartmentId }));
+    }
+  }, [currentDepartmentId, form, lastQuery.department]);
 
   const handleSearch = async (values) => {
     const nextQuery = {
-      department: values.department,
+      department: values.department || currentDepartmentId,
       projectId: values.projectId,
       projectName: values.projectName,
       dateRange: values.dateRange
@@ -152,6 +197,13 @@ const SampleQuantityManagement = () => {
 
   const handleReset = async () => {
     form.resetFields();
+    if (currentDepartmentId) {
+      form.setFieldValue('department', currentDepartmentId);
+      setLastQuery({ department: currentDepartmentId });
+      setCurrentPage(1);
+      await loadRecords({ department: currentDepartmentId }, 1, pageSize);
+      return;
+    }
     setLastQuery({});
     setCurrentPage(1);
     await loadRecords({}, 1, pageSize);
@@ -179,6 +231,7 @@ const SampleQuantityManagement = () => {
     uploadForm.resetFields();
     uploadForm.setFieldsValue({
       date: moment(),
+      projectId: undefined,
     });
     setUploadModalVisible(true);
   };
@@ -234,6 +287,8 @@ const SampleQuantityManagement = () => {
         sampleDate: values.date ? values.date.toDate().toISOString() : undefined,
         itemId: values.projectId,
         itemName: project?.itemName,
+        depId: currentDepartmentId,
+        depName: currentDepartmentName,
         detectionNum: Number(values.quantity),
         remark: values.remark,
       };
@@ -335,7 +390,7 @@ const SampleQuantityManagement = () => {
           <Row gutter={[16, 16]} style={{ width: '100%' }}>
             <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item name="department" label="检验科">
-                <Select placeholder="请选择检验科" allowClear options={departmentOptions} />
+                <Select placeholder="请选择检验科" allowClear options={departmentOptions} disabled={Boolean(currentDepartmentId)} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8} lg={6}>
@@ -429,8 +484,22 @@ const SampleQuantityManagement = () => {
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="quantity" label="检测项目数" rules={[{ required: true, message: '请输入检测项目数' }]}> 
-                <Input type="number" min={0} placeholder="请输入检测项目数" />
+              <Form.Item name="quantity" label="检测项目数" rules={[
+                { required: true, message: '请输入检测项目数' },
+                {
+                  validator: (_, value) => {
+                    if (value === undefined || value === null || value === '') {
+                      return Promise.resolve();
+                    }
+                    const numberValue = Number(value);
+                    if (!Number.isFinite(numberValue) || numberValue < 0) {
+                      return Promise.reject(new Error('检测项目数不能为负数'));
+                    }
+                    return Promise.resolve();
+                  }
+                }
+              ]}> 
+                <InputNumber min={0} precision={0} style={{ width: '100%' }} placeholder="请输入检测项目数" />
               </Form.Item>
             </Col>
           </Row>

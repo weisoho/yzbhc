@@ -19,6 +19,7 @@ import com.yunsheng.yzb.mapper.scm.SupplierMpMapper;
 import com.yunsheng.yzb.mapper.scm.SupplierQualificationMpMapper;
 import com.yunsheng.yzb.model.scm.SupplierEntity;
 import com.yunsheng.yzb.model.scm.SupplierQualificationEntity;
+import com.yunsheng.yzb.service.scm.MaterialDictionaryService;
 import com.yunsheng.yzb.service.scm.OperationLogService;
 import com.yunsheng.yzb.service.scm.SupplierManagementService;
 import org.springframework.beans.BeanUtils;
@@ -50,6 +51,9 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
 
     @Resource
     private OperationLogService operationLogService;
+
+    @Resource
+    private MaterialDictionaryService materialDictionaryService;
 
     @Override
     public Map<String, Integer> getWarningStatistics() {
@@ -190,6 +194,7 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
         entity.setStatus(resolveQualificationStatus(request.getExpiryDate()));
         entity.setUpdateTime(LocalDateTime.now());
         qualificationMapper.updateById(entity);
+        materialDictionaryService.syncQualificationReferences(qualificationId);
         refreshSupplierAvailability(entity.getSupplierId());
         operationLogService.save("system", "维护", "更新供应商资质: " + request.getType(), ScmConstants.LOG_SUCCESS,
                 "供应商资质", request.getLicenseNumber());

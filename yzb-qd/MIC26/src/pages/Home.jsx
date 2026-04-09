@@ -424,7 +424,14 @@ const Home = () => {
   ];
 
   // 获取用户名
-  const userName = localStorage.getItem('userName') || '管理员';
+  const userName = (() => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      return userInfo.realName || userInfo.name || userInfo.userName || localStorage.getItem('username') || '管理员';
+    } catch {
+      return localStorage.getItem('username') || '管理员';
+    }
+  })();
 
   /**
    * 渲染首页组件

@@ -74,6 +74,8 @@ public class UserController {
             return AjaxResult.res(0, departmentValidationMessage, null);
         }
 
+        populateDepartmentName(user);
+
         // 检查用户名是否已存在
         YsUserExample example = new YsUserExample();
         example.createCriteria().andUserNameEqualTo(user.getUserName());
@@ -125,6 +127,7 @@ public class UserController {
         }
 
         user.setId(id);
+        populateDepartmentName(user);
         user.setUpdateTime(new Date());
 
         int result = ysUserMapper.updateByPrimaryKeySelective(user);
@@ -171,9 +174,13 @@ public class UserController {
     @PutMapping("/{id}/password")
     @RequiresPermission("system:user:edit")
     public AjaxResult<String> updatePassword(@PathVariable Integer id, @RequestBody String newPassword) {
+        String normalizedPassword = normalizePassword(newPassword);
+        if (normalizedPassword == null || normalizedPassword.trim().isEmpty()) {
+            return AjaxResult.res(0, "新密码不能为空", null);
+        }
         YsUser user = new YsUser();
         user.setId(id);
-        user.setPassword(newPassword);
+        user.setPassword(normalizedPassword);
         user.setUpdateTime(new Date());
 
         int result = ysUserMapper.updateByPrimaryKeySelective(user);
@@ -280,5 +287,26 @@ public class UserController {
             currentId = currentDepartment.getParentId() == null ? null : currentDepartment.getParentId().longValue();
         }
         return null;
+    }
+
+    private void populateDepartmentName(YsUser user) {
+        if (user.getDepId() == null) {
+            return;
+        }
+        SysDepartment department = departmentMapper.selectById(user.getDepId().longValue());
+        if (department != null) {
+            user.setUserDep(department.getDeptName());
+        }
+    }
+
+    private String normalizePassword(String rawPassword) {
+        if (rawPassword == null) {
+            return null;
+        }
+        String password = rawPassword.trim();
+        if (password.startsWith("\"") && password.endsWith("\"") && password.length() >= 2) {
+            password = password.substring(1, password.length() - 1);
+        }
+        return password;
     }
 }

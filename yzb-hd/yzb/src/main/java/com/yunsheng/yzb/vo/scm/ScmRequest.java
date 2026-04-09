@@ -349,6 +349,24 @@ public final class ScmRequest {
 
         /** 审核意见或驳回原因。 */
         private String reason;
+
+        /** 明细审核结果。 */
+        @Valid
+        private List<PurchaseAuditItem> itemDecisions;
+    }
+
+    /**
+     * 采购审核明细参数。
+     */
+    @Data
+    public static class PurchaseAuditItem {
+        /** 采购明细主键。 */
+        @NotNull(message = "采购明细不能为空")
+        private Long purchaseOrderItemId;
+
+        /** 审核动作，approve 或 reject。 */
+        @NotBlank(message = "审核动作不能为空")
+        private String action;
     }
 
     /**

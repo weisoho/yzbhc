@@ -52,7 +52,9 @@ const ProductCatalog = () => {
         setQualifications([]);
         return;
       }
-      const response = await api.get(`/api/scm/suppliers/${supplierId}/qualifications`);
+      const response = await api.get(`/api/scm/suppliers/${supplierId}/qualifications`, {
+        type: 'REGISTRATION_CERTIFICATE'
+      });
       if (response.code === 1 && response.data) {
         const qualificationList = response.data.map(qualification => ({
           value: qualification.id,
@@ -135,7 +137,6 @@ const ProductCatalog = () => {
     try {
       setLoading(true);
       const productData = {
-        materialCode: values.materialCode,
         name: values.name,
         materialType: values.materialType,
         specification: values.specification,
@@ -149,6 +150,9 @@ const ProductCatalog = () => {
         storageCondition: values.storageCondition,
         status: values.status || 'active'
       };
+      if (values.materialCode) {
+        productData.materialCode = values.materialCode;
+      }
       const response = await api.post('/api/scm/materials', productData);
       if (response.code === 1) {
         message.success('物资新增成功');
@@ -529,7 +533,7 @@ const ProductCatalog = () => {
                   options={suppliers}
                   onChange={(value) => {
                     loadQualifications(value);
-                    addForm.setFieldsValue({ qualificationId: undefined });
+                    editForm.setFieldsValue({ qualificationId: undefined });
                   }}
                 />
               </Form.Item>
@@ -605,9 +609,8 @@ const ProductCatalog = () => {
               <Form.Item
                 name="materialCode"
                 label="物资编码"
-                rules={[{ required: true, message: '请输入物资编码' }]}
               >
-                <Input placeholder="请输入物资编码" />
+                <Input placeholder="留空后系统自动生成" />
               </Form.Item>
             </Col>
             <Col span={FORM_STYLES.form.edit.colSpan}>

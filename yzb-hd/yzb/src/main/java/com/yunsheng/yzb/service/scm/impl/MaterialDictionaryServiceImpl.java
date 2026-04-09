@@ -124,6 +124,30 @@ public class MaterialDictionaryServiceImpl implements MaterialDictionaryService 
                 .orderByAsc(MaterialEntity::getName));
     }
 
+    @Override
+    public List<MaterialEntity> listByQualification(Long qualificationId) {
+        validateQualificationExists(qualificationId);
+        return materialMapper.selectList(new LambdaQueryWrapper<MaterialEntity>()
+                .eq(MaterialEntity::getQualificationId, qualificationId)
+                .orderByDesc(MaterialEntity::getUpdateTime, MaterialEntity::getCreateTime));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int syncQualificationReferences(Long qualificationId) {
+        SupplierQualificationEntity qualification = validateQualificationExists(qualificationId);
+        List<MaterialEntity> materials = materialMapper.selectList(new LambdaQueryWrapper<MaterialEntity>()
+                .eq(MaterialEntity::getQualificationId, qualificationId));
+        int updatedCount = 0;
+        for (MaterialEntity material : materials) {
+            material.setRegistrationNumber(qualification.getLicenseNumber());
+            material.setUpdateTime(LocalDateTime.now());
+            materialMapper.updateById(material);
+            updatedCount++;
+        }
+        return updatedCount;
+    }
+
     private SupplierEntity validateSupplier(Long supplierId) {
         SupplierEntity supplier = supplierMapper.selectById(supplierId);
         if (supplier == null) {
@@ -142,6 +166,14 @@ public class MaterialDictionaryServiceImpl implements MaterialDictionaryService 
         }
         if (ScmConstants.QUALIFICATION_EXPIRED.equals(qualification.getStatus())) {
             throw new ScmBusinessException("注册证已过期，不能绑定物资");
+        }
+        return qualification;
+    }
+
+    private SupplierQualificationEntity validateQualificationExists(Long qualificationId) {
+        SupplierQualificationEntity qualification = qualificationMapper.selectById(qualificationId);
+        if (qualification == null) {
+            throw new ScmBusinessException("注册证不存在");
         }
         return qualification;
     }

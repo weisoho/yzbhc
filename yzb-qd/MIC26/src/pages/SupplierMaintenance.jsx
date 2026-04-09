@@ -326,7 +326,7 @@ const SupplierMaintenance = () => {
       onCell: () => ({ style: { whiteSpace: 'nowrap' } })
     },
     { 
-      title: '注册资本', 
+      title: '注册资本（万元）', 
       dataIndex: 'registeredCapital', 
       key: 'registeredCapital',
       ellipsis: false,
@@ -548,10 +548,10 @@ const SupplierMaintenance = () => {
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
                 name="registeredCapital"
-                label="注册资本"
+                label="注册资本（万元）"
                 getValueFromEvent={(event) => sanitizeCapitalInput(event?.target?.value)}
                 rules={[
-                  { required: true, message: '请输入注册资本' },
+                  { required: true, message: '请输入注册资本（万元）' },
                   {
                     validator: (_, value) => {
                       if (!value) {
@@ -567,7 +567,7 @@ const SupplierMaintenance = () => {
                   }
                 ]}
               >
-                <Input placeholder="请输入注册资本" inputMode="decimal" />
+                <Input placeholder="请输入注册资本（万元）" inputMode="decimal" />
               </Form.Item>
             </Col>
           </Row>
@@ -665,7 +665,7 @@ const SupplierMaintenance = () => {
             <Row gutter={FORM_STYLES.form.edit.rowGutter}>
               <Col span={FORM_STYLES.form.edit.colSpan}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 'bold' }}>注册资本：</span>
+                  <span style={{ fontWeight: 'bold' }}>注册资本（万元）：</span>
                   <span>{viewingRecord.registeredCapital}</span>
                 </div>
               </Col>

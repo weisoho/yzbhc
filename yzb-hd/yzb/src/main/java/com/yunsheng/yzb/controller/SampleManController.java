@@ -8,6 +8,7 @@ import com.yunsheng.yzb.model.*;
 import com.yunsheng.yzb.utils.AjaxResult;
 import com.yunsheng.yzb.utils.ClassCastUtil;
 import com.yunsheng.yzb.utils.LoginCacheUtil;
+import org.springframework.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.ZoneId;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.List;
 
@@ -30,7 +33,7 @@ public class SampleManController {
      * 新增,编辑样本量管理
      */
     @PostMapping("/addorupdateSampleMan")
-    public AjaxResult addOrUpdateSampleMan(@RequestBody SampleMan model){
+    public AjaxResult<SampleMan> addOrUpdateSampleMan(@RequestBody SampleMan model){
         if (model.getSampleDate() == null) {
             return AjaxResult.res(0,"日期不能为空",null);
         }
@@ -42,7 +45,7 @@ public class SampleManController {
         model.setDepId(ysUser.getDepId());
         model.setDepName(ysUser.getUserDep());
         model.setUserId(ysUser.getId());
-        model.setUserName(ysUser.getUserName());
+        model.setUserName(StringUtils.hasText(ysUser.getRealName()) ? ysUser.getRealName() : ysUser.getUserName());
         if(model.getId()!=null){
             SampleMan existing = sampleManMapper.selectByPrimaryKey(model.getId());
             if (existing == null) {
@@ -70,7 +73,7 @@ public class SampleManController {
      * 列表
      */
     @PostMapping("/selectModelList")
-    public AjaxResult selectModelList(@RequestBody SampleMan model){
+    public AjaxResult<Object> selectModelList(@RequestBody SampleMan model){
         PageHelper.startPage(defaultPageNum(model.getPageNum()), defaultPageSize(model.getPageSize()));
         SampleManExample example = new SampleManExample();
         SampleManExample.Criteria criteria = example.createCriteria().andIdIsNotNull();
@@ -121,7 +124,7 @@ public class SampleManController {
      */
 
     @PostMapping("/export")
-    public AjaxResult export(@RequestBody SampleMan model) {
+    public AjaxResult<List<SampleMan>> export(@RequestBody SampleMan model) {
         SampleManExample example = new SampleManExample();
         SampleManExample.Criteria criteria = example.createCriteria().andIdIsNotNull();
         if (model.getDepId() != null) {
@@ -161,8 +164,8 @@ public class SampleManController {
         if (source == null || target == null) {
             return false;
         }
-        return source.getYear() == target.getYear()
-                && source.getMonth() == target.getMonth()
-                && source.getDate() == target.getDate();
+        LocalDate sourceDate = source.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        LocalDate targetDate = target.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        return sourceDate.equals(targetDate);
     }
 }

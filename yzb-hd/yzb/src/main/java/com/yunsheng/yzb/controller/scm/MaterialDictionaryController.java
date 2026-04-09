@@ -49,6 +49,28 @@ public class MaterialDictionaryController {
     }
 
     /**
+     * 查询引用指定注册证的物资明细。
+     *
+     * @param qualificationId 注册证主键
+     * @return 物资列表
+     */
+    @GetMapping("/qualification/{qualificationId}/references")
+    public AjaxResult<List<MaterialEntity>> qualificationReferences(@PathVariable Long qualificationId) {
+        return AjaxResult.success(materialDictionaryService.listByQualification(qualificationId));
+    }
+
+    /**
+     * 将注册证号同步到关联物资。
+     *
+     * @param qualificationId 注册证主键
+     * @return 同步数量
+     */
+    @PostMapping("/qualification/{qualificationId}/sync")
+    public AjaxResult<Integer> syncQualificationReferences(@PathVariable Long qualificationId) {
+        return AjaxResult.success(materialDictionaryService.syncQualificationReferences(qualificationId));
+    }
+
+    /**
      * 查询单个物资详情。
      *
      * @param materialId 物资主键

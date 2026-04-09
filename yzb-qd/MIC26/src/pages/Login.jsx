@@ -22,6 +22,7 @@ const Login = () => {
         // 保存登录状态
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('username', values.username);
+        localStorage.setItem('userName', data.data.realName || data.data.userName || values.username);
         localStorage.setItem('token', data.data.userToken);
         localStorage.setItem('userInfo', JSON.stringify(data.data));
         window.dispatchEvent(new CustomEvent('authChanged', { detail: { isLoggedIn: true } }));

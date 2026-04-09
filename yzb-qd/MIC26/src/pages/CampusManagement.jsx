@@ -164,6 +164,11 @@ const CampusManagement = () => {
   };
 
   const handleDelete = async (record) => {
+    if (Number(record.level) === 1) {
+      message.warning('默认总院不允许删除');
+      return;
+    }
+
     if ((record.children || []).length > 0) {
       message.warning('该院区下仍存在分院或科室，不能直接删除');
       return;
@@ -229,7 +234,7 @@ const CampusManagement = () => {
             编辑
           </Button>
           <Popconfirm title="确定删除该院区吗？" onConfirm={() => handleDelete(record)} okText="确定" cancelText="取消">
-            <Button type="link" danger icon={<DeleteOutlined />}>
+            <Button type="link" danger icon={<DeleteOutlined />} disabled={Number(record.level) === 1}>
               删除
             </Button>
           </Popconfirm>

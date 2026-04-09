@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message, Select } from 'antd';
+import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message, Select, Alert } from 'antd';
 import { useParams } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import moment from 'moment';
@@ -25,6 +25,19 @@ const SupplierCertificate = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [suppliers, setSuppliers] = useState([]);
+  const [syncPendingIds, setSyncPendingIds] = useState([]);
+  const [referenceVisible, setReferenceVisible] = useState(false);
+  const [referenceLoading, setReferenceLoading] = useState(false);
+  const [referenceItems, setReferenceItems] = useState([]);
+  const [referenceRecord, setReferenceRecord] = useState(null);
+
+  const markSyncPending = (qualificationId) => {
+    setSyncPendingIds((prev) => (prev.includes(qualificationId) ? prev : [...prev, qualificationId]));
+  };
+
+  const clearSyncPending = (qualificationId) => {
+    setSyncPendingIds((prev) => prev.filter((item) => item !== qualificationId));
+  };
 
   // 加载供应商列表
   const loadSuppliers = async () => {
@@ -152,6 +165,7 @@ const SupplierCertificate = () => {
       const response = await api.put(`/api/scm/suppliers/qualifications/${editingRecord.key}`, certificateData);
       if (response.code === 1) {
         message.success('注册证更新成功');
+        markSyncPending(editingRecord.key);
         await loadCertificates();
       } else {
         message.error(getApiResponseMessage(response, '注册证更新失败'));
@@ -165,6 +179,41 @@ const SupplierCertificate = () => {
       message.error(getApiErrorMessage(error, '操作失败'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSync = async (record) => {
+    try {
+      setLoading(true);
+      const response = await api.post(`/api/scm/materials/qualification/${record.key}/sync`);
+      if (response.code === 1) {
+        clearSyncPending(record.key);
+        message.success(`同步完成，已更新 ${response.data || 0} 条物资字典记录`);
+      } else {
+        message.error(getApiResponseMessage(response, '注册证同步失败'));
+      }
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '注册证同步失败'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewReferences = async (record) => {
+    try {
+      setReferenceLoading(true);
+      const response = await api.get(`/api/scm/materials/qualification/${record.key}/references`);
+      if (response.code === 1 && Array.isArray(response.data)) {
+        setReferenceItems(response.data);
+        setReferenceRecord(record);
+        setReferenceVisible(true);
+      } else {
+        message.error(getApiResponseMessage(response, '加载引用物资失败'));
+      }
+    } catch (error) {
+      message.error(getApiErrorMessage(error, '加载引用物资失败'));
+    } finally {
+      setReferenceLoading(false);
     }
   };
 
@@ -196,7 +245,14 @@ const SupplierCertificate = () => {
   };
 
   const columns = [
-    { title: '注册证编号', dataIndex: 'licenseNumber', key: 'licenseNumber', width: 150, align: 'center' },
+    {
+      title: '注册证编号',
+      dataIndex: 'licenseNumber',
+      key: 'licenseNumber',
+      width: 150,
+      align: 'center',
+      render: (_, record) => <a onClick={() => handleViewReferences(record)}>{record.licenseNumber}</a>
+    },
     { title: '产品名称', dataIndex: 'certificateName', key: 'certificateName', width: 200, align: 'center' },
     { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 200, align: 'center' },
     { title: '发证部门', dataIndex: 'issuingAuthority', key: 'issuingAuthority', width: 150, align: 'center' },
@@ -210,11 +266,23 @@ const SupplierCertificate = () => {
       align: 'center',
       render: (_, record) => (
         <Space size="middle">
+          <a onClick={() => handleViewReferences(record)}>查看引用</a>
+          <a onClick={() => handleSync(record)}>同步</a>
           <a onClick={() => handleEdit(record)}><EditOutlined />编辑</a>
           <a style={{ color: 'red' }} onClick={() => handleDelete(record.key)}><DeleteOutlined />删除</a>
         </Space>
       )
     },
+  ];
+
+  const referenceColumns = [
+    { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode', width: 140 },
+    { title: '物资名称', dataIndex: 'name', key: 'name', width: 180 },
+    { title: '规格', dataIndex: 'specification', key: 'specification', width: 160 },
+    { title: '型号', dataIndex: 'model', key: 'model', width: 160 },
+    { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 180 },
+    { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 200 },
+    { title: '采购价格', dataIndex: 'purchasePrice', key: 'purchasePrice', width: 120 },
   ];
 
   const uploadProps = {
@@ -238,6 +306,15 @@ const SupplierCertificate = () => {
   return (
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>供应商注册证</h1>
+
+      {syncPendingIds.length > 0 && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="注册证已变更，请执行同步操作，确保物资字典中的注册证号立即更新。同步完成后提示会自动消失。"
+        />
+      )}
       
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -327,6 +404,7 @@ const SupplierCertificate = () => {
             const response = await api.post(`/api/scm/suppliers/${selectedSupplier.id}/qualifications`, certificateData);
             if (response.code === 1) {
               message.success('注册证新增成功');
+              markSyncPending(response.data?.id);
               await loadCertificates();
             } else {
               message.error(getApiResponseMessage(response, '注册证新增失败'));
@@ -382,6 +460,28 @@ const SupplierCertificate = () => {
           <Form.Item name="expiryDate" label="失效日期" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} /></Form.Item>
           <Form.Item label="附件"><Upload {...editUploadProps}><Button icon={<UploadOutlined />}>重新上传附件</Button></Upload></Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title={referenceRecord ? `引用注册证 ${referenceRecord.licenseNumber} 的物资字典` : '引用物资字典'}
+        open={referenceVisible}
+        onCancel={() => {
+          setReferenceVisible(false);
+          setReferenceItems([]);
+          setReferenceRecord(null);
+        }}
+        footer={null}
+        width={1000}
+      >
+        <Table
+          rowKey="id"
+          columns={referenceColumns}
+          dataSource={referenceItems}
+          loading={referenceLoading}
+          pagination={false}
+          locale={{ emptyText: '当前没有物资字典引用该注册证' }}
+          scroll={{ x: 1000 }}
+        />
       </Modal>
     </div>
   );

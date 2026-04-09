@@ -106,6 +106,11 @@ const ManualStockIn = () => {
         const catalog = response.data.map((item, index) => ({
           ...item,
           key: item.id || `catalog_${index}`,
+          materialId: item.id,
+          materialCode: item.materialCode,
+          materialName: item.name,
+          supplierName: item.supplierName,
+          unitPrice: Number(item.purchasePrice || 0),
           selected: false,
           quantity: 1,
           batchNumber: '',
@@ -152,7 +157,7 @@ const ManualStockIn = () => {
     const filtered = materialCatalog.filter(item => {
       const matchesCode = !values.materialCode || item.materialCode.includes(values.materialCode);
       const matchesName = !values.materialName || item.materialName.includes(values.materialName);
-      const matchesSupplier = !values.supplier || (item.supplier && item.supplier.includes(values.supplier));
+      const matchesSupplier = !values.supplier || (item.supplierName && item.supplierName.includes(values.supplier));
       return matchesCode && matchesName && matchesSupplier;
     });
     setFilteredMaterials(filtered);
@@ -200,11 +205,12 @@ const ManualStockIn = () => {
       productCode: item.materialCode,
       productName: item.materialName,
       materialType: item.materialType,
+      materialId: item.materialId,
       specification: item.specification,
       model: item.model,
       minPackage: item.minPackage,
       manufacturer: item.manufacturer,
-      supplierName: item.supplier,
+      supplierName: item.supplierName,
       registrationNumber: item.registrationNumber,
       orderUnit: item.unit,
       instockQuantity: item.quantity || 1,
@@ -229,9 +235,9 @@ const ManualStockIn = () => {
     }
 
     // 简单验证
-    const invalidItem = newItems.find(i => !i.batchNumber || !i.instockQuantity);
+    const invalidItem = newItems.find(i => !i.materialId || !i.productName || !i.batchNumber || !i.productionDate || !i.expiryDate || !i.instockQuantity);
     if (invalidItem) {
-      message.error(`物资 ${invalidItem.productName} 的批号或入库数量不能为空`);
+      message.error(`物资 ${invalidItem.productName || invalidItem.productCode} 的主档、批号、生产日期、失效日期或入库数量不完整`);
       return;
     }
 
@@ -239,9 +245,10 @@ const ManualStockIn = () => {
       setLoading(true);
       const saveData = {
         stockInType: '初始化入库',
-        operatorName: '管理员', // 实际应从登录信息获取
+        operatorName: JSON.parse(localStorage.getItem('userInfo') || '{}').realName || JSON.parse(localStorage.getItem('userInfo') || '{}').userName || '管理员',
         remark: '系统初始化入库',
         items: newItems.map(i => ({
+          materialId: i.materialId,
           materialCode: i.productCode,
           materialName: i.productName,
           materialType: i.materialType,
@@ -486,6 +493,7 @@ const ManualStockIn = () => {
                 <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>名称</th>
                 <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>规格</th>
                 <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>厂家</th>
+                <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>供应商</th>
                 <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>最小包装</th>
                 <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>单价</th>
                 <th style={{ padding: 12, border: '1px solid #f0f0f0' }}>数量</th>
@@ -501,6 +509,7 @@ const ManualStockIn = () => {
                   <td style={{ padding: 12, border: '1px solid #f0f0f0' }}>{item.materialName}</td>
                   <td style={{ padding: 12, border: '1px solid #f0f0f0' }}>{item.specification}</td>
                   <td style={{ padding: 12, border: '1px solid #f0f0f0' }}>{item.manufacturer}</td>
+                  <td style={{ padding: 12, border: '1px solid #f0f0f0' }}>{item.supplierName}</td>
                   <td style={{ padding: 12, border: '1px solid #f0f0f0' }}>{item.minPackage}</td>
                   <td style={{ padding: 12, border: '1px solid #f0f0f0' }}>¥{item.unitPrice?.toFixed(2)}</td>
                   <td style={{ padding: 12, border: '1px solid #f0f0f0' }}>

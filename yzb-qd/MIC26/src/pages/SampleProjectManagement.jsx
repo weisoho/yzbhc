@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, Table, Button, Space, Form, Input, Select, Modal, Tag, Row, Col, message } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, DownloadOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
+import { useCampusContext } from '../contexts/CampusContext';
+import { findDepartmentById, flattenDepartmentTree, getDepartmentOptionsByCampus, normalizeDepartmentTree } from '../utils/departmentTree';
 
 const { TextArea } = Input;
 
@@ -13,6 +15,19 @@ const statusOptions = [
 const getStatusMeta = (value) => statusOptions.find((item) => item.value === value) || { label: '-', color: 'default' };
 
 const normalizeList = (payload) => {
+  if (Array.isArray(payload?.records)) {
+    return payload.records;
+  }
+  if (Array.isArray(payload?.list)) {
+    return payload.list;
+  }
+  return [];
+};
+
+const normalizeDepartmentList = (payload) => {
+  if (Array.isArray(payload)) {
+    return payload;
+  }
   if (Array.isArray(payload?.records)) {
     return payload.records;
   }
@@ -53,18 +68,29 @@ const SampleProjectManagement = () => {
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [lastQuery, setLastQuery] = useState({});
+  const { currentCampusNode, currentDepartment } = useCampusContext();
+
+  const currentDepartmentId = currentDepartment?.id ? Number(currentDepartment.id) : undefined;
+
+  const normalizedDepartmentTree = useMemo(() => normalizeDepartmentTree(departments), [departments]);
+  const allDepartmentOptions = useMemo(() => flattenDepartmentTree(normalizedDepartmentTree).filter((item) => item.orgType === 'DEPARTMENT'), [normalizedDepartmentTree]);
+  const scopedDepartmentOptions = useMemo(() => {
+    if (currentCampusNode) {
+      return getDepartmentOptionsByCampus(currentCampusNode).filter((item) => item.orgType === 'DEPARTMENT');
+    }
+    return allDepartmentOptions;
+  }, [allDepartmentOptions, currentCampusNode]);
 
   const departmentMap = useMemo(() => {
-    return new Map(departments.map((item) => [item.value, item.label]));
-  }, [departments]);
+    return new Map(scopedDepartmentOptions.map((item) => [Number(item.id), item.deptName]));
+  }, [scopedDepartmentOptions]);
 
   const loadDepartments = useCallback(async () => {
     try {
       const response = await api.get('/api/department/list');
-      if (response.code === 1 && Array.isArray(response.data)) {
-        const options = response.data
-          .filter((item) => item?.id && item?.status === 1 && item?.orgType === 'DEPARTMENT')
-          .map(mapDepartmentOption);
+      if (response.code === 1) {
+        const options = normalizeDepartmentList(response.data)
+          .filter((item) => item?.id && item?.status === 1);
         setDepartments(options);
       }
     } catch (error) {
@@ -146,6 +172,7 @@ const SampleProjectManagement = () => {
     projectForm.setFieldsValue({
       status: 1,
       isCharge: 0,
+      department: currentDepartmentId,
     });
     setProjectModalVisible(true);
   };
@@ -211,12 +238,14 @@ const SampleProjectManagement = () => {
     setSubmitLoading(true);
     try {
       const departmentName = departmentMap.get(values.department);
+      const selectedDepartment = findDepartmentById(scopedDepartmentOptions, values.department)
+        || allDepartmentOptions.find((item) => Number(item.id) === Number(values.department));
       const payload = {
         id: selectedProject?.id,
         itemCode: values.projectCode,
         itemName: values.projectName,
         depId: values.department,
-        depName: departmentName,
+        depName: departmentName || selectedDepartment?.deptName,
         itemState: values.status,
         isCharge: values.isCharge,
         chargeCode: values.isCharge === 1 ? values.chargeCode : '',
@@ -319,6 +348,10 @@ const SampleProjectManagement = () => {
     <div style={{ padding: '0 16px' }}>
       <h1 style={{ marginBottom: 24 }}>项目字典</h1>
 
+      <div style={{ marginBottom: 16, color: '#8c8c8c' }}>
+        当前院区：{currentCampusNode?.deptName || '全部院区'}，当前科室：{currentDepartment?.deptName || '未选择科室'}
+      </div>
+
       <Card style={{ marginBottom: 16 }}>
         <Form form={form} layout="inline" onFinish={handleSearch}>
           <Row gutter={[16, 16]} style={{ width: '100%' }}>
@@ -334,7 +367,7 @@ const SampleProjectManagement = () => {
             </Col>
             <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item name="department" label="检验科">
-                <Select placeholder="请选择检验科" allowClear options={departments} />
+                <Select placeholder="请选择检验科" allowClear options={scopedDepartmentOptions.map(mapDepartmentOption)} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8} lg={6}>
@@ -410,7 +443,7 @@ const SampleProjectManagement = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="department" label="所属检验科" rules={[{ required: true, message: '请选择所属检验科' }]}>
-                <Select placeholder="请选择所属检验科" options={departments} />
+                <Select placeholder="请选择所属检验科" options={scopedDepartmentOptions.map(mapDepartmentOption)} />
               </Form.Item>
             </Col>
             <Col span={12}>

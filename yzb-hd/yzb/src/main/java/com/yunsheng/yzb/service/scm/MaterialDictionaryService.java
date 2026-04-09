@@ -57,4 +57,20 @@ public interface MaterialDictionaryService {
      * @return 启用物资列表
      */
     List<MaterialEntity> listEnabledMaterials();
+
+    /**
+     * 查询引用指定注册证的物资。
+     *
+     * @param qualificationId 注册证主键
+     * @return 引用物资列表
+     */
+    List<MaterialEntity> listByQualification(Long qualificationId);
+
+    /**
+     * 同步注册证号到关联物资。
+     *
+     * @param qualificationId 注册证主键
+     * @return 同步数量
+     */
+    int syncQualificationReferences(Long qualificationId);
 }

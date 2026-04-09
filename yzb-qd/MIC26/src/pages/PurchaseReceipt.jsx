@@ -55,6 +55,19 @@ const PurchaseReceipt = () => {
   const [batchInfo, setBatchInfo] = useState({});
   // 备注
   const [remarks, setRemarks] = useState('');
+  const [receiverName, setReceiverName] = useState('');
+  const [contactPerson, setContactPerson] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [actualDeliveryDate, setActualDeliveryDate] = useState(null);
+
+  const getCurrentUserName = () => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      return userInfo.realName || userInfo.name || userInfo.userName || '管理员';
+    } catch {
+      return '管理员';
+    }
+  };
 
   // 从API获取采购订单数据
   const loadPurchaseOrders = async () => {
@@ -203,22 +216,23 @@ const PurchaseReceipt = () => {
         try {
           setLoading(true);
           const receiveData = {
-            receiverName: '管理员',
+            receiver: receiverName || getCurrentUserName(),
+            contactPerson: contactPerson || selectedOrder.contactPerson || selectedOrder.buyer || getCurrentUserName(),
+            contactPhone: contactPhone || selectedOrder.contactPhone || '13800000000',
+            actualDeliveryDate: (actualDeliveryDate || moment()).format('YYYY-MM-DD'),
             remark: remarks,
             items: selectedItemKeys.map(key => {
               const item = selectedOrder.items.find(i => i.key === key);
               return {
                 purchaseOrderItemId: item.id,
-                quantity: receivedQuantities[key] || item.quantity,
-                batchNumber: batchInfo[key]?.batchNumber || '',
-                productionDate: batchInfo[key]?.productionDate || null,
-                expiryDate: batchInfo[key]?.expiryDate || null
+                actualReceivedQuantity: receivedQuantities[key] ?? item.quantity,
+                shortageReason: (receivedQuantities[key] ?? item.quantity) < item.quantity ? '部分到货' : ''
               };
             })
           };
           const response = await api.post(`/api/scm/purchases/orders/${selectedOrder.key}/receive`, receiveData);
           if (response.code === 1) {
-            message.success(`成功验收 ${selectedItemKeys.length} 项商品`);
+            message.success(`成功确认收货 ${selectedItemKeys.length} 项商品，请到采购入库页面录入批号和效期后完成入库`);
             loadPurchaseOrders();
             setIsModalVisible(false);
           } else {
@@ -369,6 +383,10 @@ const PurchaseReceipt = () => {
               setModifiedItems(initialModifiedItems);
               setBatchInfo(initialBatchInfo);
               setRemarks(''); // 重置备注
+              setReceiverName(getCurrentUserName());
+              setContactPerson(record.contactPerson || record.buyer || getCurrentUserName());
+              setContactPhone(record.contactPhone || '');
+              setActualDeliveryDate(record.actualDeliveryDate ? moment(record.actualDeliveryDate) : moment());
               setIsModalVisible(true);
             }}
           >
@@ -616,6 +634,9 @@ const PurchaseReceipt = () => {
               <Col span={8}>
                 <div><strong>申请人：</strong>{selectedOrder.buyer}</div>
               </Col>
+              <Col span={8}>
+                <div><strong>联系人：</strong>{selectedOrder.contactPerson || '-'}</div>
+              </Col>
             </Row>
             
             <Row gutter={16} style={{ marginBottom: 16 }}>
@@ -624,6 +645,39 @@ const PurchaseReceipt = () => {
               </Col>
               <Col span={8}>
                 <div><strong>物资数量：</strong>{selectedOrder.itemCount} 项</div>
+              </Col>
+              <Col span={8}>
+                <div><strong>联系电话：</strong>{selectedOrder.contactPhone || '-'}</div>
+              </Col>
+            </Row>
+
+            <Row gutter={16} style={{ marginBottom: 16 }}>
+              <Col span={8}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <strong>收货人</strong>
+                  <Input value={receiverName} onChange={(e) => setReceiverName(e.target.value)} placeholder="请输入收货人" />
+                </div>
+              </Col>
+              <Col span={8}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <strong>联系人</strong>
+                  <Input value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} placeholder="请输入联系人" />
+                </div>
+              </Col>
+              <Col span={8}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <strong>联系电话</strong>
+                  <Input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="请输入联系电话" />
+                </div>
+              </Col>
+            </Row>
+
+            <Row gutter={16} style={{ marginBottom: 16 }}>
+              <Col span={8}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <strong>实际到货日期</strong>
+                  <DatePicker value={actualDeliveryDate} onChange={setActualDeliveryDate} style={{ width: '100%' }} />
+                </div>
               </Col>
             </Row>
             
@@ -675,60 +729,6 @@ const PurchaseReceipt = () => {
                   { title: '物资名称', dataIndex: 'productName', key: 'productName', width: 150 },
                   { title: '规格', dataIndex: 'specification', key: 'specification', width: 100 },
                   { title: '型号', dataIndex: 'model', key: 'model', width: 100 },
-                  { 
-                    title: '批号', 
-                    key: 'batchNumber', 
-                    width: 120, 
-                    render: (_, record) => (
-                      <Input 
-                        value={batchInfo[record.key]?.batchNumber || ''} 
-                        onChange={(e) => {
-                          const newBatchInfo = { ...batchInfo };
-                          if (!newBatchInfo[record.key]) {
-                            newBatchInfo[record.key] = { ...record };
-                          }
-                          newBatchInfo[record.key].batchNumber = e.target.value;
-                          setBatchInfo(newBatchInfo);
-                        }}
-                      />
-                    )
-                  },
-                  { 
-                    title: '生产日期', 
-                    key: 'productionDate', 
-                    width: 120, 
-                    render: (_, record) => (
-                      <Input 
-                        value={batchInfo[record.key]?.productionDate || ''} 
-                        onChange={(e) => {
-                          const newBatchInfo = { ...batchInfo };
-                          if (!newBatchInfo[record.key]) {
-                            newBatchInfo[record.key] = { ...record };
-                          }
-                          newBatchInfo[record.key].productionDate = e.target.value;
-                          setBatchInfo(newBatchInfo);
-                        }}
-                      />
-                    )
-                  },
-                  { 
-                    title: '失效日期', 
-                    key: 'expiryDate', 
-                    width: 120, 
-                    render: (_, record) => (
-                      <Input 
-                        value={batchInfo[record.key]?.expiryDate || ''} 
-                        onChange={(e) => {
-                          const newBatchInfo = { ...batchInfo };
-                          if (!newBatchInfo[record.key]) {
-                            newBatchInfo[record.key] = { ...record };
-                          }
-                          newBatchInfo[record.key].expiryDate = e.target.value;
-                          setBatchInfo(newBatchInfo);
-                        }}
-                      />
-                    )
-                  },
                   { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
                   { title: '采购价格', dataIndex: 'price', key: 'price', width: 100, render: (value) => `¥${value?.toFixed(2)}` },
                   { title: '采购数量', dataIndex: 'quantity', key: 'quantity', width: 100 },
@@ -770,7 +770,7 @@ const PurchaseReceipt = () => {
                 rowKey="key"
                 pagination={false}
                 size="small"
-                scroll={{ x: 1100 }}
+                scroll={{ x: 900 }}
               />
             </div>
 

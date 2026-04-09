@@ -38,6 +38,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -218,7 +219,19 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
     public PurchaseOrderEntity approveOrder(Long orderId, ScmRequest.PurchaseAudit request) {
         PurchaseOrderEntity order = mustGetOrder(orderId);
         ensureWaitAudit(order);
+        List<PurchaseOrderItemEntity> orderItems = listOrderItems(orderId);
+        Map<Long, String> decisions = resolveAuditDecisions(request, orderItems);
+        if (!decisions.isEmpty() && decisions.containsValue("reject")) {
+            return applyItemAudit(order, orderItems, request, decisions);
+        }
+
+        for (PurchaseOrderItemEntity item : orderItems) {
+            item.setStatus(ScmConstants.PURCHASE_WAIT_RECEIVE);
+            item.setUpdateTime(LocalDateTime.now());
+            purchaseOrderItemMapper.updateById(item);
+        }
         order.setStatus(ScmConstants.PURCHASE_WAIT_RECEIVE);
+        order.setRejectReason(null);
         order.setAuditTime(LocalDateTime.now());
         order.setUpdateTime(LocalDateTime.now());
         purchaseOrderMapper.updateById(order);
@@ -232,6 +245,20 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
     public PurchaseOrderEntity rejectOrder(Long orderId, ScmRequest.PurchaseAudit request) {
         PurchaseOrderEntity order = mustGetOrder(orderId);
         ensureWaitAudit(order);
+        List<PurchaseOrderItemEntity> orderItems = listOrderItems(orderId);
+        Map<Long, String> decisions = resolveAuditDecisions(request, orderItems);
+        if (!decisions.isEmpty()) {
+            boolean hasApprove = decisions.containsValue("approve");
+            if (hasApprove) {
+                return applyItemAudit(order, orderItems, request, decisions);
+            }
+        }
+
+        for (PurchaseOrderItemEntity item : orderItems) {
+            item.setStatus(ScmConstants.PURCHASE_REJECTED);
+            item.setUpdateTime(LocalDateTime.now());
+            purchaseOrderItemMapper.updateById(item);
+        }
         order.setStatus(ScmConstants.PURCHASE_REJECTED);
         order.setRejectReason(request.getReason());
         order.setAuditTime(LocalDateTime.now());
@@ -485,6 +512,12 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
         return order;
     }
 
+    private List<PurchaseOrderItemEntity> listOrderItems(Long orderId) {
+        return purchaseOrderItemMapper.selectList(new LambdaQueryWrapper<PurchaseOrderItemEntity>()
+                .eq(PurchaseOrderItemEntity::getPurchaseOrderId, orderId)
+                .orderByAsc(PurchaseOrderItemEntity::getId));
+    }
+
     private void ensureWaitAudit(PurchaseOrderEntity order) {
         if (!Objects.equals(order.getStatus(), ScmConstants.PURCHASE_WAIT_AUDIT)) {
             throw new ScmBusinessException("采购单当前不处于待审核状态");
@@ -497,6 +530,139 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
             throw new ScmBusinessException("供应商不存在");
         }
         return supplier;
+    }
+
+    private Map<Long, String> resolveAuditDecisions(ScmRequest.PurchaseAudit request,
+                                                    List<PurchaseOrderItemEntity> orderItems) {
+        if (request.getItemDecisions() == null || request.getItemDecisions().isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<Long, PurchaseOrderItemEntity> itemMap = orderItems.stream()
+                .collect(Collectors.toMap(PurchaseOrderItemEntity::getId, item -> item));
+        Map<Long, String> decisions = new HashMap<>();
+        for (ScmRequest.PurchaseAuditItem itemDecision : request.getItemDecisions()) {
+            PurchaseOrderItemEntity item = itemMap.get(itemDecision.getPurchaseOrderItemId());
+            if (item == null) {
+                throw new ScmBusinessException("存在无效的采购明细");
+            }
+            String action = itemDecision.getAction();
+            if (!"approve".equals(action) && !"reject".equals(action)) {
+                throw new ScmBusinessException("审核动作不合法");
+            }
+            decisions.put(item.getId(), action);
+        }
+        return decisions;
+    }
+
+    private PurchaseOrderEntity applyItemAudit(PurchaseOrderEntity order,
+                                               List<PurchaseOrderItemEntity> orderItems,
+                                               ScmRequest.PurchaseAudit request,
+                                               Map<Long, String> decisions) {
+        List<PurchaseOrderItemEntity> approvedItems = new ArrayList<>();
+        List<PurchaseOrderItemEntity> rejectedItems = new ArrayList<>();
+        for (PurchaseOrderItemEntity item : orderItems) {
+            String action = decisions.get(item.getId());
+            if (!StringUtils.hasText(action)) {
+                throw new ScmBusinessException("请为所有采购明细选择审核结果");
+            }
+            if ("approve".equals(action)) {
+                approvedItems.add(item);
+            } else {
+                rejectedItems.add(item);
+            }
+        }
+
+        if (approvedItems.isEmpty()) {
+            for (PurchaseOrderItemEntity item : rejectedItems) {
+                item.setStatus(ScmConstants.PURCHASE_REJECTED);
+                item.setUpdateTime(LocalDateTime.now());
+                purchaseOrderItemMapper.updateById(item);
+            }
+            order.setStatus(ScmConstants.PURCHASE_REJECTED);
+            order.setRejectReason(request.getReason());
+            order.setAuditTime(LocalDateTime.now());
+            order.setUpdateTime(LocalDateTime.now());
+            purchaseOrderMapper.updateById(order);
+            operationLogService.save(request.getOperatorName(), "审核", "驳回采购单: " + order.getOrderNumber(),
+                    ScmConstants.LOG_WARNING, "采购审核", order.getOrderNumber());
+            return order;
+        }
+
+        if (rejectedItems.isEmpty()) {
+            for (PurchaseOrderItemEntity item : approvedItems) {
+                item.setStatus(ScmConstants.PURCHASE_WAIT_RECEIVE);
+                item.setUpdateTime(LocalDateTime.now());
+                purchaseOrderItemMapper.updateById(item);
+            }
+            order.setStatus(ScmConstants.PURCHASE_WAIT_RECEIVE);
+            order.setRejectReason(null);
+            order.setAuditTime(LocalDateTime.now());
+            order.setUpdateTime(LocalDateTime.now());
+            purchaseOrderMapper.updateById(order);
+            operationLogService.save(request.getOperatorName(), "审核", "通过采购单: " + order.getOrderNumber(),
+                    ScmConstants.LOG_SUCCESS, "采购审核", order.getOrderNumber());
+            return order;
+        }
+
+        for (PurchaseOrderItemEntity item : approvedItems) {
+            item.setStatus(ScmConstants.PURCHASE_WAIT_RECEIVE);
+            item.setUpdateTime(LocalDateTime.now());
+            purchaseOrderItemMapper.updateById(item);
+        }
+
+        PurchaseOrderEntity rejectedOrder = cloneRejectedOrder(order, rejectedItems, request);
+        purchaseOrderMapper.insert(rejectedOrder);
+        BigDecimal rejectedAmount = BigDecimal.ZERO;
+        for (PurchaseOrderItemEntity rejectedItem : rejectedItems) {
+            PurchaseOrderItemEntity newItem = new PurchaseOrderItemEntity();
+            BeanUtils.copyProperties(rejectedItem, newItem, "id", "purchaseOrderId", "createTime", "updateTime");
+            newItem.setPurchaseOrderId(rejectedOrder.getId());
+            newItem.setStatus(ScmConstants.PURCHASE_REJECTED);
+            newItem.setCreateTime(LocalDateTime.now());
+            newItem.setUpdateTime(LocalDateTime.now());
+            purchaseOrderItemMapper.insert(newItem);
+            rejectedAmount = rejectedAmount.add(newItem.getAmount());
+            purchaseOrderItemMapper.deleteById(rejectedItem.getId());
+        }
+        rejectedOrder.setTotalAmount(rejectedAmount);
+        rejectedOrder.setItemCount(rejectedItems.size());
+        purchaseOrderMapper.updateById(rejectedOrder);
+
+        order.setStatus(ScmConstants.PURCHASE_WAIT_RECEIVE);
+        order.setRejectReason(null);
+        order.setAuditTime(LocalDateTime.now());
+        order.setUpdateTime(LocalDateTime.now());
+        order.setItemCount(approvedItems.size());
+        order.setTotalAmount(sumAmount(approvedItems));
+        purchaseOrderMapper.updateById(order);
+        operationLogService.save(request.getOperatorName(), "审核", "部分通过采购单: " + order.getOrderNumber(),
+                ScmConstants.LOG_WARNING, "采购审核", order.getOrderNumber());
+        return order;
+    }
+
+    private PurchaseOrderEntity cloneRejectedOrder(PurchaseOrderEntity source,
+                                                   List<PurchaseOrderItemEntity> rejectedItems,
+                                                   ScmRequest.PurchaseAudit request) {
+        PurchaseOrderEntity rejectedOrder = new PurchaseOrderEntity();
+        BeanUtils.copyProperties(source, rejectedOrder, "id", "orderNumber", "status", "rejectReason",
+                "totalAmount", "itemCount", "submitTime", "auditTime", "createTime", "updateTime");
+        rejectedOrder.setOrderNumber(ScmCodeGenerator.nextCode(purchaseOrderMapper, "PO", "order_number"));
+        rejectedOrder.setStatus(ScmConstants.PURCHASE_REJECTED);
+        rejectedOrder.setRejectReason(StringUtils.hasText(request.getReason())
+                ? request.getReason() : "采购审核部分驳回");
+        rejectedOrder.setSubmitTime(source.getSubmitTime());
+        rejectedOrder.setAuditTime(LocalDateTime.now());
+        rejectedOrder.setCreateTime(LocalDateTime.now());
+        rejectedOrder.setUpdateTime(LocalDateTime.now());
+        rejectedOrder.setItemCount(rejectedItems.size());
+        rejectedOrder.setTotalAmount(sumAmount(rejectedItems));
+        return rejectedOrder;
+    }
+
+    private BigDecimal sumAmount(List<PurchaseOrderItemEntity> items) {
+        return items.stream()
+                .map(item -> item.getAmount() == null ? BigDecimal.ZERO : item.getAmount())
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     private BigDecimal persistOrderItems(PurchaseOrderEntity order, List<ScmRequest.PurchaseItemSave> items, boolean persist) {

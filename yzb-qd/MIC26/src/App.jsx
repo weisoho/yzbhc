@@ -137,6 +137,14 @@ const AppContent = () => {
   const [isDepartmentModalVisible, setIsDepartmentModalVisible] = useState(false);
 
   const currentDepartmentLabel = currentDepartment?.deptName || currentDepartment?.name || '未选择科室';
+  const currentUserName = (() => {
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      return userInfo.realName || userInfo.name || userInfo.userName || '管理员';
+    } catch {
+      return '管理员';
+    }
+  })();
   
   // 主页功能设置（与 PageVisibilityContext 双向绑定）
   const [homeFeatureSettings, setHomeFeatureSettings] = useState({
@@ -270,6 +278,8 @@ const AppContent = () => {
     const newDepartment = e.target.value;
     selectDepartment(newDepartment);
     setIsDepartmentModalVisible(false);
+    window.dispatchEvent(new CustomEvent('workspaceScopeChanged'));
+    window.location.href = '/';
   };
 
   /**
@@ -647,7 +657,7 @@ const AppContent = () => {
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
                   lineHeight: 1.5
-                }}>管理员</span>
+                }}>{currentUserName}</span>
                 
                 {/* 科室切换按钮 */}
                 <button
@@ -1110,7 +1120,11 @@ const AppContent = () => {
                 <CampusSelectorModal
                   visible={isCampusModalVisible}
                   onCancel={hideCampusModal}
-                  onSelect={selectCampus}
+                  onSelect={(campus) => {
+                    selectCampus(campus);
+                    window.dispatchEvent(new CustomEvent('workspaceScopeChanged'));
+                    window.location.href = '/';
+                  }}
                   currentCampus={currentCampus}
                   currentCampusId={currentCampusNode?.id}
                   campuses={campuses}

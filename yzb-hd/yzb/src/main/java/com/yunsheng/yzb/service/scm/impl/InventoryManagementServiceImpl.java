@@ -49,6 +49,7 @@ public class InventoryManagementServiceImpl implements InventoryManagementServic
                 .like(StringUtils.hasText(query.getManufacturer()), InventoryEntity::getManufacturer, query.getManufacturer())
                 .like(StringUtils.hasText(query.getWarehouse()), InventoryEntity::getWarehouse, query.getWarehouse())
                 .like(StringUtils.hasText(query.getBatchNumber()), InventoryEntity::getBatchNumber, query.getBatchNumber())
+            .gt(InventoryEntity::getCurrentStock, 0)
                 .eq(StringUtils.hasText(query.getStockStatus()), InventoryEntity::getStockStatus, query.getStockStatus())
                 .orderByDesc(InventoryEntity::getUpdateTime);
         Page<InventoryEntity> page = inventoryMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);

@@ -24,9 +24,9 @@ const Inventory = () => {
           materialName: item.materialName,
           specification: item.specification,
           warehouse: item.warehouse || '未知',
-          shelf: item.location || '未知',
+          shelf: item.shelf || '未知',
           batchNumber: item.batchNumber,
-          quantity: item.quantity,
+          quantity: item.currentStock,
           unit: item.unit,
           productionDate: item.productionDate,
           expirationDate: item.expiryDate

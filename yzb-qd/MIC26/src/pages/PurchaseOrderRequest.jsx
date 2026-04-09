@@ -64,6 +64,25 @@ const PurchaseOrderRequest = () => {
   // 新建采购申请表单字段
   const [newOrderForm] = Form.useForm();
 
+  const getCurrentRequesterInfo = () => {
+    let userInfo = {};
+    try {
+      userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+    } catch {
+      userInfo = {};
+    }
+
+    const currentDepartmentId = localStorage.getItem('currentDepartmentId');
+    const currentDepartmentName = localStorage.getItem('currentDepartment');
+    const operatorName = userInfo.realName || userInfo.name || userInfo.userName || '管理员';
+
+    return {
+      operatorName,
+      departmentId: currentDepartmentId ? Number(currentDepartmentId) : undefined,
+      departmentName: currentDepartmentName || undefined,
+    };
+  };
+
   // 加载物资目录（从后端）
   const loadMaterialCatalog = async () => {
     try {
@@ -125,8 +144,8 @@ const PurchaseOrderRequest = () => {
         pageNum: currentPage,
         pageSize: currentSize,
         orderNumber: values.orderNumber,
-        materialCode: values.materialCode,
-        materialName: values.materialName,
+        productCode: values.materialCode,
+        productName: values.materialName,
         createTime: values.createTime ? values.createTime.format('YYYY-MM-DD') : undefined
       };
       const response = await api.get('/api/scm/purchases/orders', params);
@@ -233,6 +252,12 @@ const PurchaseOrderRequest = () => {
   };
 
   const handleNewRequest = () => {
+    const requester = getCurrentRequesterInfo();
+    newOrderForm.setFieldsValue({
+      departmentId: requester.departmentId,
+      operatorName: requester.operatorName,
+      planType: 'monthly'
+    });
     setModalVisible(true);
   };
 
@@ -305,7 +330,7 @@ const PurchaseOrderRequest = () => {
         departmentId: formValues.departmentId,
         departmentName: departments.find(d => d.id === formValues.departmentId)?.name || String(formValues.departmentId),
         supplierId: formValues.supplierId,
-        operatorName: formValues.operatorName || '当前用户',
+        operatorName: formValues.operatorName || getCurrentRequesterInfo().operatorName,
         planType: formValues.planType || 'monthly',
         remark: remark,
         items: selectedMaterials.map(item => ({
@@ -350,7 +375,7 @@ const PurchaseOrderRequest = () => {
         departmentId: formValues.departmentId,
         departmentName: departments.find(d => d.id === formValues.departmentId)?.name || String(formValues.departmentId),
         supplierId: formValues.supplierId,
-        operatorName: formValues.operatorName || '当前用户',
+        operatorName: formValues.operatorName || getCurrentRequesterInfo().operatorName,
         planType: formValues.planType || 'monthly',
         remark: remark,
         items: selectedMaterials.map(item => ({
@@ -361,7 +386,7 @@ const PurchaseOrderRequest = () => {
 
       const response = await api.post('/api/scm/purchases/orders', purchaseData);
       if (response.code === 1) {
-        const submitResponse = await api.post(`/api/scm/purchases/orders/${response.data.id}/submit?operatorName=${encodeURIComponent(formValues.operatorName || '当前用户')}`);
+        const submitResponse = await api.post(`/api/scm/purchases/orders/${response.data.id}/submit?operatorName=${encodeURIComponent(formValues.operatorName || getCurrentRequesterInfo().operatorName)}`);
         if (submitResponse.code === 1) {
           messageApi.success(`已提交 ${selectedMaterials.length} 项物资`);
           handleModalCancel();
@@ -591,11 +616,10 @@ const PurchaseOrderRequest = () => {
   const getFilteredPurchaseOrders = () => {
     return purchaseOrders.filter(order => {
       const status = String(order.status || '').toUpperCase();
-      // 包含：待提交、待审核、已驳回、待收货、已完成及其对应的各种标识
       return [
-        'DRAFT', 'WAIT_AUDIT', 'REJECTED', 'WAIT_RECEIVE', 'COMPLETED',
-        '待提交', '待审核', '已驳回', '待收货', '已完成',
-        'PENDING', 'APPROVED', 'COMPLETED', 'REJECTED'
+        'DRAFT', 'WAIT_AUDIT', 'REJECTED',
+        '待提交', '待审核', '已驳回',
+        'PENDING', 'APPROVED', 'REJECTED'
       ].includes(status);
     });
   };
@@ -1124,7 +1148,7 @@ const PurchaseOrderRequest = () => {
         {/* 采购基本信息 */}
         <Form form={newOrderForm} layout="inline" style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid #f0f0f0' }}>
           <Form.Item name="departmentId" label="申领科室" rules={[{ required: true, message: '请选择科室' }]}>
-            <Select placeholder="请选择科室" style={{ width: 120 }}>
+            <Select placeholder="自动带出当前科室，可按需调整" style={{ width: 160 }}>
               {departments.map(d => <Select.Option key={d.id} value={d.id}>{d.name}</Select.Option>)}
             </Select>
           </Form.Item>
@@ -1134,7 +1158,7 @@ const PurchaseOrderRequest = () => {
             </Select>
           </Form.Item>
           <Form.Item name="operatorName" label="申请人" rules={[{ required: true, message: '请输入申请人' }]}>
-            <Input placeholder="申请人姓名" style={{ width: 100 }} />
+            <Input placeholder="自动带出当前登录人" style={{ width: 120 }} />
           </Form.Item>
           <Form.Item name="planType" label="计划类型" rules={[{ required: true, message: '请选择计划类型' }]}>
             <Select placeholder="计划类型" style={{ width: 100 }}>

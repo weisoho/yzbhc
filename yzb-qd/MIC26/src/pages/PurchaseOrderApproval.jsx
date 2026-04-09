@@ -517,22 +517,30 @@ const PurchaseOrderApproval = () => {
     
     try {
       setLoading(true);
-      
-      // 统计通过和驳回的数量
-      let approveCount = 0;
-      let rejectCount = 0;
-      
-      // 这里假设每个订单只能整体审核，不能按明细项分别审核
-      // 实际实现需要根据API设计调整
-      if (currentOrder) {
-        const action = selectedItems[0][1]; // 只取第一个选择的操作
-        if (action === 'approve') {
-          await handleApprove(currentOrder);
-          approveCount = 1;
-        } else if (action === 'reject') {
-          await handleReject(currentOrder);
-          rejectCount = 1;
-        }
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const operatorName = userInfo.realName || userInfo.userName || '管理员';
+      const itemDecisions = (currentOrder?.items || []).map((item, index) => {
+        const action = itemApprovalSelections[`${currentOrder.orderNo}-${index}`];
+        return {
+          purchaseOrderItemId: item.id,
+          action,
+        };
+      });
+
+      const approveCount = itemDecisions.filter(item => item.action === 'approve').length;
+      const rejectCount = itemDecisions.filter(item => item.action === 'reject').length;
+      const allRejected = rejectCount === itemDecisions.length;
+
+      const endpoint = allRejected ? 'reject' : 'approve';
+      const response = await api.post(`/api/scm/purchases/orders/${currentOrder.key}/${endpoint}`, {
+        operatorName,
+        reason: rejectCount > 0 ? '采购审核驳回' : '',
+        itemDecisions,
+      });
+
+      if (response.code !== 1) {
+        messageApi.error(response.message || '提交审核失败');
+        return;
       }
       
       // 显示汇总信息
@@ -547,6 +555,7 @@ const PurchaseOrderApproval = () => {
       // 清空选择
       setItemApprovalSelections({});
       setDetailVisible(false);
+      loadPurchaseOrders();
     } catch (error) {
       console.error('提交审核失败:', error);
       messageApi.error('提交审核失败，请检查网络连接或联系管理员');

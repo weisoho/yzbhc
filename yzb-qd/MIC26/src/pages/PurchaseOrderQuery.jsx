@@ -73,10 +73,8 @@ const PurchaseOrderQuery = () => {
           orderNo: order.orderNumber,
           department: order.departmentName,
           applicant: order.operatorName,
-          product: order.details && order.details.length > 0 ? order.details[0].materialName : '',
-          quantity: order.details && order.details.length > 0 ? order.details[0].quantity : 0,
-          unit: order.details && order.details.length > 0 ? order.details[0].unit : '',
-          price: order.details && order.details.length > 0 ? order.details[0].unitPrice : 0,
+          approver: order.auditOperatorName || order.approverName || order.approveUserName || order.auditUserName || '',
+          quantity: order.itemCount || (order.details || order.items || []).length || 0,
           totalAmount: order.totalAmount,
           status: order.status,
           supplier: order.supplierName,
@@ -205,13 +203,11 @@ const PurchaseOrderQuery = () => {
     },
     { title: '采购分院', dataIndex: 'department', key: 'department', width: 100 },
     { title: '申请人', dataIndex: 'applicant', key: 'applicant', width: 80 },
-    { title: '物资名称', dataIndex: 'product', key: 'product', width: 120 },
-    { title: '采购数量', dataIndex: 'quantity', key: 'quantity', width: 80, render: (qty, record) => `${qty} ${record.unit}` },
-    { title: '采购价格', dataIndex: 'price', key: 'price', width: 100, render: (price) => `¥${price?.toFixed(2)}` },
+    { title: '采购数量', dataIndex: 'quantity', key: 'quantity', width: 100, render: (qty) => `${qty} 种` },
     { title: '合计金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 120, render: (amount) => `¥${amount?.toFixed(2)}` },
     { title: '创建日期', dataIndex: 'createTime', key: 'createTime', width: 160 },
     { title: '审核日期', dataIndex: 'approveTime', key: 'approveTime', width: 160, render: (time) => time || '-' },
-    { title: '审核人', dataIndex: 'approveTime', key: 'approver', width: 80, render: (time) => time ? '管理员' : '-' },
+    { title: '审核人', dataIndex: 'approver', key: 'approver', width: 100, render: (value) => value || '-' },
     { 
       title: '操作', 
       key: 'action', 
@@ -385,7 +381,7 @@ const PurchaseOrderQuery = () => {
               <Descriptions.Item label="物资数量">{currentRecord.productCount} 种</Descriptions.Item>
               <Descriptions.Item label="总金额">¥{currentRecord.totalAmount.toFixed(2)}</Descriptions.Item>
               <Descriptions.Item label="申请原因">{currentRecord.reason}</Descriptions.Item>
-              <Descriptions.Item label="审核人">{currentRecord.approveTime ? '管理员' : '-'}</Descriptions.Item>
+              <Descriptions.Item label="审核人">{currentRecord.approver || '-'}</Descriptions.Item>
               <Descriptions.Item label="审核时间">{currentRecord.approveTime || '-'}</Descriptions.Item>
               <Descriptions.Item label="完成时间">{currentRecord.completeTime || '-'}</Descriptions.Item>
             </Descriptions>
