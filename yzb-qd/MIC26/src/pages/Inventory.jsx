@@ -29,7 +29,8 @@ const Inventory = () => {
           quantity: item.currentStock,
           unit: item.unit,
           productionDate: item.productionDate,
-          expirationDate: item.expiryDate
+          expirationDate: item.expiryDate,
+          supplier: item.supplier
         }));
         setInventoryDetails(inventoryList);
       } else {
@@ -66,6 +67,7 @@ const Inventory = () => {
   const inventoryColumns = [
     { title: '商品名称', dataIndex: 'materialName', key: 'materialName' },
     { title: '规格型号', dataIndex: 'specification', key: 'specification' },
+    { title: '供应商', dataIndex: 'supplier', key: 'supplier' },
     { title: '所属仓库', dataIndex: 'warehouse', key: 'warehouse' },
     { title: '货架位置', dataIndex: 'shelf', key: 'shelf' },
     { title: '批号', dataIndex: 'batchNumber', key: 'batchNumber' },
@@ -166,13 +168,13 @@ const Inventory = () => {
       if (response.code === 1 && response.data) {
         const transactionList = response.data.records.map(item => ({
           key: item.id,
-          recordDate: item.transactionDate,
+          recordDate: item.operationTime,
           materialName: item.materialName,
           specification: item.specification,
           warehouse: item.warehouse || '未知',
           quantity: item.quantity,
           unit: item.unit,
-          operationType: item.transactionType,
+          operationType: item.operationType,
           operator: item.operatorName,
           remark: item.remark
         }));

@@ -1,0 +1,1 @@
+﻿SELECT id, item_name, item_code, dep_id, dep_name, item_state FROM sample_item ORDER BY id LIMIT 20;

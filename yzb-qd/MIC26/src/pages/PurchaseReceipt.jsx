@@ -260,54 +260,26 @@ const PurchaseReceipt = () => {
       content: `确定要拒收选中的 ${selectedItemKeys.length} 项商品吗？`,
       okText: '确认',
       cancelText: '取消',
-      onOk: () => {
-        // 更新数据中选中商品的状态
-        const updatedData = data.map(order => {
-          if (order.key === selectedOrder.key) {
-            const updatedItems = order.items.map(item => {
-              if (selectedItemKeys.includes(item.key)) {
-                return {
-                  ...item,
-                  status: '已拒收'
-                };
-              }
-              return item;
-            });
-
-            // 检查订单状态
-            const allAccepted = updatedItems.every(item => item.status === '已验收');
-            const allRejected = updatedItems.every(item => item.status === '已拒收');
-            const hasPending = updatedItems.some(item => item.status === '待验收');
-
-            let newStatus = order.status;
-            if (allAccepted) {
-              newStatus = '已验收';
-            } else if (allRejected) {
-              newStatus = '已拒收';
-            } else if (!hasPending) {
-              newStatus = '部分验收';
-            }
-
-            return {
-              ...order,
-              status: newStatus,
-              items: updatedItems
-            };
+      onOk: async () => {
+        try {
+          setLoading(true);
+          const response = await api.post(`/api/scm/purchases/orders/${selectedOrder.key}/receive-reject`, {
+            operatorName: receiverName || getCurrentUserName(),
+            reason: remarks || '收货拒收'
+          });
+          if (response.code === 1) {
+            message.success(`成功拒收订单 ${selectedOrder.orderNumber}`);
+            loadPurchaseOrders();
+            setIsModalVisible(false);
+          } else {
+            message.error(response.message || '拒收失败');
           }
-          return order;
-        });
-
-        setData(updatedData);
-        setFilteredData(updatedData);
-        
-        // 更新当前选中的订单
-        const updatedSelectedOrder = updatedData.find(order => order.key === selectedOrder.key);
-        setSelectedOrder(updatedSelectedOrder);
-        
-        // 清空选择状态
-        setSelectedItemKeys([]);
-        
-        message.success(`成功拒收 ${selectedItemKeys.length} 项商品`);
+        } catch (error) {
+          console.error('拒收失败:', error);
+          message.error('拒收失败，请检查网络连接或联系管理员');
+        } finally {
+          setLoading(false);
+        }
       }
     });
   };
@@ -560,15 +532,110 @@ const PurchaseReceipt = () => {
             <Space>
               <Button 
                 type="primary" 
-                disabled={selectedRowKeys.length === 0}
-                onClick={() => message.success(`批量验收 ${selectedRowKeys.length} 个订单`)}
+                disabled={selectedRowKeys.length === 0 || loading}
+                loading={loading}
+                onClick={() => {
+                  Modal.confirm({
+                    title: '批量验收',
+                    content: `确定要批量验收选中的 ${selectedRowKeys.length} 个订单吗？将对每个订单执行全量收货。`,
+                    okText: '确认',
+                    cancelText: '取消',
+                    onOk: async () => {
+                      try {
+                        setLoading(true);
+                        let successCount = 0;
+                        let failCount = 0;
+                        for (const orderId of selectedRowKeys) {
+                          const order = data.find(o => o.key === orderId);
+                          if (!order) continue;
+                          try {
+                            const receiveData = {
+                              receiver: getCurrentUserName(),
+                              contactPerson: order.contactPerson || order.buyer || getCurrentUserName(),
+                              contactPhone: order.contactPhone || '13800000000',
+                              actualDeliveryDate: moment().format('YYYY-MM-DD'),
+                              remark: '批量验收',
+                              items: order.items.map(item => ({
+                                purchaseOrderItemId: item.id,
+                                actualReceivedQuantity: item.quantity,
+                                shortageReason: ''
+                              }))
+                            };
+                            const response = await api.post(`/api/scm/purchases/orders/${orderId}/receive`, receiveData);
+                            if (response.code === 1) {
+                              successCount++;
+                            } else {
+                              failCount++;
+                            }
+                          } catch {
+                            failCount++;
+                          }
+                        }
+                        if (successCount > 0) {
+                          message.success(`批量验收成功 ${successCount} 个订单${failCount > 0 ? `，${failCount} 个失败` : ''}`);
+                        } else {
+                          message.error('批量验收全部失败');
+                        }
+                        setSelectedRowKeys([]);
+                        loadPurchaseOrders();
+                      } catch (error) {
+                        console.error('批量验收失败:', error);
+                        message.error('批量验收失败');
+                      } finally {
+                        setLoading(false);
+                      }
+                    }
+                  });
+                }}
               >
                 批量验收
               </Button>
               <Button 
                 danger 
-                disabled={selectedRowKeys.length === 0}
-                onClick={() => message.success(`批量拒收 ${selectedRowKeys.length} 个订单`)}
+                disabled={selectedRowKeys.length === 0 || loading}
+                loading={loading}
+                onClick={() => {
+                  Modal.confirm({
+                    title: '批量拒收',
+                    content: `确定要批量拒收选中的 ${selectedRowKeys.length} 个订单吗？拒收的订单将进入异常订单管理。`,
+                    okText: '确认',
+                    cancelText: '取消',
+                    onOk: async () => {
+                      try {
+                        setLoading(true);
+                        let successCount = 0;
+                        let failCount = 0;
+                        for (const orderId of selectedRowKeys) {
+                          try {
+                            const response = await api.post(`/api/scm/purchases/orders/${orderId}/receive-reject`, {
+                              operatorName: getCurrentUserName(),
+                              reason: '批量拒收'
+                            });
+                            if (response.code === 1) {
+                              successCount++;
+                            } else {
+                              failCount++;
+                            }
+                          } catch {
+                            failCount++;
+                          }
+                        }
+                        if (successCount > 0) {
+                          message.success(`批量拒收成功 ${successCount} 个订单${failCount > 0 ? `，${failCount} 个失败` : ''}`);
+                        } else {
+                          message.error('批量拒收全部失败');
+                        }
+                        setSelectedRowKeys([]);
+                        loadPurchaseOrders();
+                      } catch (error) {
+                        console.error('批量拒收失败:', error);
+                        message.error('批量拒收失败');
+                      } finally {
+                        setLoading(false);
+                      }
+                    }
+                  });
+                }}
               >
                 批量拒收
               </Button>

@@ -143,6 +143,19 @@ public class PurchaseManagementController {
     }
 
     /**
+     * 收货阶段拒收采购单。
+     *
+     * @param orderId 采购单主键
+     * @param request 拒收请求体
+     * @return 拒收后的采购单信息
+     */
+    @PostMapping("/orders/{orderId}/receive-reject")
+    public AjaxResult<PurchaseOrderEntity> receiveRejectOrder(@PathVariable Long orderId,
+                                                              @Valid @RequestBody ScmRequest.PurchaseReceiveReject request) {
+        return AjaxResult.success(purchaseManagementService.receiveRejectOrder(orderId, request));
+    }
+
+    /**
      * 分页查询收货单。
      *
      * @param query 收货分页查询条件

@@ -99,12 +99,8 @@ const SampleQuantityManagement = () => {
 
   const departmentOptions = useMemo(() => scopedDepartments.map(mapDepartmentOption), [scopedDepartments]);
   const projectOptions = useMemo(() => {
-    const list = projects.map(mapProjectOption);
-    if (!currentDepartmentId) {
-      return list;
-    }
-    return list.filter((item) => !item.depId || Number(item.depId) === Number(currentDepartmentId));
-  }, [currentDepartmentId, projects]);
+    return projects.map(mapProjectOption);
+  }, [projects]);
   const projectMap = useMemo(() => new Map(projectOptions.map((item) => [item.value, item])), [projectOptions]);
 
   const loadDepartments = async () => {

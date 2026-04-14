@@ -23,6 +23,11 @@ const StockInAccept = () => {
   const [selectedReceipt, setSelectedReceipt] = useState(null);
   const [receiptItems, setReceiptItems] = useState([]);
   const [materialMetaMap, setMaterialMetaMap] = useState({});
+  // 待提交入库明细列表（暂存区）
+  const [pendingStockInItems, setPendingStockInItems] = useState([]);
+  // 待提交明细复选框选中的key
+  const [selectedPendingKeys, setSelectedPendingKeys] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
 
   const getCurrentUserName = () => {
     try {
@@ -231,7 +236,7 @@ const StockInAccept = () => {
             expiryDate: item.expiryDate || '',
             purchasePrice: item.price,
             orderQuantity: item.quantity,
-            stockInQuantity: item.actualReceivedQuantity,
+            stockInQuantity: item.actualReceivedQuantity || item.quantity || 0,
             remark: '',
           };
         });
@@ -259,8 +264,8 @@ const StockInAccept = () => {
     }));
   };
 
-  // 创建入库单
-  const handleCreateStockIn = async () => {
+  // 将收货单明细添加到待提交列表
+  const handleAddToPending = () => {
     if (!selectedReceipt) {
       message.warning('请选择收货单');
       return;
@@ -269,82 +274,146 @@ const StockInAccept = () => {
       message.warning('当前收货单没有可入库明细');
       return;
     }
-    const invalidItem = receiptItems.find((item) => !item.batchNumber || !item.productionDate || !item.expiryDate || !item.stockInQuantity);
+    const invalidItem = receiptItems.find((item) => !item.batchNumber || !item.productionDate || !item.expiryDate || item.stockInQuantity == null || item.stockInQuantity === '' || Number(item.stockInQuantity) <= 0);
     if (invalidItem) {
       message.error(`请补全 ${invalidItem.materialName} 的批号、生产日期、失效日期和入库数量`);
       return;
     }
+    // 检查是否已添加过同一收货单
+    const existingReceiptIds = pendingStockInItems.map(item => item._receiptId);
+    if (existingReceiptIds.includes(selectedReceipt.id)) {
+      message.warning('该收货单已在待提交列表中');
+      return;
+    }
+    const newItems = receiptItems.map((item, index) => ({
+      ...item,
+      _pendingKey: `${selectedReceipt.id}_${index}_${Date.now()}`,
+      _receiptId: selectedReceipt.id,
+      _receiptNumber: selectedReceipt.receiptNumber,
+      _receiptObj: selectedReceipt,
+    }));
+    setPendingStockInItems(prev => [...prev, ...newItems]);
+    setCreateModalVisible(false);
+    setSelectedReceipt(null);
+    setReceiptItems([]);
+    message.success('已添加到待提交入库列表');
+  };
+
+  // 确认提交入库
+  const handleConfirmStockIn = () => {
+    if (selectedPendingKeys.length === 0) {
+      message.warning('请先勾选要提交的入库明细');
+      return;
+    }
+    if (submitting) return;
+    Modal.confirm({
+      title: '确认提交入库',
+      content: `确定要提交选中的 ${selectedPendingKeys.length} 项入库明细吗？提交后将自动生成入库单号。`,
+      okText: '确认提交',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          setSubmitting(true);
+          setLoading(true);
+          // 按收货单分组
+          const selectedItems = pendingStockInItems.filter(item => selectedPendingKeys.includes(item._pendingKey));
+          const groupedByReceipt = {};
+          for (const item of selectedItems) {
+            const receiptId = item._receiptId;
+            if (!groupedByReceipt[receiptId]) {
+              groupedByReceipt[receiptId] = { receipt: item._receiptObj, items: [] };
+            }
+            groupedByReceipt[receiptId].items.push(item);
+          }
+          let successCount = 0;
+          let failCount = 0;
+          for (const [receiptId, group] of Object.entries(groupedByReceipt)) {
+            try {
+              const stockInData = {
+                stockInType: '采购入库',
+                operatorName: getCurrentUserName(),
+                remark: `采购收货单 ${group.receipt.receiptNumber} 入库`,
+                items: group.items.map((item) => ({
+                  receiveItemId: item.receiveItemId,
+                  materialId: item.materialId,
+                  materialCode: item.materialCode,
+                  materialName: item.materialName,
+                  materialType: item.materialType,
+                  specification: item.specification,
+                  model: item.model,
+                  minPackage: item.minPackage,
+                  unit: item.unit,
+                  supplierName: item.supplierName,
+                  manufacturer: item.manufacturer,
+                  registrationNumber: item.registrationNumber,
+                  batchNumber: item.batchNumber,
+                  productionDate: normalizeDateInput(item.productionDate),
+                  expiryDate: normalizeDateInput(item.expiryDate),
+                  purchasePrice: item.purchasePrice,
+                  orderQuantity: item.orderQuantity,
+                  stockInQuantity: item.stockInQuantity,
+                  remark: item.remark,
+                }))
+              };
+              const response = await api.post(`/api/scm/stock-in/receipts/${receiptId}`, stockInData);
+              if (response.code === 1) {
+                successCount++;
+              } else {
+                failCount++;
+                message.error(response.message || `收货单 ${group.receipt.receiptNumber} 入库失败`);
+              }
+            } catch (error) {
+              failCount++;
+              console.error('入库失败:', error);
+            }
+          }
+          if (successCount > 0) {
+            message.success(`成功提交 ${successCount} 个入库单${failCount > 0 ? `，${failCount} 个失败` : ''}`);
+            // 移除已提交的项
+            setPendingStockInItems(prev => prev.filter(item => !selectedPendingKeys.includes(item._pendingKey)));
+            setSelectedPendingKeys([]);
+            // 刷新入库单列表
+            refreshStockInOrders();
+          } else {
+            message.error('入库提交全部失败');
+          }
+        } catch (error) {
+          console.error('提交入库失败:', error);
+          message.error('提交入库失败');
+        } finally {
+          setSubmitting(false);
+          setLoading(false);
+        }
+      }
+    });
+  };
+
+  // 刷新入库单列表
+  const refreshStockInOrders = async () => {
     try {
       setLoading(true);
-      const stockInData = {
-        stockInType: '采购入库',
-        operatorName: getCurrentUserName(),
-        remark: `采购收货单 ${selectedReceipt.receiptNumber} 入库`,
-        items: receiptItems.map((item) => ({
-          receiveItemId: item.receiveItemId,
-          materialId: item.materialId,
-          materialCode: item.materialCode,
-          materialName: item.materialName,
-          materialType: item.materialType,
-          specification: item.specification,
-          model: item.model,
-          minPackage: item.minPackage,
-          unit: item.unit,
-          supplierName: item.supplierName,
-          manufacturer: item.manufacturer,
-          registrationNumber: item.registrationNumber,
-          batchNumber: item.batchNumber,
-          productionDate: normalizeDateInput(item.productionDate),
-          expiryDate: normalizeDateInput(item.expiryDate),
-          purchasePrice: item.purchasePrice,
-          orderQuantity: item.orderQuantity,
-          stockInQuantity: item.stockInQuantity,
+      const response = await api.get('/api/scm/stock-in/orders', { page: 1, size: 100 });
+      if (response.code === 1 && response.data) {
+        const list = response.data.records.map((item, index) => ({
+          ...item,
+          key: item.id || index.toString(),
+          orderNumber: item.orderNumber,
+          supplier: item.supplierName,
+          department: item.departmentName,
+          itemCount: item.itemCount,
+          totalAmount: item.totalAmount,
+          receiver: item.operatorName,
+          receiveDate: item.createTime,
+          status: item.status,
           remark: item.remark,
-        }))
-      };
-      const response = await api.post(`/api/scm/stock-in/receipts/${selectedReceipt.id}`, stockInData);
-      if (response.code === 1) {
-        message.success('入库单创建成功');
-        setCreateModalVisible(false);
-        setSelectedReceipt(null);
-        setReceiptItems([]);
-        // 重新加载入库单列表
-        const fetchData = async () => {
-          setLoading(true);
-          try {
-            const response = await api.get('/api/scm/stock-in/orders', { pageNum: 1, pageSize: 10 });
-            if (response.code === 1 && response.data) {
-              const data = response.data.records.map((item, index) => ({
-                ...item,
-                key: item.id || index.toString(),
-                orderNumber: item.orderNumber,
-                supplier: item.supplierName,
-                department: item.departmentName,
-                itemCount: item.itemCount,
-                totalAmount: item.totalAmount,
-                receiver: item.operatorName,
-                receiveDate: item.createTime,
-                status: item.status,
-                remark: item.remark,
-                items: item.items || []
-              }));
-              setData(data);
-              setFilteredData(data);
-              setPagination(prev => ({ ...prev, total: response.data.total }));
-            }
-          } catch (error) {
-            console.error('获取采购入库数据失败:', error);
-          } finally {
-            setLoading(false);
-          }
-        };
-        fetchData();
-      } else {
-        message.error(response.message || '创建入库单失败');
+          items: item.items || []
+        }));
+        setData(list);
+        setFilteredData(list);
+        setPagination(prev => ({ ...prev, total: response.data.total }));
       }
     } catch (error) {
-      console.error('创建入库单失败:', error);
-      message.error('创建入库单失败，请检查网络连接或联系管理员');
+      console.error('刷新入库数据失败:', error);
     } finally {
       setLoading(false);
     }
@@ -530,7 +599,7 @@ const StockInAccept = () => {
           </div>
         </Form>
 
-        {/* 数据表格 */}
+        {/* 数据表格 - 已提交入库单 */}
         <Table
           columns={columns}
           dataSource={filteredData}
@@ -547,6 +616,60 @@ const StockInAccept = () => {
           scroll={{ x: 1200 }}
         />
       </Card>
+
+      {/* 待提交入库明细区域 */}
+      {pendingStockInItems.length > 0 && (
+        <Card title="待提交入库明细" bordered={false} style={{ marginTop: 16 }}>
+          <Table
+            rowKey="_pendingKey"
+            dataSource={pendingStockInItems}
+            rowSelection={{
+              selectedRowKeys: selectedPendingKeys,
+              onChange: (keys) => setSelectedPendingKeys(keys),
+            }}
+            pagination={false}
+            scroll={{ x: 1600 }}
+            columns={[
+              { title: '收货单号', dataIndex: '_receiptNumber', key: '_receiptNumber', width: 140 },
+              { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode', width: 120 },
+              { title: '物资名称', dataIndex: 'materialName', key: 'materialName', width: 150 },
+              { title: '规格', dataIndex: 'specification', key: 'specification', width: 120 },
+              { title: '型号', dataIndex: 'model', key: 'model', width: 100 },
+              { title: '单位', dataIndex: 'unit', key: 'unit', width: 70 },
+              { title: '入库数量', dataIndex: 'stockInQuantity', key: 'stockInQuantity', width: 100 },
+              { title: '批号', dataIndex: 'batchNumber', key: 'batchNumber', width: 120 },
+              { title: '生产日期', dataIndex: 'productionDate', key: 'productionDate', width: 110 },
+              { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', width: 110 },
+              { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 150 },
+              {
+                title: '操作',
+                key: 'action',
+                width: 80,
+                render: (_, record) => (
+                  <Button type="link" danger size="small" onClick={() => {
+                    setPendingStockInItems(prev => prev.filter(item => item._pendingKey !== record._pendingKey));
+                    setSelectedPendingKeys(prev => prev.filter(k => k !== record._pendingKey));
+                  }}>
+                    移除
+                  </Button>
+                ),
+              },
+            ]}
+          />
+          <Row style={{ marginTop: 16 }} justify="end">
+            <Col>
+              <Button 
+                type="primary" 
+                disabled={selectedPendingKeys.length === 0 || submitting}
+                loading={submitting}
+                onClick={handleConfirmStockIn}
+              >
+                确认提交入库（{selectedPendingKeys.length}/{pendingStockInItems.length}）
+              </Button>
+            </Col>
+          </Row>
+        </Card>
+      )}
 
       {/* 详情模态框 */}
       <Modal
@@ -643,8 +766,8 @@ const StockInAccept = () => {
           <Button key="close" onClick={() => setCreateModalVisible(false)}>
             关闭
           </Button>,
-          <Button key="create" type="primary" onClick={handleCreateStockIn} loading={loading}>
-            创建入库单
+          <Button key="create" type="primary" onClick={handleAddToPending} loading={loading}>
+            添加到待提交列表
           </Button>,
         ]}
       >

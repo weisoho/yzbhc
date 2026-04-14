@@ -23,6 +23,7 @@ public final class ScmConstants {
     public static final String PURCHASE_REJECTED = "已驳回";
     public static final String PURCHASE_WAIT_RECEIVE = "待收货";
     public static final String PURCHASE_WAIT_STOCK_IN = "待入库";
+    public static final String PURCHASE_RECEIVE_REJECTED = "收货拒收";
     public static final String PURCHASE_COMPLETED = "已完成";
 
     public static final String RECEIPT_WAIT_STOCK_IN = "待入库";

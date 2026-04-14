@@ -42,8 +42,13 @@ public class SampleManController {
         }
         //获取操作人
         YsUser ysUser = LoginCacheUtil.getCurrentAccount();
-        model.setDepId(ysUser.getDepId());
-        model.setDepName(ysUser.getUserDep());
+        // 如果前端传入了科室信息，使用前端的值（支持跨科室登记）；否则使用用户绑定的科室
+        if (model.getDepId() == null) {
+            model.setDepId(ysUser.getDepId());
+        }
+        if (!StringUtils.hasText(model.getDepName())) {
+            model.setDepName(ysUser.getUserDep());
+        }
         model.setUserId(ysUser.getId());
         model.setUserName(StringUtils.hasText(ysUser.getRealName()) ? ysUser.getRealName() : ysUser.getUserName());
         if(model.getId()!=null){

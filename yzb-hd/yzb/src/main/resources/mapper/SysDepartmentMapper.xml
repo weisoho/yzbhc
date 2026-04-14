@@ -63,10 +63,10 @@
     <insert id="insert" parameterType="com.yunsheng.yzb.model.SysDepartment" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO sys_department (
             parent_id, dept_name, org_type, dept_code, address, leader, phone, email, remark, status, sort_order,
-            create_by, create_time
+            create_by, create_time, update_time
         ) VALUES (
             #{parentId}, #{deptName}, #{orgType}, #{deptCode}, #{address}, #{leader}, #{phone}, #{email}, #{remark}, #{status}, #{sortOrder},
-            #{createBy}, NOW()
+            #{createBy}, NOW(), NOW()
         )
     </insert>
 

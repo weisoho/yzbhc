@@ -52,7 +52,7 @@ const MaintenanceRecord = () => {
   const loadMaintenanceRecords = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/yzb/selectRepairList', {
+      const response = await api.get('/api/selectRepairList', {
         pageNum: currentPage,
         pageSize: pageSize
       });

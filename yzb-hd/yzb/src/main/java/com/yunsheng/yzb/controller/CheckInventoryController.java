@@ -54,6 +54,9 @@ public class CheckInventoryController {
         }
         YsUser user = LoginCacheUtil.getCurrentAccount();//获取当前登录人信息
         InventoryEntity inventoryEntity = inventoryMapper.selectById(model.getInventoryId());
+        if (inventoryEntity == null) {
+            return AjaxResult.res(0, "库存记录不存在", null);
+        }
         model.setInventoryId(Integer.valueOf(inventoryEntity.getId()+""));//转化数据格式
         model.setCdate(new Date());
         model.setUdate(new Date());
@@ -140,6 +143,9 @@ public class CheckInventoryController {
         CheckInventoryExample example = new CheckInventoryExample();
         example.createCriteria().andInventoryIdEqualTo(inventoryId);
         List<CheckInventory> checkInventoryList = checkInventoryMapper.selectByExample(example);
+        if (checkInventoryList == null || checkInventoryList.isEmpty()) {
+            return AjaxResult.res(0, "未找到对应的盘点记录", null);
+        }
         CheckInventory inventory = checkInventoryList.get(0);
         inventory.setActualNum(model.getActualNum());
         inventory.setUdate(new Date());
@@ -181,6 +187,9 @@ public class CheckInventoryController {
     @PostMapping("/reCheck")
     public AjaxResult reCheck(@RequestBody CheckInventory model){
         CheckInventory checkInventory = checkInventoryMapper.selectByPrimaryKey(model.getId());
+        if (checkInventory == null) {
+            return AjaxResult.res(0, "盘点记录不存在", null);
+        }
         checkInventory.setStatus(2);
         checkInventory.setUdate(new Date());
         checkInventoryMapper.updateByPrimaryKeySelective(checkInventory);

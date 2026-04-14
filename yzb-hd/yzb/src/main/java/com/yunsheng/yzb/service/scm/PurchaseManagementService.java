@@ -93,6 +93,15 @@ public interface PurchaseManagementService {
     PurchaseReceiveEntity receiveOrder(Long orderId, ScmRequest.PurchaseReceiveSave request);
 
     /**
+     * 收货阶段拒收采购单。
+     *
+     * @param orderId 采购单主键
+     * @param request 拒收参数
+     * @return 拒收后的采购单
+     */
+    PurchaseOrderEntity receiveRejectOrder(Long orderId, ScmRequest.PurchaseReceiveReject request);
+
+    /**
      * 分页查询收货单。
      *
      * @param query 查询条件

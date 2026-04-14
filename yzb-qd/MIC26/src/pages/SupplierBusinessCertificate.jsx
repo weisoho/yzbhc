@@ -22,6 +22,7 @@ const SupplierBusinessCertificate = () => {
   const [editFileList, setEditFileList] = useState([]);
   const [businessCertificates, setBusinessCertificates] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [total, setTotal] = useState(0);
   const [searchParams, setSearchParams] = useState({
     supplierName: '',
@@ -137,8 +138,9 @@ const SupplierBusinessCertificate = () => {
 
   // 保存编辑
   const handleEditSave = async () => {
+    if (submitting) return;
     try {
-      setLoading(true);
+      setSubmitting(true);
       const values = await editForm.validateFields();
       
       // 从选择的供应商名称查找供应商ID
@@ -183,7 +185,7 @@ const SupplierBusinessCertificate = () => {
       console.error('编辑营业执照失败:', error);
       message.error(getApiErrorMessage(error, '操作失败'));
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -502,9 +504,11 @@ const SupplierBusinessCertificate = () => {
       <Modal
         title="新增营业执照"
         open={visible}
+        confirmLoading={submitting}
         onOk={async () => {
+          if (submitting) return;
           try {
-            setLoading(true);
+            setSubmitting(true);
             const values = await form.validateFields();
             
             // 从选择的供应商名称查找供应商ID
@@ -548,7 +552,7 @@ const SupplierBusinessCertificate = () => {
             console.error('新增营业执照失败:', error);
             message.error(getApiErrorMessage(error, '操作失败'));
           } finally {
-            setLoading(false);
+            setSubmitting(false);
           }
         }}
         onCancel={() => {
@@ -657,6 +661,7 @@ const SupplierBusinessCertificate = () => {
       <Modal
         title="编辑营业执照"
         open={editVisible}
+        confirmLoading={submitting}
         onOk={handleEditSave}
         onCancel={() => {
           setEditVisible(false);

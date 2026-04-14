@@ -365,6 +365,30 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PurchaseOrderEntity receiveRejectOrder(Long orderId, ScmRequest.PurchaseReceiveReject request) {
+        PurchaseOrderEntity order = mustGetOrder(orderId);
+        if (!Objects.equals(order.getStatus(), ScmConstants.PURCHASE_WAIT_RECEIVE)) {
+            throw new ScmBusinessException("采购单当前不处于待收货状态");
+        }
+        List<PurchaseOrderItemEntity> orderItems = listOrderItems(orderId);
+        for (PurchaseOrderItemEntity item : orderItems) {
+            item.setStatus("已拒收");
+            item.setReceivedQuantity(0);
+            item.setUpdateTime(LocalDateTime.now());
+            purchaseOrderItemMapper.updateById(item);
+            createExceptionOrder(order, item, request.getReason(), LocalDate.now());
+        }
+        order.setStatus(ScmConstants.PURCHASE_RECEIVE_REJECTED);
+        order.setRejectReason(request.getReason());
+        order.setUpdateTime(LocalDateTime.now());
+        purchaseOrderMapper.updateById(order);
+        operationLogService.save(request.getOperatorName(), "收货拒收", "收货拒收采购单: " + order.getOrderNumber(),
+                ScmConstants.LOG_WARNING, "采购收货", order.getOrderNumber());
+        return order;
+    }
+
+    @Override
     public PageResult<PurchaseReceiveEntity> queryReceipts(ScmRequest.PurchaseQuery query) {
         LambdaQueryWrapper<PurchaseReceiveEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.hasText(query.getOrderNumber()), PurchaseReceiveEntity::getOrderNumber, query.getOrderNumber())

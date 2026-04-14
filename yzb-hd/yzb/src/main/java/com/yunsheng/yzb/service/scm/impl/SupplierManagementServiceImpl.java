@@ -169,6 +169,16 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
     @Transactional(rollbackFor = Exception.class)
     public SupplierQualificationEntity createQualification(Long supplierId, ScmRequest.QualificationSave request) {
         SupplierEntity supplier = getSupplier(supplierId);
+        // 防止重复提交：检查同一供应商下是否已存在相同类型和证件编号的资质
+        if (StringUtils.hasText(request.getLicenseNumber())) {
+            Long existCount = qualificationMapper.selectCount(new LambdaQueryWrapper<SupplierQualificationEntity>()
+                    .eq(SupplierQualificationEntity::getSupplierId, supplierId)
+                    .eq(SupplierQualificationEntity::getType, request.getType())
+                    .eq(SupplierQualificationEntity::getLicenseNumber, request.getLicenseNumber()));
+            if (existCount != null && existCount > 0) {
+                throw new ScmBusinessException("该供应商下已存在相同类型和证件编号的资质记录，请勿重复提交");
+            }
+        }
         SupplierQualificationEntity entity = new SupplierQualificationEntity();
         BeanUtils.copyProperties(request, entity);
         entity.setSupplierId(supplierId);

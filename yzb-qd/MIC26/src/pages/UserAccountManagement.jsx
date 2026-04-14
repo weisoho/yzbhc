@@ -190,7 +190,7 @@ const UserAccountManagement = () => {
       status: 1,
       roleIds: [],
       campusId: currentCampusNode?.id,
-      depId: currentDepartment?.id,
+      depId: undefined,
       accountType: '普通账号',
       warehouseScope: '当前院区',
     });

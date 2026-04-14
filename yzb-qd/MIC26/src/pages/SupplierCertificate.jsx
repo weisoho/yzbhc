@@ -16,6 +16,7 @@ const SupplierCertificate = () => {
   const [editFileList, setEditFileList] = useState([]);
   const [certificates, setCertificates] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [total, setTotal] = useState(0);
   const [searchParams, setSearchParams] = useState({
     certificateName: '',
@@ -139,8 +140,9 @@ const SupplierCertificate = () => {
 
   // 保存编辑
   const handleEditSave = async () => {
+    if (submitting) return;
     try {
-      setLoading(true);
+      setSubmitting(true);
       const values = await editForm.validateFields();
       
       const selectedSupplier = suppliers.find(s => s.name === values.supplierName);
@@ -178,7 +180,7 @@ const SupplierCertificate = () => {
     } catch (error) {
       message.error(getApiErrorMessage(error, '操作失败'));
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -378,9 +380,11 @@ const SupplierCertificate = () => {
       <Modal
         title="新增注册证"
         open={visible}
+        confirmLoading={submitting}
         onOk={async () => {
+          if (submitting) return;
           try {
-            setLoading(true);
+            setSubmitting(true);
             const values = await form.validateFields();
             const selectedSupplier = suppliers.find(s => s.name === values.supplierName);
             if (!selectedSupplier) {
@@ -415,7 +419,7 @@ const SupplierCertificate = () => {
           } catch (error) {
             message.error(getApiErrorMessage(error, '操作失败'));
           } finally {
-            setLoading(false);
+            setSubmitting(false);
           }
         }}
         onCancel={() => { setVisible(false); form.resetFields(); setFileList([]); }}
@@ -432,8 +436,8 @@ const SupplierCertificate = () => {
             </Select>
           </Form.Item>
           <Form.Item name="issuingAuthority" label="发证部门" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="effectiveDate" label="生效日期" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="expiryDate" label="失效日期" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="effectiveDate" label="生效日期" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} getPopupContainer={(trigger) => trigger.parentNode} /></Form.Item>
+          <Form.Item name="expiryDate" label="失效日期" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} getPopupContainer={(trigger) => trigger.parentNode} /></Form.Item>
           <Form.Item label="附件"><Upload {...uploadProps}><Button icon={<UploadOutlined />}>上传附件</Button></Upload></Form.Item>
         </Form>
       </Modal>
@@ -441,6 +445,7 @@ const SupplierCertificate = () => {
       <Modal
         title="编辑注册证"
         open={editVisible}
+        confirmLoading={submitting}
         onOk={handleEditSave}
         onCancel={() => { setEditVisible(false); editForm.resetFields(); setEditFileList([]); }}
         okText="保存"
@@ -456,8 +461,8 @@ const SupplierCertificate = () => {
             </Select>
           </Form.Item>
           <Form.Item name="issuingAuthority" label="发证部门" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="effectiveDate" label="生效日期" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="expiryDate" label="失效日期" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="effectiveDate" label="生效日期" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} getPopupContainer={(trigger) => trigger.parentNode} /></Form.Item>
+          <Form.Item name="expiryDate" label="失效日期" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} getPopupContainer={(trigger) => trigger.parentNode} /></Form.Item>
           <Form.Item label="附件"><Upload {...editUploadProps}><Button icon={<UploadOutlined />}>重新上传附件</Button></Upload></Form.Item>
         </Form>
       </Modal>

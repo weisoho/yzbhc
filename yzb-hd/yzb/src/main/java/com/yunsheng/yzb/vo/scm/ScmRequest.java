@@ -418,6 +418,19 @@ public final class ScmRequest {
     }
 
     /**
+     * 收货拒收参数。
+     */
+    @Data
+    public static class PurchaseReceiveReject {
+        /** 操作人。 */
+        @NotBlank(message = "操作人不能为空")
+        private String operatorName;
+
+        /** 拒收原因。 */
+        private String reason;
+    }
+
+    /**
      * 入库分页查询参数。
      */
     @Data

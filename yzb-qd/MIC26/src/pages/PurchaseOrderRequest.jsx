@@ -324,28 +324,44 @@ const PurchaseOrderRequest = () => {
       return;
     }
 
+    // 按供应商分组
+    const supplierGroups = {};
+    selectedMaterials.forEach(item => {
+      const sid = item.supplierId || 0;
+      if (!supplierGroups[sid]) {
+        supplierGroups[sid] = { supplier: item.supplier, supplierId: sid, items: [] };
+      }
+      supplierGroups[sid].items.push(item);
+    });
+
     try {
       setLoading(true);
-      const purchaseData = {
-        departmentId: formValues.departmentId,
-        departmentName: departments.find(d => d.id === formValues.departmentId)?.name || String(formValues.departmentId),
-        supplierId: formValues.supplierId,
-        operatorName: formValues.operatorName || getCurrentRequesterInfo().operatorName,
-        planType: formValues.planType || 'monthly',
-        remark: remark,
-        items: selectedMaterials.map(item => ({
-          materialId: parseInt(item.key),
-          quantity: item.quantity
-        }))
-      };
+      let savedCount = 0;
+      for (const group of Object.values(supplierGroups)) {
+        const purchaseData = {
+          departmentId: formValues.departmentId,
+          departmentName: departments.find(d => d.id === formValues.departmentId)?.name || String(formValues.departmentId),
+          supplierId: group.supplierId,
+          operatorName: formValues.operatorName || getCurrentRequesterInfo().operatorName,
+          planType: formValues.planType || 'monthly',
+          remark: remark,
+          items: group.items.map(item => ({
+            materialId: parseInt(item.key),
+            quantity: item.quantity
+          }))
+        };
 
-      const response = await api.post('/api/scm/purchases/orders', purchaseData);
-      if (response.code === 1) {
-        messageApi.success(`已保存 ${selectedMaterials.length} 项物资`);
+        const response = await api.post('/api/scm/purchases/orders', purchaseData);
+        if (response.code === 1) {
+          savedCount++;
+        } else {
+          messageApi.error(`供应商 ${group.supplier || '未知'} 的订单保存失败: ${response.message}`);
+        }
+      }
+      if (savedCount > 0) {
+        messageApi.success(`已按供应商拆分保存 ${savedCount} 个采购单，共 ${selectedMaterials.length} 项物资`);
         handleModalCancel();
         loadPurchaseOrders();
-      } else {
-        messageApi.error(response.message || '保存失败');
       }
     } catch (error) {
       console.error('保存采购订单失败:', error);
@@ -369,33 +385,50 @@ const PurchaseOrderRequest = () => {
       return;
     }
 
+    // 按供应商分组
+    const supplierGroups = {};
+    selectedMaterials.forEach(item => {
+      const sid = item.supplierId || 0;
+      if (!supplierGroups[sid]) {
+        supplierGroups[sid] = { supplier: item.supplier, supplierId: sid, items: [] };
+      }
+      supplierGroups[sid].items.push(item);
+    });
+
     try {
       setLoading(true);
-      const purchaseData = {
-        departmentId: formValues.departmentId,
-        departmentName: departments.find(d => d.id === formValues.departmentId)?.name || String(formValues.departmentId),
-        supplierId: formValues.supplierId,
-        operatorName: formValues.operatorName || getCurrentRequesterInfo().operatorName,
-        planType: formValues.planType || 'monthly',
-        remark: remark,
-        items: selectedMaterials.map(item => ({
-          materialId: parseInt(item.key),
-          quantity: item.quantity
-        }))
-      };
+      const operatorName = formValues.operatorName || getCurrentRequesterInfo().operatorName;
+      let submittedCount = 0;
+      for (const group of Object.values(supplierGroups)) {
+        const purchaseData = {
+          departmentId: formValues.departmentId,
+          departmentName: departments.find(d => d.id === formValues.departmentId)?.name || String(formValues.departmentId),
+          supplierId: group.supplierId,
+          operatorName: operatorName,
+          planType: formValues.planType || 'monthly',
+          remark: remark,
+          items: group.items.map(item => ({
+            materialId: parseInt(item.key),
+            quantity: item.quantity
+          }))
+        };
 
-      const response = await api.post('/api/scm/purchases/orders', purchaseData);
-      if (response.code === 1) {
-        const submitResponse = await api.post(`/api/scm/purchases/orders/${response.data.id}/submit?operatorName=${encodeURIComponent(formValues.operatorName || getCurrentRequesterInfo().operatorName)}`);
-        if (submitResponse.code === 1) {
-          messageApi.success(`已提交 ${selectedMaterials.length} 项物资`);
-          handleModalCancel();
-          loadPurchaseOrders();
+        const response = await api.post('/api/scm/purchases/orders', purchaseData);
+        if (response.code === 1) {
+          const submitResponse = await api.post(`/api/scm/purchases/orders/${response.data.id}/submit?operatorName=${encodeURIComponent(operatorName)}`);
+          if (submitResponse.code === 1) {
+            submittedCount++;
+          } else {
+            messageApi.error(`供应商 ${group.supplier || '未知'} 的订单提交失败: ${submitResponse.message}`);
+          }
         } else {
-          messageApi.error(submitResponse.message || '提交失败');
+          messageApi.error(`供应商 ${group.supplier || '未知'} 的订单保存失败: ${response.message}`);
         }
-      } else {
-        messageApi.error(response.message || '保存失败');
+      }
+      if (submittedCount > 0) {
+        messageApi.success(`已按供应商拆分提交 ${submittedCount} 个采购单，共 ${selectedMaterials.length} 项物资`);
+        handleModalCancel();
+        loadPurchaseOrders();
       }
     } catch (error) {
       console.error('提交采购订单失败:', error);
@@ -541,7 +574,7 @@ const PurchaseOrderRequest = () => {
       // 检查是否已存在
       const existingIndex = newMaterials.findIndex(item => item.key === selectedItem.key);
       if (existingIndex === -1) {
-        // 添加新物资
+        // 添加新物资（保留供应商信息）
         newMaterials.push({
           key: selectedItem.key,
           materialCode: selectedItem.materialCode,
@@ -551,7 +584,11 @@ const PurchaseOrderRequest = () => {
           unitPrice: selectedItem.unitPrice,
           stock: selectedItem.stock,
           selected: true,
-          quantity: selectedItem.quantity
+          quantity: selectedItem.quantity,
+          supplier: selectedItem.supplier,
+          supplierId: selectedItem.supplierId,
+          specification: selectedItem.specification,
+          model: selectedItem.model
         });
       } else {
         // 更新现有物资的数量
@@ -639,6 +676,12 @@ const PurchaseOrderRequest = () => {
       title: '采购分院',
       dataIndex: 'department',
       key: 'department',
+      width: 120
+    },
+    {
+      title: '供应商',
+      dataIndex: 'supplier',
+      key: 'supplier',
       width: 120
     },
     {
@@ -1152,13 +1195,8 @@ const PurchaseOrderRequest = () => {
               {departments.map(d => <Select.Option key={d.id} value={d.id}>{d.name}</Select.Option>)}
             </Select>
           </Form.Item>
-          <Form.Item name="supplierId" label="供应商" rules={[{ required: true, message: '请选择供应商' }]}>
-            <Select placeholder="请选择供应商" style={{ width: 160 }}>
-              {suppliers.filter(s => s.status === '可用').map(s => <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>)}
-            </Select>
-          </Form.Item>
           <Form.Item name="operatorName" label="申请人" rules={[{ required: true, message: '请输入申请人' }]}>
-            <Input placeholder="自动带出当前登录人" style={{ width: 120 }} />
+            <Input style={{ width: 120 }} disabled />
           </Form.Item>
           <Form.Item name="planType" label="计划类型" rules={[{ required: true, message: '请选择计划类型' }]}>
             <Select placeholder="计划类型" style={{ width: 100 }}>
@@ -1211,8 +1249,10 @@ const PurchaseOrderRequest = () => {
                     onChange={handleSelectAll}
                   />
                 </th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>供应商</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资编码</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>物资名称</th>
+                <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>规格</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资类型</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>单位</th>
                 <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>采购价格</th>
@@ -1221,30 +1261,46 @@ const PurchaseOrderRequest = () => {
               </tr>
             </thead>
             <tbody>
-              {materials.slice((currentPage - 1) * pageSize, currentPage * pageSize).map(item => (
-                <tr key={item.key} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
-                    <Checkbox 
-                      checked={item.selected}
-                      onChange={() => handleMaterialSelect(item.key)}
-                    />
-                  </td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialCode}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialName}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialType}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.unit}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>¥{item.unitPrice.toFixed(2)}</td>
-                  <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
-                    <InputNumber
-                      min={1}
-                      value={item.quantity}
-                      onChange={(value) => handleQuantityChange(item.key, value)}
-                      style={{ width: '100%' }}
-                    />
+              {/* 按供应商分组排序显示 */}
+              {[...materials].sort((a, b) => (a.supplier || '').localeCompare(b.supplier || '')).slice((currentPage - 1) * pageSize, currentPage * pageSize).map((item, index, arr) => {
+                const prevItem = index > 0 ? arr[index - 1] : null;
+                const showSupplierDivider = !prevItem || prevItem.supplier !== item.supplier;
+                return (
+                  <React.Fragment key={item.key}>
+                    {showSupplierDivider && (
+                      <tr style={{ backgroundColor: '#e6f7ff' }}>
+                        <td colSpan={10} style={{ padding: '6px 12px', border: '1px solid #f0f0f0', fontWeight: 'bold', color: '#1890ff' }}>
+                          供应商：{item.supplier || '未知供应商'}
+                        </td>
+                      </tr>
+                    )}
+                    <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
+                        <Checkbox 
+                          checked={item.selected}
+                          onChange={() => handleMaterialSelect(item.key)}
+                        />
+                      </td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.supplier || '-'}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialCode}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialName}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.specification || '-'}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialType}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.unit}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>¥{item.unitPrice.toFixed(2)}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
+                        <InputNumber
+                          min={1}
+                          value={item.quantity}
+                          onChange={(value) => handleQuantityChange(item.key, value)}
+                          style={{ width: '100%' }}
+                        />
                   </td>
                   <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.stock}</td>
-                </tr>
-              ))}
+                    </tr>
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

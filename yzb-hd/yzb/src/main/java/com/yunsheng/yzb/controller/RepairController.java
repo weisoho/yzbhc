@@ -69,6 +69,18 @@ public class RepairController {
         PageInfo<RepairVo> pageInfo = new PageInfo<>(list);
         return AjaxResult.res(1,"成功", ClassCastUtil.pageInfoToPageOutputDto(pageInfo));
     }
+
+    /**
+     * 删除资产维修记录
+     */
+    @PostMapping("/deleteRepair")
+    public AjaxResult<Void> deleteRepair(@RequestParam Integer id) {
+        if (id == null) {
+            return AjaxResult.res(0, "id不能为空", null);
+        }
+        repairMapper.deleteByPrimaryKey(id);
+        return AjaxResult.res(1, "删除成功", null);
+    }
     
 
 }

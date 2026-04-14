@@ -16,6 +16,7 @@ const SupplierBusinessLicense = () => {
   const [editFileList, setEditFileList] = useState([]);
   const [businessLicenses, setBusinessLicenses] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [total, setTotal] = useState(0);
   const [searchParams, setSearchParams] = useState({
     licenseNumber: '',
@@ -132,8 +133,9 @@ const SupplierBusinessLicense = () => {
 
   // 保存编辑
   const handleEditSave = async () => {
+    if (submitting) return;
     try {
-      setLoading(true);
+      setSubmitting(true);
       const values = await editForm.validateFields();
       
       // 构建许可证数据
@@ -175,7 +177,7 @@ const SupplierBusinessLicense = () => {
     } catch (error) {
       message.error(getApiErrorMessage(error, '操作失败'));
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -438,9 +440,11 @@ const SupplierBusinessLicense = () => {
       <Modal
         title="新增供应商经营许可证"
         open={visible}
+        confirmLoading={submitting}
         onOk={async () => {
+          if (submitting) return;
           try {
-            setLoading(true);
+            setSubmitting(true);
             const values = await form.validateFields();
             
             // 构建许可证数据
@@ -479,7 +483,7 @@ const SupplierBusinessLicense = () => {
           } catch (error) {
             message.error(getApiErrorMessage(error, '操作失败'));
           } finally {
-            setLoading(false);
+            setSubmitting(false);
           }
         }}
         onCancel={() => {
@@ -587,6 +591,7 @@ const SupplierBusinessLicense = () => {
       <Modal
         title="编辑经营许可证"
         open={editVisible}
+        confirmLoading={submitting}
         onOk={handleEditSave}
         onCancel={() => {
           setEditVisible(false);

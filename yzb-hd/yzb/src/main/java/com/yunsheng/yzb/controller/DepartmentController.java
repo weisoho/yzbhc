@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -85,6 +86,14 @@ public class DepartmentController {
      */
     @PostMapping
     public AjaxResult<String> createDepartment(@RequestBody SysDepartment department) {
+        // 自动生成部门编码（如果未提供）
+        if (department.getDeptCode() == null || department.getDeptCode().trim().isEmpty()) {
+            String prefix = "CAMPUS".equals(department.getOrgType()) ? "YQ" : "DEP";
+            department.setDeptCode(prefix + System.currentTimeMillis());
+        }
+        if (department.getStatus() == null) {
+            department.setStatus(1);
+        }
         int result = departmentMapper.insert(department);
         if (result > 0) {
             return AjaxResult.successInstance("创建成功");

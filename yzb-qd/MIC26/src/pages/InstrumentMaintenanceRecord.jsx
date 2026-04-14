@@ -61,7 +61,7 @@ const InstrumentMaintenanceRecord = () => {
       if (params.repairStart) queryParams.append('repairStart', params.repairStart);
       if (params.repairEnd) queryParams.append('repairEnd', params.repairEnd);
       
-      const response = await api.get(`/yzb/selectRepairList?${queryParams.toString()}`);
+      const response = await api.get(`/api/selectRepairList?${queryParams.toString()}`);
       
       if (response.code === 1) {
         const data = response.data;
@@ -212,10 +212,10 @@ const InstrumentMaintenanceRecord = () => {
       if (selectedRecord) {
         // 编辑模式
         repairData.id = selectedRecord.id;
-        response = await api.post('/yzb/updateRepair', repairData);
+        response = await api.post('/api/updateRepair', repairData);
       } else {
         // 新增模式
-        response = await api.post('/yzb/addRepair', repairData);
+        response = await api.post('/api/addRepair', repairData);
       }
       
       if (response.code === 1) {
@@ -265,8 +265,26 @@ const InstrumentMaintenanceRecord = () => {
   };
 
   const handleDelete = (record) => {
-    // 后端暂未实现删除接口
-    message.success('删除成功');
+    Modal.confirm({
+      title: '确认删除',
+      content: `确定要删除该维修记录吗？`,
+      onOk: async () => {
+        try {
+          const response = await api.request('/api/deleteRepair', {
+            method: 'POST',
+            params: { id: record.id },
+          });
+          if (response.code === 1) {
+            message.success('删除成功');
+            fetchMaintenanceRecords();
+          } else {
+            message.error(response.message || '删除失败');
+          }
+        } catch (error) {
+          message.error('删除失败');
+        }
+      },
+    });
   };
 
   const handleExport = () => {
