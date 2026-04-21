@@ -6,6 +6,7 @@ import com.yunsheng.yzb.common.ScmBusinessException;
 import com.yunsheng.yzb.common.ScmCodeGenerator;
 import com.yunsheng.yzb.common.ScmConstants;
 import com.yunsheng.yzb.common.ScmPageHelper;
+import com.yunsheng.yzb.common.ScmRequestGuard;
 import com.yunsheng.yzb.export.ExportConfig;
 import com.yunsheng.yzb.export.ExportProcessor;
 import com.yunsheng.yzb.export.scm.ManufacturerQualificationWarningConverter;
@@ -34,6 +35,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 供应商维护服务实现。
@@ -54,6 +56,9 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
 
     @Resource
     private MaterialDictionaryService materialDictionaryService;
+
+    @Resource
+    private ScmRequestGuard scmRequestGuard;
 
     @Override
     public Map<String, Integer> getWarningStatistics() {
@@ -158,38 +163,64 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
     public List<SupplierQualificationEntity> listQualifications(Long supplierId, String type, String certificateName, String licenseNumber) {
         LambdaQueryWrapper<SupplierQualificationEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(supplierId != null, SupplierQualificationEntity::getSupplierId, supplierId)
-                .eq(StringUtils.hasText(type), SupplierQualificationEntity::getType, type)
                 .like(StringUtils.hasText(certificateName), SupplierQualificationEntity::getCertificateName, certificateName)
                 .like(StringUtils.hasText(licenseNumber), SupplierQualificationEntity::getLicenseNumber, licenseNumber)
                 .orderByDesc(SupplierQualificationEntity::getExpiryDate, SupplierQualificationEntity::getCreateTime);
-        return qualificationMapper.selectList(wrapper);
+        if (StringUtils.hasText(type)) {
+            if (ScmConstants.isRegistrationQualificationType(type)) {
+                wrapper.in(SupplierQualificationEntity::getType,
+                        ScmConstants.QUALIFICATION_TYPE_REGISTRATION_CERTIFICATE,
+                        ScmConstants.QUALIFICATION_TYPE_INSPECTION_REPORT);
+            } else {
+                wrapper.eq(SupplierQualificationEntity::getType, type);
+            }
+        }
+        List<SupplierQualificationEntity> qualifications = qualificationMapper.selectList(wrapper);
+        return qualifications.stream()
+                .peek(item -> item.setType(ScmConstants.normalizeQualificationType(item.getType())))
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SupplierQualificationEntity createQualification(Long supplierId, ScmRequest.QualificationSave request) {
-        SupplierEntity supplier = getSupplier(supplierId);
-        // 防止重复提交：检查同一供应商下是否已存在相同类型和证件编号的资质
-        if (StringUtils.hasText(request.getLicenseNumber())) {
-            Long existCount = qualificationMapper.selectCount(new LambdaQueryWrapper<SupplierQualificationEntity>()
-                    .eq(SupplierQualificationEntity::getSupplierId, supplierId)
-                    .eq(SupplierQualificationEntity::getType, request.getType())
-                    .eq(SupplierQualificationEntity::getLicenseNumber, request.getLicenseNumber()));
-            if (existCount != null && existCount > 0) {
-                throw new ScmBusinessException("该供应商下已存在相同类型和证件编号的资质记录，请勿重复提交");
+        String normalizedType = ScmConstants.normalizeQualificationType(request.getType());
+        String requestKey = String.format("qualification:create:%d:%s:%s",
+                supplierId,
+                normalizedType,
+                StringUtils.trimWhitespace(request.getLicenseNumber()));
+        return scmRequestGuard.execute(requestKey, "资质正在处理或已提交，请勿重复点击", () -> {
+            SupplierEntity supplier = getSupplier(supplierId);
+            if (StringUtils.hasText(request.getLicenseNumber())) {
+                LambdaQueryWrapper<SupplierQualificationEntity> duplicateWrapper = new LambdaQueryWrapper<SupplierQualificationEntity>()
+                        .eq(SupplierQualificationEntity::getSupplierId, supplierId)
+                        .eq(SupplierQualificationEntity::getLicenseNumber, request.getLicenseNumber());
+                if (ScmConstants.isRegistrationQualificationType(normalizedType)) {
+                    duplicateWrapper.in(SupplierQualificationEntity::getType,
+                            ScmConstants.QUALIFICATION_TYPE_REGISTRATION_CERTIFICATE,
+                            ScmConstants.QUALIFICATION_TYPE_INSPECTION_REPORT);
+                } else {
+                    duplicateWrapper.eq(SupplierQualificationEntity::getType, normalizedType);
+                }
+                Long existCount = qualificationMapper.selectCount(duplicateWrapper);
+                if (existCount != null && existCount > 0) {
+                    throw new ScmBusinessException("该供应商下已存在相同类型和证件编号的资质记录，请勿重复提交");
+                }
             }
-        }
-        SupplierQualificationEntity entity = new SupplierQualificationEntity();
-        BeanUtils.copyProperties(request, entity);
-        entity.setSupplierId(supplierId);
-        entity.setStatus(resolveQualificationStatus(request.getExpiryDate()));
-        entity.setCreateTime(LocalDateTime.now());
-        entity.setUpdateTime(LocalDateTime.now());
-        qualificationMapper.insert(entity);
-        refreshSupplierAvailability(supplierId);
-        operationLogService.save("system", "维护", "新增供应商资质: " + supplier.getName() + " / " + request.getType(),
-                ScmConstants.LOG_SUCCESS, "供应商资质", request.getLicenseNumber());
-        return entity;
+            SupplierQualificationEntity entity = new SupplierQualificationEntity();
+            BeanUtils.copyProperties(request, entity);
+            entity.setType(normalizedType);
+            entity.setSupplierId(supplierId);
+            entity.setStatus(resolveQualificationStatus(request.getExpiryDate()));
+            entity.setCreateTime(LocalDateTime.now());
+            entity.setUpdateTime(LocalDateTime.now());
+            qualificationMapper.insert(entity);
+            entity.setType(ScmConstants.normalizeQualificationType(entity.getType()));
+            refreshSupplierAvailability(supplierId);
+            operationLogService.save("system", "维护", "新增供应商资质: " + supplier.getName() + " / " + normalizedType,
+                    ScmConstants.LOG_SUCCESS, "供应商资质", request.getLicenseNumber());
+            return entity;
+        });
     }
 
     @Override
@@ -201,6 +232,7 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
         }
         BeanUtils.copyProperties(request, entity);
         entity.setId(qualificationId);
+        entity.setType(ScmConstants.normalizeQualificationType(request.getType()));
         entity.setStatus(resolveQualificationStatus(request.getExpiryDate()));
         entity.setUpdateTime(LocalDateTime.now());
         qualificationMapper.updateById(entity);
@@ -208,6 +240,7 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
         refreshSupplierAvailability(entity.getSupplierId());
         operationLogService.save("system", "维护", "更新供应商资质: " + request.getType(), ScmConstants.LOG_SUCCESS,
                 "供应商资质", request.getLicenseNumber());
+        entity.setType(ScmConstants.normalizeQualificationType(entity.getType()));
         return entity;
     }
 
@@ -413,7 +446,7 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
         SupplierEntity supplier = getSupplier(supplierId);
         Long validLicenseCount = qualificationMapper.selectCount(new LambdaQueryWrapper<SupplierQualificationEntity>()
                 .eq(SupplierQualificationEntity::getSupplierId, supplierId)
-                .eq(SupplierQualificationEntity::getType, "BUSINESS_LICENSE")
+            .eq(SupplierQualificationEntity::getType, ScmConstants.QUALIFICATION_TYPE_BUSINESS_LICENSE)
                 .in(SupplierQualificationEntity::getStatus, ScmConstants.QUALIFICATION_VALID, ScmConstants.QUALIFICATION_EXPIRING));
         Long certificateCount = qualificationMapper.selectCount(new LambdaQueryWrapper<SupplierQualificationEntity>()
                 .eq(SupplierQualificationEntity::getSupplierId, supplierId));

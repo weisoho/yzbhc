@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, Button, Table, Form, Input, Space, Modal, Popconfirm, Checkbox, Radio, Row, Col, message, DatePicker } from 'antd';
-import moment from 'moment';
+import dayjs from 'dayjs';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, DownloadOutlined, EyeOutlined } from '@ant-design/icons';
 import { FORM_STYLES, getFormLayoutStyle, getModalConfig } from '../utils/formStyles';
 import api from '../utils/api';
@@ -23,6 +23,7 @@ const SupplierMaintenance = () => {
   const [pageSize, setPageSize] = useState(10);
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [searchParams, setSearchParams] = useState({
     name: '',
     legalRepresentative: '',
@@ -40,6 +41,13 @@ const SupplierMaintenance = () => {
   };
 
   const getErrorMessage = (error, fallback) => error?.msg || error?.message || error?.data?.msg || error?.data?.message || fallback;
+
+  const datePickerProps = {
+    style: { width: '100%' },
+    placeholder: '请选择注册时间',
+    inputReadOnly: true,
+    getPopupContainer: (trigger) => trigger.parentElement || trigger.parentNode,
+  };
 
   // 加载供应商列表
   const loadSuppliers = async () => {
@@ -107,7 +115,7 @@ const SupplierMaintenance = () => {
       creditCode: record.creditCode,
       legalRepresentative: record.legalRepresentative,
       registeredCapital: record.registeredCapital,
-      registrationDate: record.registrationDate ? moment(record.registrationDate) : null,
+      registrationDate: record.registrationDate ? dayjs(record.registrationDate) : null,
       phone: record.phone,
       address: record.address
     });
@@ -115,8 +123,9 @@ const SupplierMaintenance = () => {
   };
 
   const handleModalOk = async () => {
+    if (submitting) return;
     try {
-      setLoading(true);
+      setSubmitting(true);
       const values = await form.validateFields();
       
       // 构建供应商数据
@@ -159,7 +168,7 @@ const SupplierMaintenance = () => {
       console.error('操作失败:', error);
       message.error(getErrorMessage(error, '操作失败，请检查网络连接或联系管理员'));
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -475,6 +484,7 @@ const SupplierMaintenance = () => {
         open={visible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
+        confirmLoading={submitting}
         okText="保存"
         cancelText="取消"
         {...getModalConfig()}
@@ -579,7 +589,7 @@ const SupplierMaintenance = () => {
                 label="注册时间"
                 rules={[{ required: true, message: '请选择注册时间' }]}
               >
-                <DatePicker style={{ width: '100%' }} placeholder="请选择注册时间" />
+                <DatePicker {...datePickerProps} />
               </Form.Item>
             </Col>
             <Col span={FORM_STYLES.form.edit.colSpan}>

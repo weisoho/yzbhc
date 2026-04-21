@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message, Select } from 'antd';
 import { useParams } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
-import moment from 'moment';
+import dayjs from 'dayjs';
 import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
 
 const SupplierBusinessLicense = () => {
@@ -26,6 +26,12 @@ const SupplierBusinessLicense = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [suppliers, setSuppliers] = useState([]);
+
+  const datePickerProps = {
+    style: { width: '100%' },
+    inputReadOnly: true,
+    getPopupContainer: (trigger) => trigger.parentElement || trigger.parentNode,
+  };
 
   // 加载经营许可证列表
   const loadBusinessLicenses = async () => {
@@ -123,8 +129,8 @@ const SupplierBusinessLicense = () => {
       unifiedSocialCreditCode: record.unifiedSocialCreditCode,
       legalRepresentative: record.legalRepresentative,
       issuingAuthority: record.issuingAuthority,
-      effectiveDate: record.effectiveDate ? moment(record.effectiveDate) : null,
-      expiryDate: record.expiryDate ? moment(record.expiryDate) : null
+      effectiveDate: record.effectiveDate ? dayjs(record.effectiveDate) : null,
+      expiryDate: record.expiryDate ? dayjs(record.expiryDate) : null
     });
     // 重置编辑文件列表
     setEditFileList([]);
@@ -565,7 +571,7 @@ const SupplierBusinessLicense = () => {
             label="生效日期"
             rules={[{ required: true, message: '请选择生效日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择生效日期" />
+            <DatePicker {...datePickerProps} placeholder="请选择生效日期" />
           </Form.Item>
           
           <Form.Item
@@ -573,7 +579,7 @@ const SupplierBusinessLicense = () => {
             label="失效日期"
             rules={[{ required: true, message: '请选择失效日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择失效日期" />
+            <DatePicker {...datePickerProps} placeholder="请选择失效日期" />
           </Form.Item>
           
           <Form.Item
@@ -673,7 +679,7 @@ const SupplierBusinessLicense = () => {
             label="生效日期"
             rules={[{ required: true, message: '请选择生效日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择生效日期" />
+            <DatePicker {...datePickerProps} placeholder="请选择生效日期" />
           </Form.Item>
           
           <Form.Item
@@ -681,7 +687,7 @@ const SupplierBusinessLicense = () => {
             label="失效日期"
             rules={[{ required: true, message: '请选择失效日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择失效日期" />
+            <DatePicker {...datePickerProps} placeholder="请选择失效日期" />
           </Form.Item>
           
           <Form.Item

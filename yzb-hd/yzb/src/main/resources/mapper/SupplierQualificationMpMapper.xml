@@ -32,7 +32,7 @@
             s.name as supplier_name,
             s.credit_code,
             s.legal_representative,
-            sq.type,
+            CASE WHEN sq.type = 'INSPECTION_REPORT' THEN 'REGISTRATION_CERTIFICATE' ELSE sq.type END AS type,
             sq.certificate_name,
             sq.license_number,
             sq.license_type,
@@ -56,7 +56,14 @@
                 AND sq.supplier_id = #{query.supplierId}
             </if>
             <if test="query.type != null and query.type != ''">
-                AND sq.type = #{query.type}
+                <choose>
+                    <when test="query.type == 'REGISTRATION_CERTIFICATE' or query.type == 'INSPECTION_REPORT'">
+                        AND sq.type IN ('REGISTRATION_CERTIFICATE', 'INSPECTION_REPORT')
+                    </when>
+                    <otherwise>
+                        AND sq.type = #{query.type}
+                    </otherwise>
+                </choose>
             </if>
             <if test="query.certificateName != null and query.certificateName != ''">
                 AND (sq.certificate_name LIKE CONCAT('%', #{query.certificateName}, '%')
@@ -94,7 +101,7 @@
             s.name as supplier_name,
             s.credit_code,
             s.legal_representative,
-            sq.type,
+            CASE WHEN sq.type = 'INSPECTION_REPORT' THEN 'REGISTRATION_CERTIFICATE' ELSE sq.type END AS type,
             sq.certificate_name,
             sq.license_number,
             sq.license_type,
@@ -118,7 +125,14 @@
                 AND sq.supplier_id = #{query.supplierId}
             </if>
             <if test="query.type != null and query.type != ''">
-                AND sq.type = #{query.type}
+                <choose>
+                    <when test="query.type == 'REGISTRATION_CERTIFICATE' or query.type == 'INSPECTION_REPORT'">
+                        AND sq.type IN ('REGISTRATION_CERTIFICATE', 'INSPECTION_REPORT')
+                    </when>
+                    <otherwise>
+                        AND sq.type = #{query.type}
+                    </otherwise>
+                </choose>
             </if>
             <if test="query.certificateName != null and query.certificateName != ''">
                 AND (sq.certificate_name LIKE CONCAT('%', #{query.certificateName}, '%')

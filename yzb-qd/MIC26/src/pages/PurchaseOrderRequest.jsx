@@ -60,6 +60,8 @@ const PurchaseOrderRequest = () => {
   const [currentOrderDetails, setCurrentOrderDetails] = useState(null);
   const [editingDetails, setEditingDetails] = useState([]); // 编辑中的商品明细数据
   const [loading, setLoading] = useState(false);
+  const [submittingAction, setSubmittingAction] = useState(null);
+  const [detailSubmittingAction, setDetailSubmittingAction] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
   // 新建采购申请表单字段
   const [newOrderForm] = Form.useForm();
@@ -311,6 +313,7 @@ const PurchaseOrderRequest = () => {
   };
 
   const handleSave = async () => {
+    if (submittingAction) return;
     const selectedMaterials = materials.filter(item => item.selected);
     if (selectedMaterials.length === 0) {
       messageApi.warning('请至少选择一项物资');
@@ -335,7 +338,7 @@ const PurchaseOrderRequest = () => {
     });
 
     try {
-      setLoading(true);
+      setSubmittingAction('save');
       let savedCount = 0;
       for (const group of Object.values(supplierGroups)) {
         const purchaseData = {
@@ -367,11 +370,12 @@ const PurchaseOrderRequest = () => {
       console.error('保存采购订单失败:', error);
       messageApi.error('保存失败，请检查网络连接或联系管理员');
     } finally {
-      setLoading(false);
+      setSubmittingAction(null);
     }
   };
 
   const handleSubmit = async () => {
+    if (submittingAction) return;
     const selectedMaterials = materials.filter(item => item.selected);
     if (selectedMaterials.length === 0) {
       messageApi.warning('请至少选择一项物资');
@@ -396,7 +400,7 @@ const PurchaseOrderRequest = () => {
     });
 
     try {
-      setLoading(true);
+      setSubmittingAction('submit');
       const operatorName = formValues.operatorName || getCurrentRequesterInfo().operatorName;
       let submittedCount = 0;
       for (const group of Object.values(supplierGroups)) {
@@ -434,7 +438,7 @@ const PurchaseOrderRequest = () => {
       console.error('提交采购订单失败:', error);
       messageApi.error('提交失败，请检查网络连接或联系管理员');
     } finally {
-      setLoading(false);
+      setSubmittingAction(null);
     }
   };
 
@@ -1415,6 +1419,8 @@ const PurchaseOrderRequest = () => {
           <Button 
             type="primary" 
             onClick={handleSave}
+            loading={submittingAction === 'save'}
+            disabled={Boolean(submittingAction)}
             style={{ 
               minWidth: '80px',
               height: '36px',
@@ -1427,6 +1433,8 @@ const PurchaseOrderRequest = () => {
           <Button 
             type="primary" 
             onClick={handleSubmit}
+            loading={submittingAction === 'submit'}
+            disabled={Boolean(submittingAction)}
             style={{ 
               minWidth: '80px',
               height: '36px',
@@ -1874,10 +1882,11 @@ const PurchaseOrderRequest = () => {
               <Button 
                 type="primary"
                 onClick={async () => {
+                  if (detailSubmittingAction) return;
                   // 保存订单逻辑
                   if (currentOrderDetails) {
                     try {
-                      setLoading(true);
+                      setDetailSubmittingAction('save');
                       const updateData = {
                         id: currentOrderDetails.key,
                         remark: currentOrderDetails.remark,
@@ -1899,10 +1908,12 @@ const PurchaseOrderRequest = () => {
                       console.error('保存订单失败:', error);
                       messageApi.error('保存失败，请检查网络连接');
                     } finally {
-                      setLoading(false);
+                      setDetailSubmittingAction(null);
                     }
                   }
                 }}
+                loading={detailSubmittingAction === 'save'}
+                disabled={Boolean(detailSubmittingAction)}
                 style={{ 
                   minWidth: '80px',
                   height: '36px'
@@ -1913,10 +1924,11 @@ const PurchaseOrderRequest = () => {
               <Button 
                 type="primary"
                 onClick={async () => {
+                  if (detailSubmittingAction) return;
                   // 提交订单逻辑
                   if (currentOrderDetails) {
                     try {
-                      setLoading(true);
+                      setDetailSubmittingAction('submit');
                       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
                       const operatorName = userInfo.realName || userInfo.userName || '管理员';
                       
@@ -1932,10 +1944,12 @@ const PurchaseOrderRequest = () => {
                       console.error('提交订单失败:', error);
                       messageApi.error('提交失败，请检查网络连接');
                     } finally {
-                      setLoading(false);
+                      setDetailSubmittingAction(null);
                     }
                   }
                 }}
+                loading={detailSubmittingAction === 'submit'}
+                disabled={Boolean(detailSubmittingAction)}
                 style={{ 
                   minWidth: '80px',
                   height: '36px',

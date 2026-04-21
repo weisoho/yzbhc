@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message, Select, Alert } from 'antd';
 import { useParams } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
-import moment from 'moment';
+import dayjs from 'dayjs';
 import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api';
 
 const SupplierCertificate = () => {
@@ -31,6 +31,12 @@ const SupplierCertificate = () => {
   const [referenceLoading, setReferenceLoading] = useState(false);
   const [referenceItems, setReferenceItems] = useState([]);
   const [referenceRecord, setReferenceRecord] = useState(null);
+
+  const datePickerProps = {
+    style: { width: '100%' },
+    inputReadOnly: true,
+    getPopupContainer: (trigger) => trigger.parentElement || trigger.parentNode,
+  };
 
   const markSyncPending = (qualificationId) => {
     setSyncPendingIds((prev) => (prev.includes(qualificationId) ? prev : [...prev, qualificationId]));
@@ -131,8 +137,8 @@ const SupplierCertificate = () => {
       certificateName: record.certificateName,
       supplierName: record.supplierName,
       issuingAuthority: record.issuingAuthority,
-      effectiveDate: record.effectiveDate ? moment(record.effectiveDate) : null,
-      expiryDate: record.expiryDate ? moment(record.expiryDate) : null
+      effectiveDate: record.effectiveDate ? dayjs(record.effectiveDate) : null,
+      expiryDate: record.expiryDate ? dayjs(record.expiryDate) : null
     });
     setEditFileList([]);
     setEditVisible(true);
@@ -436,8 +442,8 @@ const SupplierCertificate = () => {
             </Select>
           </Form.Item>
           <Form.Item name="issuingAuthority" label="发证部门" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="effectiveDate" label="生效日期" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} getPopupContainer={(trigger) => trigger.parentNode} /></Form.Item>
-          <Form.Item name="expiryDate" label="失效日期" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} getPopupContainer={(trigger) => trigger.parentNode} /></Form.Item>
+          <Form.Item name="effectiveDate" label="生效日期" rules={[{ required: true }]}><DatePicker {...datePickerProps} /></Form.Item>
+          <Form.Item name="expiryDate" label="失效日期" rules={[{ required: true }]}><DatePicker {...datePickerProps} /></Form.Item>
           <Form.Item label="附件"><Upload {...uploadProps}><Button icon={<UploadOutlined />}>上传附件</Button></Upload></Form.Item>
         </Form>
       </Modal>
@@ -461,8 +467,8 @@ const SupplierCertificate = () => {
             </Select>
           </Form.Item>
           <Form.Item name="issuingAuthority" label="发证部门" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="effectiveDate" label="生效日期" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} getPopupContainer={(trigger) => trigger.parentNode} /></Form.Item>
-          <Form.Item name="expiryDate" label="失效日期" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} getPopupContainer={(trigger) => trigger.parentNode} /></Form.Item>
+          <Form.Item name="effectiveDate" label="生效日期" rules={[{ required: true }]}><DatePicker {...datePickerProps} /></Form.Item>
+          <Form.Item name="expiryDate" label="失效日期" rules={[{ required: true }]}><DatePicker {...datePickerProps} /></Form.Item>
           <Form.Item label="附件"><Upload {...editUploadProps}><Button icon={<UploadOutlined />}>重新上传附件</Button></Upload></Form.Item>
         </Form>
       </Modal>

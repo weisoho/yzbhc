@@ -2,6 +2,7 @@ package com.yunsheng.yzb.model.scm;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -22,6 +23,12 @@ public class PurchaseReceiveEntity {
 
     /** 收货单号。 */
     private String receiveNumber;
+
+    /**
+     * 兼容前端历史字段名 receiptNumber。
+     */
+    @TableField(exist = false)
+    private String receiptNumber;
 
     /** 采购单主键。 */
     private Long purchaseOrderId;
@@ -79,4 +86,8 @@ public class PurchaseReceiveEntity {
 
     /** 更新时间。 */
     private LocalDateTime updateTime;
+
+    public String getReceiptNumber() {
+        return receiptNumber != null ? receiptNumber : receiveNumber;
+    }
 }

@@ -6,6 +6,7 @@ import com.yunsheng.yzb.common.ScmBusinessException;
 import com.yunsheng.yzb.common.ScmCodeGenerator;
 import com.yunsheng.yzb.common.ScmConstants;
 import com.yunsheng.yzb.common.ScmPageHelper;
+import com.yunsheng.yzb.common.ScmRequestGuard;
 import com.yunsheng.yzb.vo.scm.PageResult;
 import com.yunsheng.yzb.vo.scm.ScmRequest;
 import com.yunsheng.yzb.vo.scm.ScmView;
@@ -73,6 +74,9 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
 
     @Resource
     private OperationLogService operationLogService;
+
+    @Resource
+    private ScmRequestGuard scmRequestGuard;
 
     @Override
     public PageResult<ScmView.PurchaseOrderDetail> queryOrders(ScmRequest.PurchaseQuery query) {
@@ -143,28 +147,30 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PurchaseOrderEntity createOrder(ScmRequest.PurchaseSave request) {
-        SupplierEntity supplier = validateSupplier(request.getSupplierId());
-        PurchaseOrderEntity order = new PurchaseOrderEntity();
-        order.setOrderNumber(ScmCodeGenerator.nextCode(purchaseOrderMapper, "PO", "order_number"));
-        order.setDepartmentId(request.getDepartmentId());
-        order.setDepartmentName(request.getDepartmentName());
-        order.setSupplierId(request.getSupplierId());
-        order.setSupplierName(supplier.getName());
-        order.setOperatorName(request.getOperatorName());
-        order.setPlanType(request.getPlanType());
-        order.setStatus(ScmConstants.PURCHASE_DRAFT);
-        order.setRemark(request.getRemark());
-        order.setCreateTime(LocalDateTime.now());
-        order.setUpdateTime(LocalDateTime.now());
+        return scmRequestGuard.execute(buildCreateOrderRequestKey(request), "采购申请正在处理或已提交，请勿重复点击", () -> {
+            SupplierEntity supplier = validateSupplier(request.getSupplierId());
+            PurchaseOrderEntity order = new PurchaseOrderEntity();
+            order.setOrderNumber(ScmCodeGenerator.nextCode(purchaseOrderMapper, "PO", "order_number"));
+            order.setDepartmentId(request.getDepartmentId());
+            order.setDepartmentName(request.getDepartmentName());
+            order.setSupplierId(request.getSupplierId());
+            order.setSupplierName(supplier.getName());
+            order.setOperatorName(request.getOperatorName());
+            order.setPlanType(request.getPlanType());
+            order.setStatus(ScmConstants.PURCHASE_DRAFT);
+            order.setRemark(request.getRemark());
+            order.setCreateTime(LocalDateTime.now());
+            order.setUpdateTime(LocalDateTime.now());
 
-        BigDecimal totalAmount = persistOrderItems(order, request.getItems(), false);
-        order.setTotalAmount(totalAmount);
-        order.setItemCount(request.getItems().size());
-        purchaseOrderMapper.insert(order);
-        persistOrderItems(order, request.getItems(), true);
-        operationLogService.save(request.getOperatorName(), "新增", "创建采购单: " + order.getOrderNumber(),
-                ScmConstants.LOG_SUCCESS, "采购管理", order.getOrderNumber());
-        return order;
+            BigDecimal totalAmount = persistOrderItems(order, request.getItems(), false);
+            order.setTotalAmount(totalAmount);
+            order.setItemCount(request.getItems().size());
+            purchaseOrderMapper.insert(order);
+            persistOrderItems(order, request.getItems(), true);
+            operationLogService.save(request.getOperatorName(), "新增", "创建采购单: " + order.getOrderNumber(),
+                    ScmConstants.LOG_SUCCESS, "采购管理", order.getOrderNumber());
+            return order;
+        });
     }
 
     @Override
@@ -731,6 +737,26 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
     private String resolveSupplierCode(Long supplierId) {
         SupplierEntity supplier = supplierMapper.selectById(supplierId);
         return supplier == null ? null : supplier.getSupplierCode();
+    }
+
+    private String buildCreateOrderRequestKey(ScmRequest.PurchaseSave request) {
+        String itemFingerprint = request.getItems().stream()
+                .sorted((left, right) -> {
+                    int materialCompare = left.getMaterialId().compareTo(right.getMaterialId());
+                    if (materialCompare != 0) {
+                        return materialCompare;
+                    }
+                    return left.getQuantity().compareTo(right.getQuantity());
+                })
+                .map(item -> item.getMaterialId() + "x" + item.getQuantity())
+                .collect(Collectors.joining(","));
+        return String.format("purchase:create:%d:%d:%s:%s:%s:%s",
+                request.getDepartmentId(),
+                request.getSupplierId(),
+                request.getOperatorName(),
+                request.getPlanType(),
+                StringUtils.trimWhitespace(request.getRemark()),
+                itemFingerprint);
     }
 
     private void createExceptionOrder(PurchaseOrderEntity order, PurchaseOrderItemEntity item,

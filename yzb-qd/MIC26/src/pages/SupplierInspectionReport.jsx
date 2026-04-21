@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message, Select } from 'antd';
 import { useParams } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
-import moment from 'moment';
+import dayjs from 'dayjs';
 import api from '../utils/api';
 
 const SupplierInspectionReport = () => {
@@ -16,6 +16,7 @@ const SupplierInspectionReport = () => {
   const [editFileList, setEditFileList] = useState([]);
   const [registrationCertificates, setRegistrationCertificates] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [searchParams, setSearchParams] = useState({
     supplierName: '',
     productName: '',
@@ -25,6 +26,12 @@ const SupplierInspectionReport = () => {
   const [pageSize, setPageSize] = useState(10);
   const [suppliers, setSuppliers] = useState([]);
   const [total, setTotal] = useState(0);
+
+  const datePickerProps = {
+    style: { width: '100%' },
+    inputReadOnly: true,
+    getPopupContainer: (trigger) => trigger.parentElement || trigger.parentNode,
+  };
 
   const getErrorMessage = (error, fallback) => error?.msg || error?.message || error?.data?.msg || error?.data?.message || fallback;
 
@@ -135,8 +142,8 @@ const SupplierInspectionReport = () => {
       registrationNumber: record.registrationNumber,
       packagingSpec: record.packagingSpec,
       storageCondition: record.storageCondition,
-      effectiveDate: record.effectiveDate ? moment(record.effectiveDate) : null,
-      expiryDate: record.expiryDate ? moment(record.expiryDate) : null
+      effectiveDate: record.effectiveDate ? dayjs(record.effectiveDate) : null,
+      expiryDate: record.expiryDate ? dayjs(record.expiryDate) : null
     });
     // 重置编辑文件列表
     setEditFileList([]);
@@ -145,8 +152,9 @@ const SupplierInspectionReport = () => {
 
   // 保存编辑
   const handleEditSave = async () => {
+    if (submitting) return;
     try {
-      setLoading(true);
+      setSubmitting(true);
       const values = await editForm.validateFields();
       
       // 构建注册证数据
@@ -178,7 +186,7 @@ const SupplierInspectionReport = () => {
     } catch (error) {
       message.error(getErrorMessage(error, '操作失败'));
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -527,9 +535,11 @@ const SupplierInspectionReport = () => {
       <Modal
         title="新增注册证"
         open={visible}
+        confirmLoading={submitting}
         onOk={async () => {
+          if (submitting) return;
           try {
-            setLoading(true);
+            setSubmitting(true);
             const values = await form.validateFields();
             
             // 构建注册证数据
@@ -560,7 +570,7 @@ const SupplierInspectionReport = () => {
           } catch (error) {
             message.error(getErrorMessage(error, '操作失败'));
           } finally {
-            setLoading(false);
+            setSubmitting(false);
           }
         }}
         onCancel={() => {
@@ -624,7 +634,7 @@ const SupplierInspectionReport = () => {
             label="生效日期"
             rules={[{ required: true, message: '请选择生效日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择生效日期" />
+            <DatePicker {...datePickerProps} placeholder="请选择生效日期" />
           </Form.Item>
           
           <Form.Item
@@ -632,7 +642,7 @@ const SupplierInspectionReport = () => {
             label="失效日期"
             rules={[{ required: true, message: '请选择失效日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择失效日期" />
+            <DatePicker {...datePickerProps} placeholder="请选择失效日期" />
           </Form.Item>
           
           <Form.Item
@@ -650,6 +660,7 @@ const SupplierInspectionReport = () => {
       <Modal
         title="编辑注册证"
         open={editVisible}
+        confirmLoading={submitting}
         onOk={handleEditSave}
         onCancel={() => {
           setEditVisible(false);
@@ -699,7 +710,7 @@ const SupplierInspectionReport = () => {
             label="生效日期"
             rules={[{ required: true, message: '请选择生效日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择生效日期" />
+            <DatePicker {...datePickerProps} placeholder="请选择生效日期" />
           </Form.Item>
           
           <Form.Item
@@ -707,7 +718,7 @@ const SupplierInspectionReport = () => {
             label="失效日期"
             rules={[{ required: true, message: '请选择失效日期' }]}
           >
-            <DatePicker style={{ width: '100%' }} placeholder="请选择失效日期" />
+            <DatePicker {...datePickerProps} placeholder="请选择失效日期" />
           </Form.Item>
           
           <Form.Item

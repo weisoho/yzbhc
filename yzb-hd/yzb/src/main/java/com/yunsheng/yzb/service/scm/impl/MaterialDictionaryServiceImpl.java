@@ -164,6 +164,9 @@ public class MaterialDictionaryServiceImpl implements MaterialDictionaryService 
         if (qualification == null || !supplierId.equals(qualification.getSupplierId())) {
             throw new ScmBusinessException("注册证不存在或不属于当前供应商");
         }
+        if (!ScmConstants.isRegistrationQualificationType(qualification.getType())) {
+            throw new ScmBusinessException("当前资质不是注册证，不能绑定物资");
+        }
         if (ScmConstants.QUALIFICATION_EXPIRED.equals(qualification.getStatus())) {
             throw new ScmBusinessException("注册证已过期，不能绑定物资");
         }

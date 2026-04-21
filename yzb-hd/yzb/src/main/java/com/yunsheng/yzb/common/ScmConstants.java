@@ -17,6 +17,10 @@ public final class ScmConstants {
     public static final String QUALIFICATION_VALID = "有效";
     public static final String QUALIFICATION_EXPIRING = "即将过期";
     public static final String QUALIFICATION_EXPIRED = "已过期";
+    public static final String QUALIFICATION_TYPE_REGISTRATION_CERTIFICATE = "REGISTRATION_CERTIFICATE";
+    public static final String QUALIFICATION_TYPE_INSPECTION_REPORT = "INSPECTION_REPORT";
+    public static final String QUALIFICATION_TYPE_BUSINESS_LICENSE = "BUSINESS_LICENSE";
+    public static final String QUALIFICATION_TYPE_BUSINESS_CERTIFICATE = "BUSINESS_CERTIFICATE";
 
     public static final String PURCHASE_DRAFT = "待提交";
     public static final String PURCHASE_WAIT_AUDIT = "待审核";
@@ -46,4 +50,16 @@ public final class ScmConstants {
     public static final String WARNING_LOW_STOCK = "low_stock";
     public static final String WARNING_OVERSTOCK = "overstock";
     public static final String WARNING_EXPIRING = "expiring";
+
+    public static String normalizeQualificationType(String type) {
+        if (QUALIFICATION_TYPE_INSPECTION_REPORT.equals(type)) {
+            return QUALIFICATION_TYPE_REGISTRATION_CERTIFICATE;
+        }
+        return type;
+    }
+
+    public static boolean isRegistrationQualificationType(String type) {
+        return QUALIFICATION_TYPE_REGISTRATION_CERTIFICATE.equals(type)
+                || QUALIFICATION_TYPE_INSPECTION_REPORT.equals(type);
+    }
 }
