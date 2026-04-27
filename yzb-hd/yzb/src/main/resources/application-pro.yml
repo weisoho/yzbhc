@@ -1,5 +1,5 @@
 server:
-  port: 8088
+  port: ${SERVER_PORT:8088}
   servlet:
     encoding:
       charset: UTF-8
@@ -25,9 +25,9 @@ spring:
     request-context-attribute: request
 
   datasource:
-    url: jdbc:mysql://111.229.113.226:53302/yzb?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: root
-    password: ENC(Yccg2d7sG0RQqYGq42HVLPO3ISRTQkDMzKnV/i34hRI=)
+    url: ${DB_URL:jdbc:mysql://111.229.113.226:53302/yzb?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:ENC(Yccg2d7sG0RQqYGq42HVLPO3ISRTQkDMzKnV/i34hRI=)}
     #com.mysql.cj.jdbc.Driver com.mysql.jdbc.Driver
     driver-class-name: com.mysql.cj.jdbc.Driver
 
@@ -52,7 +52,7 @@ logging:
 
 ###################### ueditor ########################
 ue:
-  physical-path: E:/upload/ #存储文件的绝对路径 必须使用标准路径"/"作为分隔符
+  physical-path: ${UPLOAD_PATH:/upload/} #存储文件的绝对路径 必须使用标准路径"/"作为分隔符
   config-file: static/ueditor/jsp/config.json #resources目录下配置文件的位置
   server-url: /ueditor.do #服务器统一请求接口路径
   url-prefix: /file/ #"/"结尾
@@ -65,7 +65,7 @@ pagehelper:
 
 jasypt:
   encryptor:
-    password: ${JASYPT_ENCRYPTOR_PASSWORD}
+    password: ${JASYPT_ENCRYPTOR_PASSWORD:}
     algorithm: PBEWithMD5AndDES
     iv-generator-classname: org.jasypt.iv.NoIvGenerator
 
