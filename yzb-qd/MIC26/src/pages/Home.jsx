@@ -22,34 +22,48 @@ import api from '../utils/api';
  */
 const Home = () => {
   const navigate = useNavigate();
+  const [inventorySummary, setInventorySummary] = useState({
+    totalAmount: 0,
+    totalQuantity: 0,
+    monthInbound: 0,
+    monthConsumption: 0,
+  });
+  const [expiringItems, setExpiringItems] = useState([]);
+  const [expiredItems, setExpiredItems] = useState([]);
   const [qualificationWarningData, setQualificationWarningData] = useState([]);
+
+  const formatNumber = (value) => Number(value || 0).toLocaleString('zh-CN');
+  const toNumber = (value) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+  };
 
   // 库存统计数据
   const inventoryData = [
     { 
       name: '库存总金额', 
-      value: '1,234,567', 
+      value: formatNumber(inventorySummary.totalAmount), 
       icon: <DollarOutlined />, 
       color: '#667eea',
       bgColor: '#f0f4ff'
     },
     { 
       name: '库存总数量', 
-      value: '8,912', 
+      value: formatNumber(inventorySummary.totalQuantity), 
       icon: <DatabaseOutlined />, 
       color: '#52c41a',
       bgColor: '#f6ffed'
     },
     { 
       name: '本月入库', 
-      value: '3,456', 
+      value: formatNumber(inventorySummary.monthInbound), 
       icon: <InboxOutlined />, 
       color: '#faad14',
       bgColor: '#fffbe6'
     },
     { 
       name: '本月消耗', 
-      value: '2,789', 
+      value: formatNumber(inventorySummary.monthConsumption), 
       icon: <UnorderedListOutlined />, 
       color: '#f5222d',
       bgColor: '#fff1f0'
@@ -115,7 +129,78 @@ const Home = () => {
     };
   }, [styles]);
 
+  const getQualificationWarningStatus = (expiryDate) => {
+    const today = moment().startOf('day');
+    const targetDate = moment(expiryDate).startOf('day');
+    const daysUntilExpiry = targetDate.diff(today, 'days');
+
+    if (daysUntilExpiry < 0) {
+      return { status: '已过期', daysUntilExpiry };
+    }
+    if (daysUntilExpiry <= 90) {
+      return { status: '即将过期', daysUntilExpiry };
+    }
+    return { status: '有效', daysUntilExpiry };
+  };
+
   useEffect(() => {
+    const getRecordList = (pageData) => {
+      if (!pageData || typeof pageData !== 'object') {
+        return [];
+      }
+      if (Array.isArray(pageData.records)) {
+        return pageData.records;
+      }
+      if (Array.isArray(pageData.list)) {
+        return pageData.list;
+      }
+      return [];
+    };
+
+    const getRecordTotal = (pageData, recordsLength) => {
+      const total = Number(pageData?.total ?? pageData?.count ?? recordsLength ?? 0);
+      return Number.isFinite(total) ? total : recordsLength;
+    };
+
+    const fetchPagedRecords = async (url, params = {}, maxPages = 20) => {
+      const pageSize = Number(params.pageSize || 200);
+      const firstResp = await api.get(url, { ...params, pageNum: 1, pageSize });
+      if (firstResp?.code !== 1 || !firstResp.data) {
+        return [];
+      }
+
+      const firstRecords = getRecordList(firstResp.data);
+      const total = getRecordTotal(firstResp.data, firstRecords.length);
+      const totalPages = Math.min(Math.ceil(total / pageSize), maxPages);
+      const records = [...firstRecords];
+
+      for (let pageNum = 2; pageNum <= totalPages; pageNum += 1) {
+        const pageResp = await api.get(url, { ...params, pageNum, pageSize });
+        if (pageResp?.code !== 1 || !pageResp.data) {
+          break;
+        }
+        records.push(...getRecordList(pageResp.data));
+      }
+
+      return records;
+    };
+
+    const getInventoryQuantity = (item) => toNumber(item.currentStock ?? item.stockQuantity ?? item.quantity);
+
+    const getInventoryPrice = (item) => toNumber(item.purchasePrice ?? item.unitPrice);
+
+    const mapInventoryToHomeRow = (item, daysLeft) => ({
+      key: String(item.id ?? `${item.materialCode || item.materialName || 'item'}-${item.batchNumber || ''}`),
+      name: item.materialName || '-',
+      specification: item.specification || item.model || '-',
+      warehouse: item.warehouse || item.inventoryName || item.warehouseName || '-',
+      shelf: item.shelf || item.location || '-',
+      productionDate: item.productionDate || '-',
+      expirationDate: item.expiryDate || '-',
+      daysLeft,
+      daysOverdue: Math.abs(daysLeft),
+    });
+
     const loadQualificationWarnings = async () => {
       try {
         const response = await api.get('/api/scm/suppliers/qualifications', {
@@ -146,39 +231,100 @@ const Home = () => {
 
         setQualificationWarningData(rows);
       } catch (error) {
-        console.error('首页资质预警加载失败:', error);
         setQualificationWarningData([]);
       }
     };
 
+    const loadInventoryOverview = async () => {
+      try {
+        const inventoryRecords = await fetchPagedRecords('/api/scm/inventory', { pageSize: 200 });
+        const today = moment().startOf('day');
+
+        const overview = inventoryRecords.reduce(
+          (acc, item) => {
+            const quantity = getInventoryQuantity(item);
+            const unitPrice = getInventoryPrice(item);
+            acc.totalQuantity += quantity;
+            acc.totalAmount += quantity * unitPrice;
+            return acc;
+          },
+          { totalAmount: 0, totalQuantity: 0 }
+        );
+
+        const expiringRows = [];
+        const expiredRows = [];
+
+        inventoryRecords.forEach((item) => {
+          if (!item.expiryDate) {
+            return;
+          }
+          const daysLeft = moment(item.expiryDate).startOf('day').diff(today, 'days');
+          if (daysLeft >= 0 && daysLeft <= 90) {
+            expiringRows.push(mapInventoryToHomeRow(item, daysLeft));
+          }
+          if (daysLeft < 0) {
+            expiredRows.push(mapInventoryToHomeRow(item, daysLeft));
+          }
+        });
+
+        const monthStart = moment().startOf('month').format('YYYY-MM-DD');
+        const monthEnd = moment().endOf('month').format('YYYY-MM-DD');
+
+        const [stockInRecords, stockOutRecords] = await Promise.all([
+          fetchPagedRecords('/api/scm/stock-in/items', { pageSize: 200 }),
+          fetchPagedRecords('/api/scm/stock-out/undo-list', {
+            pageSize: 200,
+            startDate: monthStart,
+            endDate: monthEnd,
+          }),
+        ]);
+
+        const monthInbound = stockInRecords.reduce((sum, item) => {
+          const time = item.createTime || item.updateTime || item.inboundDate;
+          if (!time || !moment(time).isSame(moment(), 'month')) {
+            return sum;
+          }
+          return sum + toNumber(item.stockInQuantity ?? item.orderQuantity);
+        }, 0);
+
+        const monthConsumption = stockOutRecords.reduce(
+          (sum, item) => sum + toNumber(item.outboundQuantity ?? item.quantity),
+          0
+        );
+
+        setInventorySummary({
+          totalAmount: overview.totalAmount,
+          totalQuantity: overview.totalQuantity,
+          monthInbound,
+          monthConsumption,
+        });
+
+        setExpiringItems(
+          expiringRows
+            .sort((left, right) => (left.daysLeft ?? 0) - (right.daysLeft ?? 0))
+            .slice(0, 4)
+        );
+
+        setExpiredItems(
+          expiredRows
+            .sort((left, right) => (right.daysOverdue ?? 0) - (left.daysOverdue ?? 0))
+            .slice(0, 4)
+        );
+      } catch (error) {
+        setInventorySummary({
+          totalAmount: 0,
+          totalQuantity: 0,
+          monthInbound: 0,
+          monthConsumption: 0,
+        });
+        setExpiringItems([]);
+        setExpiredItems([]);
+      }
+    };
+
     loadQualificationWarnings();
+    loadInventoryOverview();
   }, []);
-
-  // 近效期商品数据
-  const expiringItems = [
-    { key: '1', name: '一次性注射器', specification: '10ml', warehouse: '仓库1', shelf: 'A1-01', productionDate: '2024-01-15', expirationDate: '2024-03-15', daysLeft: 15 },
-    { key: '2', name: '输液器', specification: '500ml', warehouse: '仓库2', shelf: 'B2-03', productionDate: '2024-01-20', expirationDate: '2024-03-20', daysLeft: 20 },
-    { key: '3', name: '医用棉签', specification: '100支/包', warehouse: '仓库1', shelf: 'C3-05', productionDate: '2024-02-01', expirationDate: '2024-03-25', daysLeft: 25 },
-  ];
-
-  // 过期商品数据
-  const expiredItems = [
-    { key: '1', name: '酒精棉球', specification: '50g/瓶', warehouse: '仓库3', shelf: 'D4-02', productionDate: '2023-11-20', expirationDate: '2024-02-10', daysOverdue: 10 },
-  ];
-
-  const getQualificationWarningStatus = (expiryDate) => {
-    const today = moment().startOf('day');
-    const targetDate = moment(expiryDate).startOf('day');
-    const daysUntilExpiry = targetDate.diff(today, 'days');
-
-    if (daysUntilExpiry < 0) {
-      return { status: '已过期', daysUntilExpiry };
-    }
-    if (daysUntilExpiry <= 90) {
-      return { status: '即将过期', daysUntilExpiry };
-    }
-    return { status: '有效', daysUntilExpiry };
-  };
 
   /**
    * 近效期商品表格列配置
