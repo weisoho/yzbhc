@@ -1,21 +1,57 @@
 /*
  Navicat Premium Data Transfer
 
- Source Server         : 111.229.113.226
+ Source Server         : 114.132.251.50
  Source Server Type    : MySQL
  Source Server Version : 80045 (8.0.45)
- Source Host           : 111.229.113.226:53302
+ Source Host           : 114.132.251.50:33066
  Source Schema         : yzb
 
  Target Server Type    : MySQL
  Target Server Version : 80045 (8.0.45)
  File Encoding         : 65001
 
- Date: 30/03/2026 07:31:52
+ Date: 30/04/2026 22:51:54
 */
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for adverse_event_record
+-- ----------------------------
+DROP TABLE IF EXISTS `adverse_event_record`;
+CREATE TABLE `adverse_event_record`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `event_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '事件编号',
+  `patient_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '患者姓名',
+  `gender` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '性别',
+  `age` int NULL DEFAULT NULL COMMENT '年龄',
+  `patient_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '患者/条码号',
+  `hospitalization_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '住院号',
+  `involved_project` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '涉及项目',
+  `event_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '事件名称',
+  `occurrence_date` datetime NOT NULL COMMENT '发生日期',
+  `event_summary` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '事件概述',
+  `investigation_situation` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '调查情况',
+  `event_analysis` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '事件分析',
+  `event_summary_detail` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '事件总结',
+  `handling_result` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '处理结果',
+  `rectification_measures` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '整改措施',
+  `attachment` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '附件',
+  `recorder_id` int NULL DEFAULT NULL COMMENT '登记人ID',
+  `recorder_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '登记人',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `delete_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标记 0正常 1删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_adverse_event_no`(`event_no` ASC) USING BTREE,
+  INDEX `idx_adverse_event_date`(`occurrence_date` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '医疗器械不良事件登记' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of adverse_event_record
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for asset
@@ -49,6 +85,45 @@ CREATE TABLE `asset`  (
 
 -- ----------------------------
 -- Records of asset
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for asset_change_record
+-- ----------------------------
+DROP TABLE IF EXISTS `asset_change_record`;
+CREATE TABLE `asset_change_record`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `change_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '变更单号',
+  `asset_id` int NOT NULL COMMENT '资产ID',
+  `asset_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '资产编码',
+  `asset_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '资产名称',
+  `change_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '变更类型',
+  `old_value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '原值',
+  `new_value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '新值',
+  `change_reason` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '变更原因',
+  `change_date` datetime NULL DEFAULT NULL COMMENT '计划变更日期',
+  `applicant_id` int NULL DEFAULT NULL COMMENT '申请人ID',
+  `applicant_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '申请人',
+  `apply_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '申请时间',
+  `audit_status` int NOT NULL DEFAULT 1 COMMENT '审核状态 1待审核 2已通过 3已驳回 4已撤销',
+  `auditor_id` int NULL DEFAULT NULL COMMENT '审核人ID',
+  `auditor_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '审核人',
+  `audit_date` datetime NULL DEFAULT NULL COMMENT '审核时间',
+  `audit_remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '审核意见',
+  `execute_status` int NOT NULL DEFAULT 0 COMMENT '执行状态 0未执行 1处理中 2已完成',
+  `executor_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '执行人',
+  `execute_date` datetime NULL DEFAULT NULL COMMENT '执行时间',
+  `scrap_value` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '报废净值/残值',
+  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
+  `delete_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标记 0正常 1删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_asset_change_asset`(`asset_id` ASC) USING BTREE,
+  INDEX `idx_asset_change_type`(`change_type` ASC) USING BTREE,
+  INDEX `idx_asset_change_status`(`audit_status` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '资产报废及变更记录' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of asset_change_record
 -- ----------------------------
 
 -- ----------------------------
@@ -139,7 +214,7 @@ CREATE TABLE `asset_transfer_record`  (
   `inventory_id` int NOT NULL COMMENT '仓库id',
   `inventory_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '仓库名字',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '资产调拨明细' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '资产调拨明细' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of asset_transfer_record
@@ -164,6 +239,35 @@ CREATE TABLE `asset_type`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for asset_warning_record
+-- ----------------------------
+DROP TABLE IF EXISTS `asset_warning_record`;
+CREATE TABLE `asset_warning_record`  (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `asset_id` int NOT NULL COMMENT '资产ID',
+  `asset_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '资产编码',
+  `asset_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '资产名称',
+  `warning_type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '预警类型',
+  `warning_level` varchar(16) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '预警级别',
+  `warning_date` datetime NULL DEFAULT NULL COMMENT '预警日期',
+  `due_date` datetime NULL DEFAULT NULL COMMENT '到期日期',
+  `days_left` int NULL DEFAULT NULL COMMENT '剩余天数',
+  `status` int NOT NULL DEFAULT 1 COMMENT '处理状态 1待处理 2处理中 3已完成',
+  `description` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '预警描述',
+  `action_required` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '建议措施',
+  `handler_id` int NULL DEFAULT NULL COMMENT '处理人ID',
+  `handler_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '处理人',
+  `handle_time` datetime NULL DEFAULT NULL COMMENT '处理时间',
+  `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_asset_warning`(`asset_id` ASC, `warning_type` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '资产预警处理记录' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of asset_warning_record
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for check_inventory
 -- ----------------------------
 DROP TABLE IF EXISTS `check_inventory`;
@@ -185,15 +289,49 @@ CREATE TABLE `check_inventory`  (
   `che_status` int NULL DEFAULT 0 COMMENT '1盘亏，2盘盈，0无差异',
   `che_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '盘点日期',
   PRIMARY KEY (`id`, `che_date`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_general_ci COMMENT = '盘点表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_general_ci COMMENT = '盘点表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of check_inventory
 -- ----------------------------
-INSERT INTO `check_inventory` VALUES (1, 'PD20260326101347927', 4, '医用手套', '2026-03-26 10:13:48', '2026-03-26 10:13:48', 0, 1, 'admin', 11, '药剂科', 0, 200, NULL, 0, '2026-03-26 10:14:32');
-INSERT INTO `check_inventory` VALUES (2, 'PD20260326101347597', 3, '一次性注射器', '2026-03-26 10:13:48', '2026-03-26 10:13:48', 0, 1, 'admin', 11, '药剂科', 0, 100, NULL, 0, '2026-03-26 10:14:32');
-INSERT INTO `check_inventory` VALUES (3, 'PD20260326101347444', 1, 'Disposable Syringe', '2026-03-26 10:13:48', '2026-03-26 10:13:48', 0, 1, 'admin', 11, '药剂科', 0, 200, NULL, 0, '2026-03-26 10:14:32');
-INSERT INTO `check_inventory` VALUES (4, 'PD20260326101347379', 2, 'Medical Mask', '2026-03-26 10:13:48', '2026-03-26 10:13:48', 0, 1, 'admin', 11, '药剂科', 0, 250, NULL, 0, '2026-03-26 10:14:32');
+
+-- ----------------------------
+-- Table structure for consumable_quality_issue
+-- ----------------------------
+DROP TABLE IF EXISTS `consumable_quality_issue`;
+CREATE TABLE `consumable_quality_issue`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `issue_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '问题编号',
+  `inventory_id` bigint NOT NULL COMMENT '库存ID',
+  `material_id` bigint NULL DEFAULT NULL COMMENT '物资ID',
+  `material_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '物资编码',
+  `material_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '物资名称',
+  `specification` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '规格',
+  `model` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '型号',
+  `registration_number` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '注册证号',
+  `manufacturer` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '生产厂家',
+  `supplier_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '供应商',
+  `batch_number` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '批号',
+  `production_date` date NULL DEFAULT NULL COMMENT '生产日期',
+  `expiry_date` date NULL DEFAULT NULL COMMENT '有效期',
+  `quantity` int NOT NULL COMMENT '问题数量',
+  `occurrence_date` datetime NOT NULL COMMENT '发生日期',
+  `issue_description` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '问题描述',
+  `attachment` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '附件',
+  `creator_id` int NULL DEFAULT NULL COMMENT '登记人ID',
+  `creator_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '登记人',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `delete_flag` tinyint NOT NULL DEFAULT 0 COMMENT '删除标记 0正常 1删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_quality_issue_no`(`issue_no` ASC) USING BTREE,
+  INDEX `idx_quality_issue_inventory`(`inventory_id` ASC) USING BTREE,
+  INDEX `idx_quality_issue_date`(`occurrence_date` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '耗材质量问题登记' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of consumable_quality_issue
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for sample_item
@@ -212,12 +350,11 @@ CREATE TABLE `sample_item`  (
   `is_charge` int NOT NULL DEFAULT 0 COMMENT '是否收费',
   `charge_code` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NULL DEFAULT NULL COMMENT '收费编码',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_general_ci COMMENT = '样本-项目管理' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_general_ci COMMENT = '样本-项目管理' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sample_item
 -- ----------------------------
-INSERT INTO `sample_item` VALUES (1, '测试', '11111', 1, '111', 1, NULL, '2026-03-24 17:01:50', '2026-03-24 17:01:50', 0, NULL);
 
 -- ----------------------------
 -- Table structure for sample_man
@@ -237,7 +374,7 @@ CREATE TABLE `sample_man`  (
   `item_id` int NOT NULL COMMENT '项目ID',
   `item_name` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NULL DEFAULT NULL COMMENT '项目名字',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_general_ci COMMENT = '样本量管理' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_general_ci COMMENT = '样本量管理' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sample_man
@@ -269,19 +406,14 @@ CREATE TABLE `scm_exception_order`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_scm_exception_order_no`(`order_no` ASC) USING BTREE,
   INDEX `idx_scm_exception_order_status`(`status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '异常订单' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '异常订单' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_exception_order
 -- ----------------------------
-INSERT INTO `scm_exception_order` VALUES (1, 'PO202403180001', 10, '上海医疗器械有限公司', 'SUP-EDIT-001', '手术室', '管理员', '管理员', '13100001111', '2026-03-18', '2026-03-21', NULL, '待验收', '到货数量不足，需补货', NULL, 255.00, '2026-03-18 20:17:32', '2026-03-18 20:26:17');
-INSERT INTO `scm_exception_order` VALUES (3, 'PO202403180002', 11, '北京康健医药有限公司', 'SUP-TEST-002', '内科', '管理员', '管理员', '13900139000', '2026-03-18', '2026-03-23', NULL, '超时未验收', NULL, '供应商未按期送达', 15.00, '2026-03-18 20:31:37', NULL);
-INSERT INTO `scm_exception_order` VALUES (4, 'PO202603180001', 9, '上海医疗器械有限公司', 'SUP-EX-R-9', '1', '张数', '张数', '13800138000', '2026-03-18', '2026-03-21', NULL, '已拒收', '到货数量不足，需补货', NULL, 25.50, '2026-03-18 20:35:13', NULL);
-INSERT INTO `scm_exception_order` VALUES (5, 'PO202603170001', 8, '昆明有限公司', 'SUP-EX-R-8', '1', '李二', '李二', '13800138000', '2026-03-17', '2026-03-20', NULL, '已拒收', '到货数量不足，需补货', NULL, 2.50, '2026-03-18 20:35:13', NULL);
-INSERT INTO `scm_exception_order` VALUES (6, 'PO-20260310-0003', 7, '昆明有限公司', 'SUP-EX-R-7', '急诊科', '王五', '王五', '13800138000', '2026-03-10', '2026-03-13', NULL, '已拒收', '到货数量不足，需补货', NULL, 0.00, '2026-03-18 20:35:13', NULL);
-INSERT INTO `scm_exception_order` VALUES (7, 'PO-20260305-0002', 6, '上海医疗器械有限公司', 'SUP-EX-R-6', '外科', '李四', '李四', '13800138000', '2026-03-05', '2026-03-08', NULL, '已拒收', '到货数量不足，需补货', NULL, 0.00, '2026-03-18 20:35:13', NULL);
-INSERT INTO `scm_exception_order` VALUES (8, 'PO-20260301-0001', 5, '上海医疗器械有限公司', 'SUP-EX-R-5', '内科', '张三', '张三', '13800138000', '2026-03-01', '2026-03-04', NULL, '已拒收', '到货数量不足，需补货', NULL, 0.00, '2026-03-18 20:35:13', NULL);
-INSERT INTO `scm_exception_order` VALUES (11, 'PO20240001', 4, 'Shanghai Medical Device Co.', 'SUP-EX-T-4', 'Head Office', 'admin', 'admin', '13900139000', '2026-03-17', '2026-03-22', NULL, '超时未验收', NULL, '供应商未按期送达', 1250.00, '2026-03-18 20:35:13', NULL);
+INSERT INTO `scm_exception_order` VALUES (1, 'PO202604300002', 2, '南昌云晟健康科技有限公司', 'SUP202604300001', '11', '管理员', '管理员', NULL, '2026-04-30', '2026-05-03', '2026-04-30', '待验收', '部分到货', NULL, 475000.00, '2026-04-30 22:14:06', '2026-04-30 22:15:09');
+INSERT INTO `scm_exception_order` VALUES (2, 'PO202604300001', 1, '南昌云晟健康科技有限公司', 'SUP202604300001', '11', '管理员', '管理员', NULL, '2026-04-30', '2026-05-03', '2026-04-30', '待验收', '部分到货', NULL, 475000.00, '2026-04-30 22:14:21', '2026-04-30 22:15:04');
+INSERT INTO `scm_exception_order` VALUES (3, 'PO202604300004', 4, '南昌云晟健康科技有限公司', 'SUP202604300001', '11', '管理员', '管理员', NULL, '2026-04-30', '2026-05-03', '2026-04-30', '待验收', '部分到货', NULL, 475000.00, '2026-04-30 22:20:12', '2026-04-30 22:20:25');
 
 -- ----------------------------
 -- Table structure for scm_inventory
@@ -326,10 +458,6 @@ CREATE TABLE `scm_inventory`  (
 -- ----------------------------
 -- Records of scm_inventory
 -- ----------------------------
-INSERT INTO `scm_inventory` VALUES (1, 1, 'MAT001', 'Disposable Syringe', 'Medical Device', '1ml', 'SYR-001', 'Main Warehouse', 'A1-01', 'BATCH001', '2026-03-17', '2028-03-17', '100pcs/box', 'pc', 2.50, 200, 50, 500, 90, 'SH20200001', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'Normal', 'No', '2026-03-17', '2026-03-17 17:47:51', '2026-03-25 15:05:27', 11, 1);
-INSERT INTO `scm_inventory` VALUES (2, 2, 'MAT002', 'Medical Mask', 'Medical Device', 'N95', 'MASK-001', 'Main Warehouse', 'A1-02', 'BATCH002', '2026-03-17', '2028-03-17', '50pcs/box', 'pc', 3.00, 250, 50, 500, 90, 'SH20200001', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'Normal', 'No', '2026-03-17', '2026-03-17 17:47:51', '2026-03-25 15:05:30', 11, 1);
-INSERT INTO `scm_inventory` VALUES (3, 21, 'MAT202603180001', '一次性注射器', '耗材', '2ml', '2ml', '仓库2', '默认货位', 'TB20260317-001', '2026-02-15', '2027-03-17', '1', '支', 1.00, 100, 10, 1000, 90, 'REG-2ML-001', '上海医疗器械有限公司', '上海医疗器械厂', 'normal', NULL, '2026-03-18', '2026-03-18 19:34:09', '2026-03-18 19:34:09', NULL, NULL);
-INSERT INTO `scm_inventory` VALUES (4, 22, 'MAT202603180002', '医用手套', '耗材', '中号', '中号', '仓库2', '默认货位', 'TB20260317-002', '2026-02-15', '2027-03-17', '1', '副', 2.00, 200, 10, 1000, 90, 'REG-GLV-001', '上海医疗器械有限公司', '上海医疗器械厂', 'normal', NULL, '2026-03-18', '2026-03-18 19:48:41', '2026-03-18 19:49:14', NULL, NULL);
 
 -- ----------------------------
 -- Table structure for scm_inventory_transaction
@@ -358,11 +486,6 @@ CREATE TABLE `scm_inventory_transaction`  (
 -- ----------------------------
 -- Records of scm_inventory_transaction
 -- ----------------------------
-INSERT INTO `scm_inventory_transaction` VALUES (1, 1, 1, 'MAT001', 'Disposable Syringe', 'BATCH001', 'Stock In', 200, 200, 'STKIN20240001', 'admin', 'Purchase stock in', '2026-03-17 17:47:51');
-INSERT INTO `scm_inventory_transaction` VALUES (2, 2, 2, 'MAT002', 'Medical Mask', 'BATCH002', 'Stock In', 250, 250, 'STKIN20240001', 'admin', 'Purchase stock in', '2026-03-17 17:47:51');
-INSERT INTO `scm_inventory_transaction` VALUES (3, 3, 21, 'MAT202603180001', '一次性注射器', 'TB20260317-001', '调拨入库', 100, 100, 'TR-20260317-0001', '???', '调拨验收入库', '2026-03-18 19:34:09');
-INSERT INTO `scm_inventory_transaction` VALUES (4, 4, 22, 'MAT202603180002', '医用手套', 'TB20260317-002', '调拨入库', 50, 50, 'TR-20260317-0001', '???', '调拨验收入库', '2026-03-18 19:48:41');
-INSERT INTO `scm_inventory_transaction` VALUES (5, 4, 22, 'MAT202603180002', '医用手套', 'TB20260317-002', '调拨入库', 150, 200, 'TR-20260317-0001', '???', '调拨验收入库', '2026-03-18 19:49:14');
 
 -- ----------------------------
 -- Table structure for scm_material
@@ -392,11 +515,12 @@ CREATE TABLE `scm_material`  (
   UNIQUE INDEX `uk_scm_material_unique`(`supplier_id` ASC, `qualification_id` ASC, `name` ASC, `specification` ASC, `model` ASC) USING BTREE,
   INDEX `idx_scm_material_supplier`(`supplier_id` ASC) USING BTREE,
   INDEX `idx_scm_material_status`(`status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 23 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '物资字典' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '物资字典' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_material
 -- ----------------------------
+INSERT INTO `scm_material` VALUES (1, '1', 'FT3', 'IVD', '4×1.5ml', '4×1.5ml', '1个测试', '只', 950.00, 1, '南昌云晟健康科技有限公司', 1, '国械注进20162404586', '罗氏诊断', '2-8', 'active', '2026-04-30 22:07:08', '2026-04-30 22:12:35');
 
 -- ----------------------------
 -- Table structure for scm_operation_log
@@ -417,94 +541,46 @@ CREATE TABLE `scm_operation_log`  (
   INDEX `idx_scm_operation_log_time`(`operation_time` ASC) USING BTREE,
   INDEX `idx_scm_operation_log_type`(`operation_type` ASC) USING BTREE,
   INDEX `idx_scm_operation_log_status`(`status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 84 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '操作日志' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 36 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '操作日志' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_operation_log
 -- ----------------------------
-INSERT INTO `scm_operation_log` VALUES (1, '2026-03-16 14:16:46', 'system', '维护', '新增供应商: 京康健医药有限公司', 'success', '0:0:0:0:0:0:0:1', '供应商维护', 'SUP202603160001', '2026-03-16 14:16:46');
-INSERT INTO `scm_operation_log` VALUES (2, '2026-03-16 16:04:16', 'system', '维护', '新增供应商资质: 上海医疗器械有限公司 / INSPECTION_REPORT', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '1', '2026-03-16 16:04:16');
-INSERT INTO `scm_operation_log` VALUES (3, '2026-03-16 16:13:33', 'system', '维护', '新增供应商资质: 上海医疗器械有限公司 / BUSINESS_LICENSE', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '1', '2026-03-16 16:13:33');
-INSERT INTO `scm_operation_log` VALUES (4, '2026-03-16 17:16:10', 'system', '维护', '更新供应商: 上海医疗器械有限公司 -> 上海医疗器械有限公司', 'success', '0:0:0:0:0:0:0:1', '供应商维护', NULL, '2026-03-16 17:16:10');
-INSERT INTO `scm_operation_log` VALUES (5, '2026-03-16 17:16:15', 'system', '删除', '删除供应商: 京康健医药有限公司', 'success', '0:0:0:0:0:0:0:1', '供应商维护', 'SUP202603160001', '2026-03-16 17:16:15');
-INSERT INTO `scm_operation_log` VALUES (6, '2026-03-16 17:16:51', 'system', '维护', '更新供应商: 北京康健医药有限公司 -> 北京康健医药有限公司', 'success', '0:0:0:0:0:0:0:1', '供应商维护', NULL, '2026-03-16 17:16:51');
-INSERT INTO `scm_operation_log` VALUES (7, '2026-03-16 17:34:33', 'system', '删除', '删除供应商资质: 1', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '1', '2026-03-16 17:34:33');
-INSERT INTO `scm_operation_log` VALUES (8, '2026-03-16 17:58:56', 'system', '维护', '新增供应商: 1', 'success', '0:0:0:0:0:0:0:1', '供应商维护', 'SUP202603160001', '2026-03-16 17:58:56');
-INSERT INTO `scm_operation_log` VALUES (9, '2026-03-16 17:59:13', 'system', '删除', '删除供应商: 1', 'success', '0:0:0:0:0:0:0:1', '供应商维护', 'SUP202603160001', '2026-03-16 17:59:13');
-INSERT INTO `scm_operation_log` VALUES (10, '2026-03-16 18:06:27', 'system', '维护', '更新供应商资质: BUSINESS_LICENSE', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '913524356', '2026-03-16 18:06:27');
-INSERT INTO `scm_operation_log` VALUES (11, '2026-03-16 18:07:41', 'system', '维护', '更新供应商资质: INSPECTION_REPORT', 'success', '0:0:0:0:0:0:0:1', '供应商资质', 'INSP-2025002', '2026-03-16 18:07:41');
-INSERT INTO `scm_operation_log` VALUES (12, '2026-03-16 18:07:55', 'system', '维护', '更新供应商资质: INSPECTION_REPORT', 'success', '0:0:0:0:0:0:0:1', '供应商资质', 'INSP-2025001', '2026-03-16 18:07:55');
-INSERT INTO `scm_operation_log` VALUES (13, '2026-03-16 18:09:04', 'system', '维护', '新增供应商资质: 上海医疗器械有限公司 / INSPECTION_REPORT', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '122312', '2026-03-16 18:09:04');
-INSERT INTO `scm_operation_log` VALUES (14, '2026-03-16 18:13:35', 'system', '维护', '更新供应商资质: BUSINESS_LICENSE', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '913524356', '2026-03-16 18:13:35');
-INSERT INTO `scm_operation_log` VALUES (15, '2026-03-16 18:14:08', 'system', '维护', '更新供应商资质: BUSINESS_CERTIFICATE', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '1111111111111', '2026-03-16 18:14:08');
-INSERT INTO `scm_operation_log` VALUES (16, '2026-03-16 18:15:49', 'system', '维护', '新增供应商资质: 上海医疗器械有限公司 / INSPECTION_REPORT', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '12123124', '2026-03-16 18:15:49');
-INSERT INTO `scm_operation_log` VALUES (17, '2026-03-16 18:17:13', 'system', '维护', '新增供应商: 南昌有限公司', 'success', '0:0:0:0:0:0:0:1', '供应商维护', 'SUP202603160001', '2026-03-16 18:17:13');
-INSERT INTO `scm_operation_log` VALUES (18, '2026-03-16 18:19:21', 'system', '维护', '新增供应商资质: 上海医疗器械有限公司 / INSPECTION_REPORT', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '1213', '2026-03-16 18:19:21');
-INSERT INTO `scm_operation_log` VALUES (19, '2026-03-16 18:26:36', 'system', '维护', '新增供应商资质: 南昌有限公司 / INSPECTION_REPORT', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '1', '2026-03-16 18:26:36');
-INSERT INTO `scm_operation_log` VALUES (20, '2026-03-16 18:28:08', 'system', '删除', '删除供应商资质: 1213', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '1213', '2026-03-16 18:28:08');
-INSERT INTO `scm_operation_log` VALUES (21, '2026-03-16 18:40:30', 'system', '维护', '新增供应商资质: 南昌有限公司 / INSPECTION_REPORT', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '17967464', '2026-03-16 18:40:30');
-INSERT INTO `scm_operation_log` VALUES (22, '2026-03-16 18:48:46', 'system', '维护', '更新供应商资质: INSPECTION_REPORT', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '17967464', '2026-03-16 18:48:46');
-INSERT INTO `scm_operation_log` VALUES (23, '2026-03-16 18:48:59', 'system', '维护', '更新供应商资质: INSPECTION_REPORT', 'success', '0:0:0:0:0:0:0:1', '供应商资质', 'JC20230001', '2026-03-16 18:48:59');
-INSERT INTO `scm_operation_log` VALUES (24, '2026-03-16 20:39:45', 'system', '维护', '更新供应商资质: BUSINESS_LICENSE', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '913524356', '2026-03-16 20:39:45');
-INSERT INTO `scm_operation_log` VALUES (25, '2026-03-16 20:40:14', 'system', '维护', '新增供应商资质: 上海医疗器械有限公司 / BUSINESS_LICENSE', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '53623452', '2026-03-16 20:40:14');
-INSERT INTO `scm_operation_log` VALUES (26, '2026-03-16 20:55:11', 'system', '维护', '新增供应商资质: 上海医疗器械有限公司 / BUSINESS_LICENSE', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '2222222222', '2026-03-16 20:55:11');
-INSERT INTO `scm_operation_log` VALUES (27, '2026-03-16 21:15:49', 'system', '维护', '新增供应商: 昆明有限公司', 'success', '0:0:0:0:0:0:0:1', '供应商维护', 'SUP202603160002', '2026-03-16 21:15:49');
-INSERT INTO `scm_operation_log` VALUES (28, '2026-03-16 21:38:05', 'system', '维护', '新增供应商资质: 昆明有限公司 / BUSINESS_LICENSE', 'success', '0:0:0:0:0:0:0:1', '供应商资质', '666666', '2026-03-16 21:38:05');
-INSERT INTO `scm_operation_log` VALUES (29, '2026-03-17 23:31:51', '李二', '新增', '创建采购单: PO202603170001', 'success', '0:0:0:0:0:0:0:1', '采购管理', 'PO202603170001', '2026-03-17 23:31:51');
-INSERT INTO `scm_operation_log` VALUES (30, '2026-03-17 23:31:51', '李二', '提交', '提交采购单: PO202603170001', 'success', '0:0:0:0:0:0:0:1', '采购管理', 'PO202603170001', '2026-03-17 23:31:51');
-INSERT INTO `scm_operation_log` VALUES (31, '2026-03-17 23:49:13', 'system', '新增', '新增物资字典: 1', 'success', '0:0:0:0:0:0:0:1', '物资字典', '1', '2026-03-17 23:49:13');
-INSERT INTO `scm_operation_log` VALUES (32, '2026-03-18 16:30:09', 'system', '删除', '删除物资字典: 1', 'success', '0:0:0:0:0:0:0:1', '物资字典', '1', '2026-03-18 16:30:09');
-INSERT INTO `scm_operation_log` VALUES (33, '2026-03-18 16:30:51', 'system', '新增', '新增物资字典: 1', 'success', '0:0:0:0:0:0:0:1', '物资字典', '1', '2026-03-18 16:30:51');
-INSERT INTO `scm_operation_log` VALUES (34, '2026-03-18 16:30:59', 'system', '删除', '删除物资字典: 1', 'success', '0:0:0:0:0:0:0:1', '物资字典', '1', '2026-03-18 16:30:59');
-INSERT INTO `scm_operation_log` VALUES (35, '2026-03-18 16:48:44', '张数', '新增', '创建采购单: PO202603180001', 'success', '0:0:0:0:0:0:0:1', '采购管理', 'PO202603180001', '2026-03-18 16:48:44');
-INSERT INTO `scm_operation_log` VALUES (36, '2026-03-18 16:48:44', '张数', '提交', '提交采购单: PO202603180001', 'success', '0:0:0:0:0:0:0:1', '采购管理', 'PO202603180001', '2026-03-18 16:48:44');
-INSERT INTO `scm_operation_log` VALUES (37, '2026-03-18 20:25:56', '管理员', '删除', '删除异常订单: PO202403180002', 'warning', '127.0.0.1', '异常订单', 'PO202403180002', '2026-03-18 20:25:56');
-INSERT INTO `scm_operation_log` VALUES (38, '2026-03-18 20:26:17', '管理员', '提交', '重新提交异常订单: PO202403180001', 'success', '127.0.0.1', '异常订单', 'PO202403180001', '2026-03-18 20:26:17');
-INSERT INTO `scm_operation_log` VALUES (39, '2026-03-18 20:56:43', '李', '新增', '创建采购单: PO202603180002', 'success', '0:0:0:0:0:0:0:1', '采购管理', 'PO202603180002', '2026-03-18 20:56:43');
-INSERT INTO `scm_operation_log` VALUES (40, '2026-03-18 20:56:43', '李', '提交', '提交采购单: PO202603180002', 'success', '0:0:0:0:0:0:0:1', '采购管理', 'PO202603180002', '2026-03-18 20:56:43');
-INSERT INTO `scm_operation_log` VALUES (41, '2026-03-18 21:08:46', 'admin', '审核', '通过采购单: PO202603180002', 'success', '0:0:0:0:0:0:0:1', '采购审核', 'PO202603180002', '2026-03-18 21:08:46');
-INSERT INTO `scm_operation_log` VALUES (42, '2026-03-18 21:39:46', '无', '新增', '创建采购单: PO202603180003', 'success', '0:0:0:0:0:0:0:1', '采购管理', 'PO202603180003', '2026-03-18 21:39:46');
-INSERT INTO `scm_operation_log` VALUES (43, '2026-03-18 22:01:03', 'admin', '提交', '提交采购单: PO202603180003', 'success', '0:0:0:0:0:0:0:1', '采购管理', 'PO202603180003', '2026-03-18 22:01:03');
-INSERT INTO `scm_operation_log` VALUES (44, '2026-03-26 10:45:25', '测试', '新增', '创建采购单: PO202603260001', 'success', '0:0:0:0:0:0:0:1', '采购管理', 'PO202603260001', '2026-03-26 10:45:25');
-INSERT INTO `scm_operation_log` VALUES (45, '2026-03-26 10:45:25', '测试', '提交', '提交采购单: PO202603260001', 'success', '0:0:0:0:0:0:0:1', '采购管理', 'PO202603260001', '2026-03-26 10:45:25');
-INSERT INTO `scm_operation_log` VALUES (46, '2026-03-26 10:45:26', '测试', '新增', '创建采购单: PO202603260002', 'success', '0:0:0:0:0:0:0:1', '采购管理', 'PO202603260002', '2026-03-26 10:45:26');
-INSERT INTO `scm_operation_log` VALUES (47, '2026-03-26 10:45:26', '测试', '提交', '提交采购单: PO202603260002', 'success', '0:0:0:0:0:0:0:1', '采购管理', 'PO202603260002', '2026-03-26 10:45:26');
-INSERT INTO `scm_operation_log` VALUES (48, '2026-03-26 10:45:47', '管理员', '审核', '通过采购单: PO202603260002', 'success', '0:0:0:0:0:0:0:1', '采购审核', 'PO202603260002', '2026-03-26 10:45:47');
-INSERT INTO `scm_operation_log` VALUES (49, '2026-03-26 10:45:51', '管理员', '审核', '驳回采购单: PO202603260001', 'warning', '0:0:0:0:0:0:0:1', '采购审核', 'PO202603260001', '2026-03-26 10:45:51');
-INSERT INTO `scm_operation_log` VALUES (50, '2026-03-26 10:45:57', '管理员', '审核', '通过采购单: PO202603180003', 'success', '0:0:0:0:0:0:0:1', '采购审核', 'PO202603180003', '2026-03-26 10:45:57');
-INSERT INTO `scm_operation_log` VALUES (51, '2026-03-26 10:45:57', '管理员', '审核', '通过采购单: PO202603180001', 'success', '0:0:0:0:0:0:0:1', '采购审核', 'PO202603180001', '2026-03-26 10:45:57');
-INSERT INTO `scm_operation_log` VALUES (52, '2026-03-26 10:45:58', '管理员', '审核', '通过采购单: PO202603170001', 'success', '0:0:0:0:0:0:0:1', '采购审核', 'PO202603170001', '2026-03-26 10:45:58');
-INSERT INTO `scm_operation_log` VALUES (53, '2026-03-26 21:45:56', 'system', '删除', '删除供应商资质: JC20230001', 'success', '112.96.35.179', '供应商资质', 'JC20230001', '2026-03-26 21:45:56');
-INSERT INTO `scm_operation_log` VALUES (54, '2026-03-26 21:45:58', 'system', '删除', '删除供应商资质: 17967464', 'success', '112.96.35.179', '供应商资质', '17967464', '2026-03-26 21:45:58');
-INSERT INTO `scm_operation_log` VALUES (55, '2026-03-26 21:46:00', 'system', '删除', '删除供应商资质: 12123124', 'success', '112.96.35.179', '供应商资质', '12123124', '2026-03-26 21:46:00');
-INSERT INTO `scm_operation_log` VALUES (56, '2026-03-26 21:46:02', 'system', '删除', '删除供应商资质: 122312', 'success', '112.96.35.179', '供应商资质', '122312', '2026-03-26 21:46:02');
-INSERT INTO `scm_operation_log` VALUES (57, '2026-03-26 21:46:04', 'system', '删除', '删除供应商资质: INSP-2025001', 'success', '112.96.35.179', '供应商资质', 'INSP-2025001', '2026-03-26 21:46:04');
-INSERT INTO `scm_operation_log` VALUES (58, '2026-03-26 21:46:07', 'system', '删除', '删除供应商资质: INSP-2025002', 'success', '112.96.35.179', '供应商资质', 'INSP-2025002', '2026-03-26 21:46:07');
-INSERT INTO `scm_operation_log` VALUES (59, '2026-03-26 21:46:14', 'system', '删除', '删除供应商资质: 666666', 'success', '112.96.35.179', '供应商资质', '666666', '2026-03-26 21:46:14');
-INSERT INTO `scm_operation_log` VALUES (60, '2026-03-26 21:46:16', 'system', '删除', '删除供应商资质: 2222222222', 'success', '112.96.35.179', '供应商资质', '2222222222', '2026-03-26 21:46:16');
-INSERT INTO `scm_operation_log` VALUES (61, '2026-03-26 21:46:19', 'system', '删除', '删除供应商资质: 53623452', 'success', '112.96.35.179', '供应商资质', '53623452', '2026-03-26 21:46:19');
-INSERT INTO `scm_operation_log` VALUES (62, '2026-03-26 21:46:21', 'system', '删除', '删除供应商资质: 913524356', 'success', '112.96.35.179', '供应商资质', '913524356', '2026-03-26 21:46:21');
-INSERT INTO `scm_operation_log` VALUES (63, '2026-03-26 21:46:36', 'system', '删除', '删除供应商资质: 1111111111111', 'success', '112.96.35.179', '供应商资质', '1111111111111', '2026-03-26 21:46:36');
-INSERT INTO `scm_operation_log` VALUES (64, '2026-03-26 21:46:52', 'system', '删除', '删除供应商: 上海医疗器械有限公司', 'success', '112.96.35.179', '供应商维护', NULL, '2026-03-26 21:46:52');
-INSERT INTO `scm_operation_log` VALUES (65, '2026-03-26 21:46:54', 'system', '删除', '删除供应商: 北京康健医药有限公司', 'success', '112.96.35.179', '供应商维护', NULL, '2026-03-26 21:46:54');
-INSERT INTO `scm_operation_log` VALUES (66, '2026-03-26 21:46:56', 'system', '删除', '删除供应商: 南昌有限公司', 'success', '112.96.35.179', '供应商维护', 'SUP202603160001', '2026-03-26 21:46:56');
-INSERT INTO `scm_operation_log` VALUES (67, '2026-03-26 21:46:57', 'system', '删除', '删除供应商: 昆明有限公司', 'success', '112.96.35.179', '供应商维护', 'SUP202603160002', '2026-03-26 21:46:57');
-INSERT INTO `scm_operation_log` VALUES (68, '2026-03-26 21:47:20', 'system', '删除', '删除物资字典: 体温计', 'success', '112.96.35.179', '物资字典', 'MAT009', '2026-03-26 21:47:20');
-INSERT INTO `scm_operation_log` VALUES (69, '2026-03-26 21:47:22', 'system', '删除', '删除物资字典: 棉签', 'success', '112.96.35.179', '物资字典', 'MAT010', '2026-03-26 21:47:22');
-INSERT INTO `scm_operation_log` VALUES (70, '2026-03-26 21:47:24', 'system', '删除', '删除物资字典: Disposable Syringe', 'success', '112.96.35.179', '物资字典', 'MAT001', '2026-03-26 21:47:24');
-INSERT INTO `scm_operation_log` VALUES (71, '2026-03-26 21:47:26', 'system', '删除', '删除物资字典: 医用手套', 'success', '112.96.35.179', '物资字典', 'MAT202603180002', '2026-03-26 21:47:26');
-INSERT INTO `scm_operation_log` VALUES (72, '2026-03-26 21:47:27', 'system', '删除', '删除物资字典: 一次性注射器', 'success', '112.96.35.179', '物资字典', 'MAT202603180001', '2026-03-26 21:47:27');
-INSERT INTO `scm_operation_log` VALUES (73, '2026-03-26 21:47:28', 'system', '删除', '删除物资字典: 医用口罩', 'success', '112.96.35.179', '物资字典', 'MAT003', '2026-03-26 21:47:28');
-INSERT INTO `scm_operation_log` VALUES (74, '2026-03-26 21:47:30', 'system', '删除', '删除物资字典: 一次性手套', 'success', '112.96.35.179', '物资字典', 'MAT004', '2026-03-26 21:47:30');
-INSERT INTO `scm_operation_log` VALUES (75, '2026-03-26 21:47:33', 'system', '删除', '删除物资字典: 注射器', 'success', '112.96.35.179', '物资字典', 'MAT005', '2026-03-26 21:47:33');
-INSERT INTO `scm_operation_log` VALUES (76, '2026-03-26 21:47:34', 'system', '删除', '删除物资字典: 输液器', 'success', '112.96.35.179', '物资字典', 'MAT006', '2026-03-26 21:47:34');
-INSERT INTO `scm_operation_log` VALUES (77, '2026-03-26 21:47:36', 'system', '删除', '删除物资字典: 纱布', 'success', '112.96.35.179', '物资字典', 'MAT007', '2026-03-26 21:47:36');
-INSERT INTO `scm_operation_log` VALUES (78, '2026-03-26 21:47:37', 'system', '删除', '删除物资字典: 消毒液', 'success', '112.96.35.179', '物资字典', 'MAT008', '2026-03-26 21:47:37');
-INSERT INTO `scm_operation_log` VALUES (79, '2026-03-26 21:47:39', 'system', '删除', '删除物资字典: Medical Mask', 'success', '112.96.35.179', '物资字典', 'MAT002', '2026-03-26 21:47:39');
-INSERT INTO `scm_operation_log` VALUES (80, '2026-03-26 22:05:11', 'system', '维护', '新增供应商: 广州国科腾健生物科技有限公司', 'success', '112.96.35.179', '供应商维护', 'SUP202603260001', '2026-03-26 22:05:11');
-INSERT INTO `scm_operation_log` VALUES (81, '2026-03-26 22:23:03', 'system', '维护', '新增供应商: 深圳华康生物医学工程有限公司', 'success', '112.96.35.179', '供应商维护', 'SUP202603260002', '2026-03-26 22:23:03');
-INSERT INTO `scm_operation_log` VALUES (82, '2026-03-26 22:24:58', 'system', '删除', '删除供应商: 广州国科腾健生物科技有限公司', 'success', '112.96.35.179', '供应商维护', 'SUP202603260001', '2026-03-26 22:24:58');
-INSERT INTO `scm_operation_log` VALUES (83, '2026-03-26 22:25:00', 'system', '删除', '删除供应商: 深圳华康生物医学工程有限公司', 'success', '112.96.35.179', '供应商维护', 'SUP202603260002', '2026-03-26 22:25:00');
+INSERT INTO `scm_operation_log` VALUES (1, '2026-04-30 21:54:36', 'system', '维护', '新增供应商: 南昌云晟健康科技有限公司', 'success', '223.104.86.61', '供应商维护', 'SUP202604300001', '2026-04-30 21:54:36');
+INSERT INTO `scm_operation_log` VALUES (2, '2026-04-30 21:56:14', 'system', '维护', '新增供应商资质: 南昌云晟健康科技有限公司 / REGISTRATION_CERTIFICATE', 'success', '223.104.86.61', '供应商资质', '国械注进20162404586', '2026-04-30 21:56:14');
+INSERT INTO `scm_operation_log` VALUES (3, '2026-04-30 21:56:33', 'system', '维护', '更新供应商资质: INSPECTION_REPORT', 'success', '223.104.86.61', '供应商资质', '国械注进20162404586', '2026-04-30 21:56:33');
+INSERT INTO `scm_operation_log` VALUES (4, '2026-04-30 21:58:07', 'system', '维护', '新增供应商: 罗氏诊断', 'success', '223.104.86.61', '供应商维护', 'SUP202604300002', '2026-04-30 21:58:07');
+INSERT INTO `scm_operation_log` VALUES (5, '2026-04-30 21:59:40', 'system', '维护', '新增供应商资质: 罗氏诊断 / BUSINESS_LICENSE', 'success', '223.104.86.61', '供应商资质', '64236424', '2026-04-30 21:59:40');
+INSERT INTO `scm_operation_log` VALUES (6, '2026-04-30 22:00:17', 'system', '维护', '新增供应商资质: 南昌云晟健康科技有限公司 / BUSINESS_CERTIFICATE', 'success', '223.104.86.61', '供应商资质', '91360122MAK6223Y2X', '2026-04-30 22:00:17');
+INSERT INTO `scm_operation_log` VALUES (7, '2026-04-30 22:04:43', 'system', '维护', '更新供应商资质: BUSINESS_LICENSE', 'success', '223.104.86.61', '供应商资质', '64236424', '2026-04-30 22:04:43');
+INSERT INTO `scm_operation_log` VALUES (8, '2026-04-30 22:05:42', 'system', '维护', '更新供应商资质: BUSINESS_LICENSE', 'success', '223.104.86.61', '供应商资质', '64236424', '2026-04-30 22:05:42');
+INSERT INTO `scm_operation_log` VALUES (9, '2026-04-30 22:05:58', 'system', '维护', '更新供应商资质: BUSINESS_LICENSE', 'success', '223.104.86.61', '供应商资质', '64236424', '2026-04-30 22:05:58');
+INSERT INTO `scm_operation_log` VALUES (10, '2026-04-30 22:06:47', 'system', '维护', '新增供应商资质: 南昌云晟健康科技有限公司 / BUSINESS_LICENSE', 'success', '223.104.86.61', '供应商资质', '64236424', '2026-04-30 22:06:47');
+INSERT INTO `scm_operation_log` VALUES (11, '2026-04-30 22:07:08', 'system', '新增', '新增物资字典: FT3', 'success', '223.104.86.61', '物资字典', '1', '2026-04-30 22:07:08');
+INSERT INTO `scm_operation_log` VALUES (12, '2026-04-30 22:11:43', '管理员', '新增', '创建采购单: PO202604300001', 'success', '223.104.86.61', '采购管理', 'PO202604300001', '2026-04-30 22:11:43');
+INSERT INTO `scm_operation_log` VALUES (13, '2026-04-30 22:11:44', '管理员', '提交', '提交采购单: PO202604300001', 'success', '223.104.86.61', '采购管理', 'PO202604300001', '2026-04-30 22:11:44');
+INSERT INTO `scm_operation_log` VALUES (14, '2026-04-30 22:12:35', 'system', '维护', '更新物资字典: FT3', 'success', '223.104.86.61', '物资字典', '1', '2026-04-30 22:12:35');
+INSERT INTO `scm_operation_log` VALUES (15, '2026-04-30 22:12:54', '管理员', '新增', '创建采购单: PO202604300002', 'success', '223.104.86.61', '采购管理', 'PO202604300002', '2026-04-30 22:12:54');
+INSERT INTO `scm_operation_log` VALUES (16, '2026-04-30 22:12:54', '管理员', '提交', '提交采购单: PO202604300002', 'success', '223.104.86.61', '采购管理', 'PO202604300002', '2026-04-30 22:12:54');
+INSERT INTO `scm_operation_log` VALUES (17, '2026-04-30 22:13:17', '管理员', '审核', '通过采购单: PO202604300002', 'success', '223.104.86.61', '采购审核', 'PO202604300002', '2026-04-30 22:13:17');
+INSERT INTO `scm_operation_log` VALUES (18, '2026-04-30 22:13:23', '管理员', '审核', '通过采购单: PO202604300001', 'success', '223.104.86.61', '采购审核', 'PO202604300001', '2026-04-30 22:13:23');
+INSERT INTO `scm_operation_log` VALUES (19, '2026-04-30 22:14:06', '管理员', '收货', '采购收货: PO202604300002', 'warning', '223.104.86.61', '采购收货', 'RC202604300001', '2026-04-30 22:14:06');
+INSERT INTO `scm_operation_log` VALUES (20, '2026-04-30 22:14:21', '管理员', '收货', '采购收货: PO202604300001', 'warning', '223.104.86.61', '采购收货', 'RC202604300002', '2026-04-30 22:14:21');
+INSERT INTO `scm_operation_log` VALUES (21, '2026-04-30 22:15:04', '当前用户', '提交', '重新提交异常订单: PO202604300001', 'success', '223.104.86.61', '异常订单', 'PO202604300001', '2026-04-30 22:15:04');
+INSERT INTO `scm_operation_log` VALUES (22, '2026-04-30 22:15:09', '当前用户', '提交', '重新提交异常订单: PO202604300002', 'success', '223.104.86.61', '异常订单', 'PO202604300002', '2026-04-30 22:15:09');
+INSERT INTO `scm_operation_log` VALUES (23, '2026-04-30 22:17:14', 'system', '维护', '新增供应商资质: 南昌云晟健康科技有限公司 / REGISTRATION_CERTIFICATE', 'success', '223.104.86.61', '供应商资质', '国械注进201624045888', '2026-04-30 22:17:14');
+INSERT INTO `scm_operation_log` VALUES (24, '2026-04-30 22:17:22', 'system', '删除', '删除供应商资质: 国械注进201624045888', 'success', '223.104.86.61', '供应商资质', '国械注进201624045888', '2026-04-30 22:17:22');
+INSERT INTO `scm_operation_log` VALUES (25, '2026-04-30 22:17:43', 'system', '维护', '新增供应商资质: 南昌云晟健康科技有限公司 / REGISTRATION_CERTIFICATE', 'success', '223.104.86.61', '供应商资质', '国械注进201624045887', '2026-04-30 22:17:43');
+INSERT INTO `scm_operation_log` VALUES (26, '2026-04-30 22:18:22', 'system', '维护', '新增供应商资质: 南昌云晟健康科技有限公司 / BUSINESS_LICENSE', 'success', '223.104.86.61', '供应商资质', '642364', '2026-04-30 22:18:22');
+INSERT INTO `scm_operation_log` VALUES (27, '2026-04-30 22:19:00', '管理员', '新增', '创建采购单: PO202604300003', 'success', '223.104.86.61', '采购管理', 'PO202604300003', '2026-04-30 22:19:00');
+INSERT INTO `scm_operation_log` VALUES (28, '2026-04-30 22:19:01', '管理员', '提交', '提交采购单: PO202604300003', 'success', '223.104.86.61', '采购管理', 'PO202604300003', '2026-04-30 22:19:01');
+INSERT INTO `scm_operation_log` VALUES (29, '2026-04-30 22:19:09', '管理员', '审核', '通过采购单: PO202604300003', 'success', '223.104.86.61', '采购审核', 'PO202604300003', '2026-04-30 22:19:09');
+INSERT INTO `scm_operation_log` VALUES (30, '2026-04-30 22:19:27', '管理员', '收货', '采购收货: PO202604300003', 'success', '223.104.86.61', '采购收货', 'RC202604300003', '2026-04-30 22:19:27');
+INSERT INTO `scm_operation_log` VALUES (31, '2026-04-30 22:19:50', '管理员', '新增', '创建采购单: PO202604300004', 'success', '223.104.86.61', '采购管理', 'PO202604300004', '2026-04-30 22:19:50');
+INSERT INTO `scm_operation_log` VALUES (32, '2026-04-30 22:19:50', '管理员', '提交', '提交采购单: PO202604300004', 'success', '223.104.86.61', '采购管理', 'PO202604300004', '2026-04-30 22:19:50');
+INSERT INTO `scm_operation_log` VALUES (33, '2026-04-30 22:19:56', '管理员', '审核', '通过采购单: PO202604300004', 'success', '223.104.86.61', '采购审核', 'PO202604300004', '2026-04-30 22:19:56');
+INSERT INTO `scm_operation_log` VALUES (34, '2026-04-30 22:20:12', '管理员', '收货', '采购收货: PO202604300004', 'warning', '223.104.86.61', '采购收货', 'RC202604300004', '2026-04-30 22:20:12');
+INSERT INTO `scm_operation_log` VALUES (35, '2026-04-30 22:20:25', '当前用户', '提交', '重新提交异常订单: PO202604300004', 'success', '223.104.86.61', '异常订单', 'PO202604300004', '2026-04-30 22:20:25');
 
 -- ----------------------------
 -- Table structure for scm_product_price_adjustment
@@ -536,22 +612,12 @@ CREATE TABLE `scm_product_price_adjustment`  (
   `create_time` datetime NULL DEFAULT NULL,
   `update_time` datetime NULL DEFAULT NULL,
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 12 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_product_price_adjustment
 -- ----------------------------
-INSERT INTO `scm_product_price_adjustment` VALUES (1, NULL, 'YZS-001', '一次性注射器', '医用耗材', '10ml', 'SYR-10', '100支/盒', '支', 0.45, '国械注准201526400846', '山东威高集团', '山东威高集团有限公司', '成本上涨', 0.85, 0.45, 0.80, NULL, 0.05, 6.25, '张三', '2026-03-17 20:32:12', '2026-03-17 20:32:12', '2026-03-17 20:32:12');
-INSERT INTO `scm_product_price_adjustment` VALUES (2, NULL, 'YZS-002', '输液器', '医用耗材', '500ml', 'IV-500', '50套/盒', '套', 2.80, '国械注准201626400977', '山东威高集团', '山东威高集团有限公司', '市场竞争', 4.50, 2.80, 4.80, NULL, -0.30, -6.25, '李四', '2026-03-17 20:32:12', '2026-03-17 20:32:12', '2026-03-17 20:32:12');
-INSERT INTO `scm_product_price_adjustment` VALUES (3, NULL, 'YZS-003', '医用棉签', '医用耗材', '100支/包', 'QJ-100', '50包/盒', '包', 1.20, '国械注准201726400472', '稳健医疗用品', '稳健医疗用品股份有限公司', '促销活动', 2.00, 1.20, 2.20, NULL, -0.20, -9.09, '王五', '2026-03-17 20:32:12', '2026-03-17 20:32:12', '2026-03-17 20:32:12');
-INSERT INTO `scm_product_price_adjustment` VALUES (4, NULL, 'YZS-004', '酒精棉球', '医用耗材', '50g/瓶', 'JQ-50', '30瓶/盒', '瓶', 2.00, '国械注准201826400481', '稳健医疗用品', '稳健医疗用品股份有限公司', '库存清理', 3.50, 2.00, 3.20, NULL, 0.30, 9.38, '赵六', '2026-03-17 20:32:12', '2026-03-17 20:32:12', '2026-03-17 20:32:12');
-INSERT INTO `scm_product_price_adjustment` VALUES (5, NULL, 'YLQ-001', '碘伏消毒液', '医用耗材', '500ml', 'DF-500', '20瓶/箱', '瓶', 7.50, '国械注准201926400459', '利尔康消毒科技', '利尔康消毒科技有限公司', '新品上市', 12.00, 7.50, 10.00, NULL, 2.00, 20.00, '孙七', '2026-03-17 20:32:12', '2026-03-17 20:32:12', '2026-03-17 20:32:12');
-INSERT INTO `scm_product_price_adjustment` VALUES (6, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, '新品上市', NULL, NULL, 0.85, NULL, 1.70, 200.00, NULL, '2026-03-17 23:52:05', '2026-03-17 23:52:05', '2026-03-17 23:52:05');
-INSERT INTO `scm_product_price_adjustment` VALUES (7, 9, 'MAT001', 'Disposable Syringe', 'Medical Device', '1ml', 'SYR-001', '100pcs/box', 'pc', 2.50, 'SH20200001', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', '成本上涨', NULL, NULL, 2.50, 22.50, 20.00, 800.00, NULL, '2026-03-18 16:47:41', '2026-03-18 16:47:41', '2026-03-18 16:47:41');
-INSERT INTO `scm_product_price_adjustment` VALUES (8, 9, 'MAT001', 'Disposable Syringe', 'Medical Device', '1ml', 'SYR-001', '100pcs/box', 'pc', 22.50, 'SH20200001', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', '其他原因', NULL, NULL, 22.50, 22.50, 0.00, 0.00, NULL, '2026-03-26 10:39:01', '2026-03-26 10:39:01', '2026-03-26 10:39:01');
-INSERT INTO `scm_product_price_adjustment` VALUES (9, 9, 'MAT001', 'Disposable Syringe', 'Medical Device', '1ml', 'SYR-001', '100pcs/box', 'pc', 22.50, 'SH20200001', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', '其他原因', NULL, NULL, 22.50, 2333.50, 2311.00, 10271.11, NULL, '2026-03-26 10:39:17', '2026-03-26 10:39:17', '2026-03-26 10:39:17');
-INSERT INTO `scm_product_price_adjustment` VALUES (10, 9, 'MAT001', 'Disposable Syringe', 'Medical Device', '1ml', 'SYR-001', '100pcs/box', 'pc', 2333.50, 'SH20200001', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', '成本上涨', NULL, NULL, 2333.50, 2333.50, 0.00, 0.00, NULL, '2026-03-26 10:40:23', '2026-03-26 10:40:23', '2026-03-26 10:40:23');
-INSERT INTO `scm_product_price_adjustment` VALUES (11, 9, 'MAT001', 'Disposable Syringe', 'Medical Device', '1ml', 'SYR-001', '100pcs/box', 'pc', 2333.50, 'SH20200001', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', '其他原因: 123', NULL, NULL, 2333.50, 2333.50, 0.00, 0.00, NULL, '2026-03-26 10:41:13', '2026-03-26 10:41:13', '2026-03-26 10:41:13');
+INSERT INTO `scm_product_price_adjustment` VALUES (1, 1, '1', 'FT3', 'IVD', '4×1.5ml', '4×1.5ml', '100个测试', '只', 1000.00, '国械注进20162404586', '南昌云晟健康科技有限公司', '罗氏诊断', '渠道调整', NULL, NULL, 1000.00, 950.00, -50.00, -5.00, NULL, '2026-04-30 22:08:28', '2026-04-30 22:08:28', '2026-04-30 22:08:28');
 
 -- ----------------------------
 -- Table structure for scm_purchase_order
@@ -579,23 +645,15 @@ CREATE TABLE `scm_purchase_order`  (
   UNIQUE INDEX `uk_scm_purchase_order_number`(`order_number` ASC) USING BTREE,
   INDEX `idx_scm_purchase_order_status`(`status` ASC) USING BTREE,
   INDEX `idx_scm_purchase_order_supplier`(`supplier_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 16 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购单主表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购单主表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_purchase_order
 -- ----------------------------
-INSERT INTO `scm_purchase_order` VALUES (4, 'PO20240001', 1, 'Head Office', 1, 'Shanghai Medical Device Co.', 'admin', 'Regular Purchase', 'completed', 'Regular medical supplies purchase', NULL, 1250.00, 2, '2026-03-17 17:47:51', '2026-03-17 17:47:51', '2026-03-17 17:47:51', '2026-03-17 17:47:51');
-INSERT INTO `scm_purchase_order` VALUES (5, 'PO-20260301-0001', 1, '内科', 1, '上海医疗器械有限公司', '张三', 'monthly', 'DRAFT', '月度常规采购', NULL, 0.00, 0, NULL, NULL, '2026-03-01 09:00:00', '2026-03-01 09:00:00');
-INSERT INTO `scm_purchase_order` VALUES (6, 'PO-20260305-0002', 2, '外科', 1, '上海医疗器械有限公司', '李四', 'weekly', 'WAIT_AUDIT', '外科耗材补充', NULL, 0.00, 0, NULL, NULL, '2026-03-05 10:00:00', '2026-03-05 10:00:00');
-INSERT INTO `scm_purchase_order` VALUES (7, 'PO-20260310-0003', 3, '急诊科', 6, '昆明有限公司', '王五', 'emergency', 'REJECTED', '急诊紧急采购', NULL, 0.00, 0, NULL, NULL, '2026-03-10 14:00:00', '2026-03-10 14:00:00');
-INSERT INTO `scm_purchase_order` VALUES (8, 'PO202603170001', 1, '1', 6, '昆明有限公司', '李二', 'monthly', '待收货', '', NULL, 2.50, 1, '2026-03-17 23:31:51', '2026-03-26 10:45:57', '2026-03-17 23:31:51', '2026-03-26 10:45:57');
-INSERT INTO `scm_purchase_order` VALUES (9, 'PO202603180001', 1, '1', 1, '上海医疗器械有限公司', '张数', 'weekly', '待收货', '', NULL, 25.50, 2, '2026-03-18 16:48:44', '2026-03-26 10:45:57', '2026-03-18 16:48:44', '2026-03-26 10:45:57');
-INSERT INTO `scm_purchase_order` VALUES (10, 'PO202403180001', 1, '手术室', 1, '上海医疗器械有限公司', '管理员', '常规采购', '待收货', NULL, NULL, 255.00, 2, NULL, NULL, '2026-03-18 16:52:13', '2026-03-18 16:52:13');
-INSERT INTO `scm_purchase_order` VALUES (11, 'PO202403180002', 2, '内科', 2, '北京康健医药有限公司', '管理员', '紧急采购', '待收货', NULL, NULL, 15.00, 2, NULL, NULL, '2026-03-18 16:52:13', '2026-03-18 16:52:13');
-INSERT INTO `scm_purchase_order` VALUES (12, 'PO202603180002', 1, '1', 6, '昆明有限公司', '李', 'monthly', '待收货', '', NULL, 3.50, 1, '2026-03-18 20:56:43', '2026-03-18 21:08:46', '2026-03-18 20:56:43', '2026-03-18 21:08:46');
-INSERT INTO `scm_purchase_order` VALUES (13, 'PO202603180003', 1, '1', 1, '上海医疗器械有限公司', '无', 'emergency', '待收货', '', NULL, 834.00, 5, '2026-03-18 22:01:03', '2026-03-26 10:45:57', '2026-03-18 21:39:46', '2026-03-26 10:45:57');
-INSERT INTO `scm_purchase_order` VALUES (14, 'PO202603260001', 1, '1', 6, '昆明有限公司', '测试', 'monthly', '已驳回', '测试', NULL, 7163.00, 5, '2026-03-26 10:45:25', '2026-03-26 10:45:51', '2026-03-26 10:45:24', '2026-03-26 10:45:51');
-INSERT INTO `scm_purchase_order` VALUES (15, 'PO202603260002', 1, '1', 6, '昆明有限公司', '测试', 'monthly', '待收货', '测试', NULL, 7163.00, 5, '2026-03-26 10:45:26', '2026-03-26 10:45:47', '2026-03-26 10:45:25', '2026-03-26 10:45:47');
+INSERT INTO `scm_purchase_order` VALUES (1, 'PO202604300001', 11, '11', 1, '南昌云晟健康科技有限公司', '管理员', 'monthly', '待入库', '1月计划', NULL, 950000.00, 1, '2026-04-30 22:11:43', '2026-04-30 22:13:23', '2026-04-30 22:11:43', '2026-04-30 22:14:21');
+INSERT INTO `scm_purchase_order` VALUES (2, 'PO202604300002', 11, '11', 1, '南昌云晟健康科技有限公司', '管理员', 'monthly', '待入库', '', NULL, 950000.00, 1, '2026-04-30 22:12:54', '2026-04-30 22:13:17', '2026-04-30 22:12:54', '2026-04-30 22:14:06');
+INSERT INTO `scm_purchase_order` VALUES (3, 'PO202604300003', 11, '11', 1, '南昌云晟健康科技有限公司', '管理员', 'monthly', '待入库', '', NULL, 950000.00, 1, '2026-04-30 22:19:01', '2026-04-30 22:19:09', '2026-04-30 22:19:00', '2026-04-30 22:19:27');
+INSERT INTO `scm_purchase_order` VALUES (4, 'PO202604300004', 11, '11', 1, '南昌云晟健康科技有限公司', '管理员', 'monthly', '待入库', '', NULL, 950000.00, 1, '2026-04-30 22:19:50', '2026-04-30 22:19:56', '2026-04-30 22:19:50', '2026-04-30 22:20:12');
 
 -- ----------------------------
 -- Table structure for scm_purchase_order_item
@@ -624,36 +682,15 @@ CREATE TABLE `scm_purchase_order_item`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_scm_purchase_order_item_order`(`purchase_order_id` ASC) USING BTREE,
   INDEX `idx_scm_purchase_order_item_material`(`material_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 32 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购单明细' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购单明细' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_purchase_order_item
 -- ----------------------------
-INSERT INTO `scm_purchase_order_item` VALUES (7, 1, 1, 'MAT001', 'Disposable Syringe', '1ml', 'SYR-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 2.50, 200, 200, 200, 500.00, 'pending', '2026-03-17 17:47:51', '2026-03-17 17:47:51');
-INSERT INTO `scm_purchase_order_item` VALUES (8, 1, 2, 'MAT002', 'Medical Mask', 'N95', 'MASK-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 3.00, 250, 250, 250, 750.00, 'pending', '2026-03-17 17:47:51', '2026-03-17 17:47:51');
-INSERT INTO `scm_purchase_order_item` VALUES (9, 8, 9, 'MAT001', 'Disposable Syringe', '1ml', 'SYR-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 2.50, 1, 0, 0, 2.50, '待提交', '2026-03-17 23:31:51', '2026-03-17 23:31:51');
-INSERT INTO `scm_purchase_order_item` VALUES (10, 9, 9, 'MAT001', 'Disposable Syringe', '1ml', 'SYR-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 22.50, 1, 0, 0, 22.50, '待提交', '2026-03-18 16:48:44', '2026-03-18 16:48:44');
-INSERT INTO `scm_purchase_order_item` VALUES (11, 9, 10, 'MAT002', 'Medical Mask', 'N95', 'MASK-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 3.00, 1, 0, 0, 3.00, '待提交', '2026-03-18 16:48:44', '2026-03-18 16:48:44');
-INSERT INTO `scm_purchase_order_item` VALUES (12, 10, 11, 'MAT003', '医用口罩', 'N95', 'N95-001', '盒', '医疗用品有限公司', '上海医疗器械有限公司', '国械注准202326400123', 25.00, 10, 0, 0, 250.00, '待收货', '2026-03-18 16:52:13', '2026-03-18 16:52:13');
-INSERT INTO `scm_purchase_order_item` VALUES (13, 10, 12, 'MAT004', '一次性手套', '乳胶 M号', 'GL-301', '双', '乳胶制品厂', '上海医疗器械有限公司', '国械注准202326400789', 3.50, 10, 0, 0, 35.00, '待收货', '2026-03-18 16:52:13', '2026-03-18 16:52:13');
-INSERT INTO `scm_purchase_order_item` VALUES (14, 11, 13, 'MAT005', '注射器', '5ml', 'SY-605', '支', '注射器制造厂', '北京康健医药有限公司', '国械注准202326409012', 1.20, 10, 0, 0, 12.00, '待收货', '2026-03-18 16:52:13', '2026-03-18 16:52:13');
-INSERT INTO `scm_purchase_order_item` VALUES (15, 11, 10, 'MAT002', 'Medical Mask', 'N95', 'MASK-001', 'pc', 'Shanghai Medical Device Co.', '北京康健医药有限公司', 'SH20200001', 3.00, 1, 0, 0, 3.00, '待收货', '2026-03-18 16:52:13', '2026-03-18 16:52:13');
-INSERT INTO `scm_purchase_order_item` VALUES (16, 12, 12, 'MAT004', '一次性手套', '乳胶 M号', 'GL-301', '双', '乳胶制品厂', '上海医疗器械有限公司', '国械注准202326400789', 3.50, 1, 0, 0, 3.50, '待提交', '2026-03-18 20:56:43', '2026-03-18 20:56:43');
-INSERT INTO `scm_purchase_order_item` VALUES (17, 13, 9, 'MAT001', 'Disposable Syringe', '1ml', 'SYR-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 22.50, 17, 0, 0, 382.50, '待提交', '2026-03-18 21:39:46', '2026-03-18 21:39:46');
-INSERT INTO `scm_purchase_order_item` VALUES (18, 13, 10, 'MAT002', 'Medical Mask', 'N95', 'MASK-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 3.00, 18, 0, 0, 54.00, '待提交', '2026-03-18 21:39:46', '2026-03-18 21:39:46');
-INSERT INTO `scm_purchase_order_item` VALUES (19, 13, 12, 'MAT004', '一次性手套', '乳胶 M号', 'GL-301', '双', '乳胶制品厂', '上海医疗器械有限公司', '国械注准202326400789', 3.50, 19, 0, 0, 66.50, '待提交', '2026-03-18 21:39:46', '2026-03-18 21:39:46');
-INSERT INTO `scm_purchase_order_item` VALUES (20, 13, 21, 'MAT202603180001', '一次性注射器', '2ml', '2ml', '支', '上海医疗器械厂', '上海医疗器械有限公司', 'REG-2ML-001', 1.00, 11, 0, 0, 11.00, '待提交', '2026-03-18 21:39:46', '2026-03-18 21:39:46');
-INSERT INTO `scm_purchase_order_item` VALUES (21, 13, 17, 'MAT009', '体温计', '电子', 'TM-550', '支', '医疗器械公司', '昆明有限公司', '国械注准202326405678', 32.00, 10, 0, 0, 320.00, '待提交', '2026-03-18 21:39:46', '2026-03-18 21:39:46');
-INSERT INTO `scm_purchase_order_item` VALUES (22, 14, 9, 'MAT001', 'Disposable Syringe', '1ml', 'SYR-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 2333.50, 3, 0, 0, 7000.50, '待提交', '2026-03-26 10:45:24', '2026-03-26 10:45:24');
-INSERT INTO `scm_purchase_order_item` VALUES (23, 14, 10, 'MAT002', 'Medical Mask', 'N95', 'MASK-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 3.00, 4, 0, 0, 12.00, '待提交', '2026-03-26 10:45:24', '2026-03-26 10:45:24');
-INSERT INTO `scm_purchase_order_item` VALUES (24, 14, 12, 'MAT004', '一次性手套', '乳胶 M号', 'GL-301', '双', '乳胶制品厂', '上海医疗器械有限公司', '国械注准202326400789', 3.50, 5, 0, 0, 17.50, '待提交', '2026-03-26 10:45:24', '2026-03-26 10:45:24');
-INSERT INTO `scm_purchase_order_item` VALUES (25, 14, 21, 'MAT202603180001', '一次性注射器', '2ml', '2ml', '支', '上海医疗器械厂', '上海医疗器械有限公司', 'REG-2ML-001', 1.00, 5, 0, 0, 5.00, '待提交', '2026-03-26 10:45:24', '2026-03-26 10:45:24');
-INSERT INTO `scm_purchase_order_item` VALUES (26, 14, 17, 'MAT009', '体温计', '电子', 'TM-550', '支', '医疗器械公司', '昆明有限公司', '国械注准202326405678', 32.00, 4, 0, 0, 128.00, '待提交', '2026-03-26 10:45:24', '2026-03-26 10:45:24');
-INSERT INTO `scm_purchase_order_item` VALUES (27, 15, 9, 'MAT001', 'Disposable Syringe', '1ml', 'SYR-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 2333.50, 3, 0, 0, 7000.50, '待提交', '2026-03-26 10:45:25', '2026-03-26 10:45:25');
-INSERT INTO `scm_purchase_order_item` VALUES (28, 15, 10, 'MAT002', 'Medical Mask', 'N95', 'MASK-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 3.00, 4, 0, 0, 12.00, '待提交', '2026-03-26 10:45:25', '2026-03-26 10:45:25');
-INSERT INTO `scm_purchase_order_item` VALUES (29, 15, 12, 'MAT004', '一次性手套', '乳胶 M号', 'GL-301', '双', '乳胶制品厂', '上海医疗器械有限公司', '国械注准202326400789', 3.50, 5, 0, 0, 17.50, '待提交', '2026-03-26 10:45:25', '2026-03-26 10:45:25');
-INSERT INTO `scm_purchase_order_item` VALUES (30, 15, 21, 'MAT202603180001', '一次性注射器', '2ml', '2ml', '支', '上海医疗器械厂', '上海医疗器械有限公司', 'REG-2ML-001', 1.00, 5, 0, 0, 5.00, '待提交', '2026-03-26 10:45:25', '2026-03-26 10:45:25');
-INSERT INTO `scm_purchase_order_item` VALUES (31, 15, 17, 'MAT009', '体温计', '电子', 'TM-550', '支', '医疗器械公司', '昆明有限公司', '国械注准202326405678', 32.00, 4, 0, 0, 128.00, '待提交', '2026-03-26 10:45:25', '2026-03-26 10:45:25');
+INSERT INTO `scm_purchase_order_item` VALUES (1, 1, 1, '1', 'FT3', '4×1.5ml', '4×1.5ml', '只', '罗氏诊断', '南昌云晟健康科技有限公司', '国械注进20162404586', 950.00, 1000, 500, 0, 950000.00, '部分到货', '2026-04-30 22:11:43', '2026-04-30 22:14:21');
+INSERT INTO `scm_purchase_order_item` VALUES (2, 2, 1, '1', 'FT3', '4×1.5ml', '4×1.5ml', '只', '罗氏诊断', '南昌云晟健康科技有限公司', '国械注进20162404586', 950.00, 1000, 500, 0, 950000.00, '部分到货', '2026-04-30 22:12:54', '2026-04-30 22:14:06');
+INSERT INTO `scm_purchase_order_item` VALUES (3, 3, 1, '1', 'FT3', '4×1.5ml', '4×1.5ml', '只', '罗氏诊断', '南昌云晟健康科技有限公司', '国械注进20162404586', 950.00, 1000, 1000, 0, 950000.00, '已到货', '2026-04-30 22:19:00', '2026-04-30 22:19:27');
+INSERT INTO `scm_purchase_order_item` VALUES (4, 4, 1, '1', 'FT3', '4×1.5ml', '4×1.5ml', '只', '罗氏诊断', '南昌云晟健康科技有限公司', '国械注进20162404586', 950.00, 1000, 500, 0, 950000.00, '部分到货', '2026-04-30 22:19:50', '2026-04-30 22:20:12');
 
 -- ----------------------------
 -- Table structure for scm_purchase_receive
@@ -685,12 +722,15 @@ CREATE TABLE `scm_purchase_receive`  (
   UNIQUE INDEX `uk_scm_purchase_receive_number`(`receive_number` ASC) USING BTREE,
   INDEX `idx_scm_purchase_receive_order`(`purchase_order_id` ASC) USING BTREE,
   INDEX `idx_scm_purchase_receive_status`(`status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购收货单' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购收货单' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_purchase_receive
 -- ----------------------------
-INSERT INTO `scm_purchase_receive` VALUES (2, 'RCV20240001', 1, 'PO20240001', 1, 'Shanghai Medical Device Co.', 'SUP001', 'Head Office', 'admin', 'Manager Zhang', '13800138000', '2026-03-17', '2026-03-17', '2026-03-17', 'admin', 'completed', 1250.00, 2, 'All goods received', '2026-03-17 17:47:51', '2026-03-17 17:47:51');
+INSERT INTO `scm_purchase_receive` VALUES (1, 'RC202604300001', 2, 'PO202604300002', 1, '南昌云晟健康科技有限公司', 'SUP202604300001', '11', '管理员', '管理员', '13800000000', '2026-04-30', '2026-05-03', '2026-04-30', '管理员', '待入库', 475000.00, 1, '', '2026-04-30 22:14:06', '2026-04-30 22:14:06');
+INSERT INTO `scm_purchase_receive` VALUES (2, 'RC202604300002', 1, 'PO202604300001', 1, '南昌云晟健康科技有限公司', 'SUP202604300001', '11', '管理员', '管理员', '13800000000', '2026-04-30', '2026-05-03', '2026-04-30', '管理员', '待入库', 475000.00, 1, '', '2026-04-30 22:14:21', '2026-04-30 22:14:21');
+INSERT INTO `scm_purchase_receive` VALUES (3, 'RC202604300003', 3, 'PO202604300003', 1, '南昌云晟健康科技有限公司', 'SUP202604300001', '11', '管理员', '管理员', '13800000000', '2026-04-30', '2026-05-03', '2026-04-30', '管理员', '待入库', 950000.00, 1, '', '2026-04-30 22:19:27', '2026-04-30 22:19:27');
+INSERT INTO `scm_purchase_receive` VALUES (4, 'RC202604300004', 4, 'PO202604300004', 1, '南昌云晟健康科技有限公司', 'SUP202604300001', '11', '管理员', '管理员', '13800000000', '2026-04-30', '2026-05-03', '2026-04-30', '管理员', '待入库', 475000.00, 1, '', '2026-04-30 22:20:12', '2026-04-30 22:20:12');
 
 -- ----------------------------
 -- Table structure for scm_purchase_receive_item
@@ -721,13 +761,15 @@ CREATE TABLE `scm_purchase_receive_item`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_scm_purchase_receive_item_receive`(`receive_id` ASC) USING BTREE,
   INDEX `idx_scm_purchase_receive_item_order_item`(`purchase_order_item_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购收货明细' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购收货明细' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_purchase_receive_item
 -- ----------------------------
-INSERT INTO `scm_purchase_receive_item` VALUES (1, 1, 1, 'MAT001', 'Disposable Syringe', '1ml', 'SYR-001', 'Shanghai Medical Device Co.', 'SH20200001', 'pc', 2.50, 200, 200, 500.00, 'BATCH001', '2026-03-17', '2028-03-17', 'completed', NULL, '2026-03-17 17:47:51', '2026-03-17 17:47:51');
-INSERT INTO `scm_purchase_receive_item` VALUES (2, 1, 2, 'MAT002', 'Medical Mask', 'N95', 'MASK-001', 'Shanghai Medical Device Co.', 'SH20200001', 'pc', 3.00, 250, 250, 750.00, 'BATCH002', '2026-03-17', '2028-03-17', 'completed', NULL, '2026-03-17 17:47:51', '2026-03-17 17:47:51');
+INSERT INTO `scm_purchase_receive_item` VALUES (1, 1, 2, '1', 'FT3', '4×1.5ml', '4×1.5ml', '罗氏诊断', '国械注进20162404586', '只', 950.00, 1000, 500, 475000.00, NULL, NULL, NULL, '部分到货', '部分到货', '2026-04-30 22:14:06', '2026-04-30 22:14:06');
+INSERT INTO `scm_purchase_receive_item` VALUES (2, 2, 1, '1', 'FT3', '4×1.5ml', '4×1.5ml', '罗氏诊断', '国械注进20162404586', '只', 950.00, 1000, 500, 475000.00, NULL, NULL, NULL, '部分到货', '部分到货', '2026-04-30 22:14:21', '2026-04-30 22:14:21');
+INSERT INTO `scm_purchase_receive_item` VALUES (3, 3, 3, '1', 'FT3', '4×1.5ml', '4×1.5ml', '罗氏诊断', '国械注进20162404586', '只', 950.00, 1000, 1000, 950000.00, NULL, NULL, NULL, '已到货', '', '2026-04-30 22:19:27', '2026-04-30 22:19:27');
+INSERT INTO `scm_purchase_receive_item` VALUES (4, 4, 4, '1', 'FT3', '4×1.5ml', '4×1.5ml', '罗氏诊断', '国械注进20162404586', '只', 950.00, 1000, 500, 475000.00, NULL, NULL, NULL, '部分到货', '部分到货', '2026-04-30 22:20:12', '2026-04-30 22:20:12');
 
 -- ----------------------------
 -- Table structure for scm_stock_in_item
@@ -768,11 +810,6 @@ CREATE TABLE `scm_stock_in_item`  (
 -- ----------------------------
 -- Records of scm_stock_in_item
 -- ----------------------------
-INSERT INTO `scm_stock_in_item` VALUES (1, 1, 1, 1, 'MAT001', 'Disposable Syringe', 'Medical Device', '1ml', 'SYR-001', '100pcs/box', 'pc', 2.50, 200, 200, 500.00, 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 'BATCH001', '2026-03-17', '2028-03-17', 'completed', NULL, '2026-03-17 17:47:51', '2026-03-26 10:52:38', 1);
-INSERT INTO `scm_stock_in_item` VALUES (2, 1, 2, 2, 'MAT002', 'Medical Mask', 'Medical Device', 'N95', 'MASK-001', '50pcs/box', 'pc', 3.00, 250, 250, 750.00, 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 'BATCH002', '2026-03-17', '2028-03-17', 'completed', NULL, '2026-03-17 17:47:51', '2026-03-26 10:52:41', 1);
-INSERT INTO `scm_stock_in_item` VALUES (3, 4, NULL, 11, 'MAT003', '医用口罩', NULL, 'N95', 'N95-001', '10只/盒', '盒', 25.00, 10, 10, 250.00, '上海医疗器械有限公司', '医疗用品有限公司', '国械注准202326400123', 'B20240318', '2024-01-01', '2026-01-01', '已完成', NULL, '2026-03-18 17:05:36', '2026-03-26 10:52:43', 1);
-INSERT INTO `scm_stock_in_item` VALUES (4, 5, NULL, 13, 'MAT005', '注射器', NULL, '5ml', 'SY-605', '100支/箱', '支', 1.20, 10, 10, 12.00, '北京康健医药有限公司', '注射器制造厂', '国械注准202326409012', 'B20240318-2', '2024-02-01', '2027-02-01', '已完成', NULL, '2026-03-18 17:05:36', '2026-03-26 10:52:48', 2);
-INSERT INTO `scm_stock_in_item` VALUES (5, 1, 1, 1, 'MAT001', 'Disposable Syringe', 'Medical Device', '1ml', 'SYR-001', '100pcs/box', 'pc', 2.50, 200, 200, 500.00, 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 'BATCH001', '2026-03-17', '2028-03-17', 'completed', NULL, '2026-03-17 17:47:51', '2026-03-26 10:52:38', 1);
 
 -- ----------------------------
 -- Table structure for scm_stock_in_order
@@ -804,9 +841,6 @@ CREATE TABLE `scm_stock_in_order`  (
 -- ----------------------------
 -- Records of scm_stock_in_order
 -- ----------------------------
-INSERT INTO `scm_stock_in_order` VALUES (1, 'STKIN20240001', 1, 'RCV20240001', 1, 'PO20240001', 'Purchase Stock In', 'Head Office', 'admin', 'Shanghai Medical Device Co.', '2026-03-17', 'completed', 2, 1250.00, 'Purchase stock in', '2026-03-17 17:47:51', '2026-03-17 17:47:51');
-INSERT INTO `scm_stock_in_order` VALUES (4, 'SI202403180001', NULL, NULL, NULL, NULL, '初始化入库', '手术室', '管理员', '上海医疗器械有限公司', '2026-03-18', '已完成', 1, 250.00, NULL, '2026-03-18 17:05:36', '2026-03-18 17:05:36');
-INSERT INTO `scm_stock_in_order` VALUES (5, 'SI202403180002', NULL, NULL, NULL, NULL, '初始化入库', '内科', '管理员', '北京康健医药有限公司', '2026-03-18', '已完成', 1, 12.00, NULL, '2026-03-18 17:05:36', '2026-03-18 17:05:36');
 
 -- ----------------------------
 -- Table structure for scm_stock_out_item
@@ -846,11 +880,6 @@ CREATE TABLE `scm_stock_out_item`  (
 -- ----------------------------
 -- Records of scm_stock_out_item
 -- ----------------------------
-INSERT INTO `scm_stock_out_item` VALUES (1, 1, 1, 1, 'MAT001', 'Disposable Syringe', 'Medical Device', '1ml', 'SYR-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 'BATCH001', '2026-03-17', '2028-03-17', 2.50, 10, '2026-03-18', '已完成', '可撤销', '常规消耗', '2026-03-18 22:38:25', '2026-03-18 22:38:25');
-INSERT INTO `scm_stock_out_item` VALUES (2, 1, 2, 2, 'MAT002', 'Medical Mask', 'Medical Device', 'N95', 'MASK-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 'BATCH002', '2026-03-17', '2028-03-17', 3.00, 20, '2026-03-18', '已完成', '可撤销', '常规消耗', '2026-03-18 22:38:25', '2026-03-18 22:38:25');
-INSERT INTO `scm_stock_out_item` VALUES (3, 2, 1, 1, 'MAT001', 'Disposable Syringe', 'Medical Device', '1ml', 'SYR-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 'BATCH001', '2026-03-17', '2028-03-17', 2.50, 50, '2026-03-17', '已完成', '可撤销', '手术用量', '2026-03-18 22:38:25', '2026-03-18 22:38:25');
-INSERT INTO `scm_stock_out_item` VALUES (4, 3, 2, 2, 'MAT002', 'Medical Mask', 'Medical Device', 'N95', 'MASK-001', 'pc', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 'BATCH002', '2026-03-17', '2028-03-17', 3.00, 5, '2026-03-16', '已完成', '可撤销', '质控消耗', '2026-03-18 22:38:25', '2026-03-18 22:38:25');
-INSERT INTO `scm_stock_out_item` VALUES (5, 1, 1, 1, 'MAT003', 'Surgical Gloves', 'Medical Device', 'Size 7.5', 'GLOVE-75', 'pair', 'Shanghai Medical Device Co.', 'Shanghai Medical Device Co.', 'SH20200001', 'BATCH003', '2026-03-15', '2028-03-15', 5.00, 10, '2026-03-15', '已完成', '已撤销', '过量出库', '2026-03-18 22:50:19', '2026-03-18 22:50:19');
 
 -- ----------------------------
 -- Table structure for scm_stock_out_order
@@ -876,9 +905,6 @@ CREATE TABLE `scm_stock_out_order`  (
 -- ----------------------------
 -- Records of scm_stock_out_order
 -- ----------------------------
-INSERT INTO `scm_stock_out_order` VALUES (1, 'SO202603180001', 'consumption', '耗材科', '管理员', '已完成', '常规消耗', '今日领用', '2026-03-18', '2026-03-18 22:38:25', '2026-03-18 22:38:25');
-INSERT INTO `scm_stock_out_order` VALUES (2, 'SO202603170001', 'consumption', '手术室', '管理员', '已完成', '手术用量', '急诊手术', '2026-03-17', '2026-03-18 22:38:25', '2026-03-18 22:38:25');
-INSERT INTO `scm_stock_out_order` VALUES (3, 'SO202603160001', 'quality', '检验科', '管理员', '已完成', '质控消耗', '日常质控', '2026-03-16', '2026-03-18 22:38:25', '2026-03-18 22:38:25');
 
 -- ----------------------------
 -- Table structure for scm_transfer_order
@@ -900,8 +926,6 @@ CREATE TABLE `scm_transfer_order`  (
 -- ----------------------------
 -- Records of scm_transfer_order
 -- ----------------------------
-INSERT INTO `scm_transfer_order` VALUES (1, 'TR-20260317-0001', '仓库1', '仓库2', 'completed', '张三', '2026-03-17', '2026-03-17 19:01:43');
-INSERT INTO `scm_transfer_order` VALUES (2, 'TR-20260317-0002', '仓库2', '仓库1', 'completed', '李四', '2026-03-17', '2026-03-17 19:01:43');
 
 -- ----------------------------
 -- Table structure for scm_transfer_order_item
@@ -934,10 +958,6 @@ CREATE TABLE `scm_transfer_order_item`  (
 -- ----------------------------
 -- Records of scm_transfer_order_item
 -- ----------------------------
-INSERT INTO `scm_transfer_order_item` VALUES (1, 1, 21, 'MAT202603180001', '一次性注射器', '2ml', '2ml', '个', '上海医疗器械厂', '上海医疗器械有限公司', 'REG-2ML-001', 'TB20260317-001', '2026-02-15', '2027-03-17', 'accepted', 100, '???', '2026-03-18', 100);
-INSERT INTO `scm_transfer_order_item` VALUES (2, 1, 22, 'MAT202603180002', '医用手套', '中号', '中号', '副', '上海医疗器械厂', '上海医疗器械有限公司', 'REG-GLV-001', 'TB20260317-002', '2026-02-15', '2027-03-17', 'accepted', 200, '???', '2026-03-18', 200);
-INSERT INTO `scm_transfer_order_item` VALUES (3, 2, 13, 'MAT005', '一次性注射器', '5ml', 'SY-605', '个', '注射器制造厂', '上海医疗器械有限公司', '国械注准202326409012', 'TB20260317-003', '2026-02-15', '2027-03-17', 'pending', 0, NULL, NULL, 50);
-INSERT INTO `scm_transfer_order_item` VALUES (4, 2, 11, 'MAT003', '医用口罩', 'N95', 'N95-001', '个', '医疗用品有限公司', '上海医疗器械有限公司', '国械注准202326400123', 'TB20260317-004', '2026-02-15', '2027-03-17', 'pending', 0, NULL, NULL, 100);
 
 -- ----------------------------
 -- Table structure for supplier
@@ -964,11 +984,13 @@ CREATE TABLE `supplier`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_supplier_name`(`name` ASC) USING BTREE,
   UNIQUE INDEX `uk_supplier_code`(`supplier_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '供应商表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '供应商表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of supplier
 -- ----------------------------
+INSERT INTO `supplier` VALUES (1, '南昌云晟健康科技有限公司', '吴志欢', '15288335505', '江西省南昌市', NULL, '经营企业', '可用', 5, '91360122MAK6223Y2X', '吴志欢', '10', '2026-04-30', NULL, 'SUP202604300001', '2026-04-30 21:54:36', '2026-04-30 22:18:22');
+INSERT INTO `supplier` VALUES (2, '罗氏诊断', '韦苏豪', '15288335505', '江西省南昌市', NULL, '生产企业', '可用', 1, '91360122MAK6223Y2X', '韦苏豪', '1000', '2026-03-03', NULL, 'SUP202604300002', '2026-04-30 21:58:07', '2026-04-30 22:05:58');
 
 -- ----------------------------
 -- Table structure for supplier_qualification
@@ -991,11 +1013,17 @@ CREATE TABLE `supplier_qualification`  (
   `update_time` datetime NULL DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_supplier_id`(`supplier_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 16 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '供应商资质信息表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '供应商资质信息表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of supplier_qualification
 -- ----------------------------
+INSERT INTO `supplier_qualification` VALUES (1, 1, 'REGISTRATION_CERTIFICATE', '游离三碘甲状腺原氨酸定标液', '国械注进20162404586', '产品检验报告', '2026-04-30', '2027-04-30', '检验机构', 'Certification_国械注进20162404586_FT3 III CalSet_20300113(1).pdf', '', '有效', '2026-04-30 21:56:14', '2026-04-30 21:56:33');
+INSERT INTO `supplier_qualification` VALUES (2, 2, 'BUSINESS_LICENSE', '南昌云晟健康科技有限公司', '64236424', '经营许可证', '2026-04-01', '2027-04-30', '上海市市场监督管理局', 'Certification_国械注进20162404586_FT3 III CalSet_20300113(1).pdf', '', '有效', '2026-04-30 21:59:40', '2026-04-30 22:05:58');
+INSERT INTO `supplier_qualification` VALUES (3, 1, 'BUSINESS_CERTIFICATE', '南昌云晟健康科技有限公司', '91360122MAK6223Y2X', '营业执照', '2026-04-01', '2030-01-01', '9', 'Certification_国械注进20162404586_FT3 III CalSet_20300113(1).pdf', '', '有效', '2026-04-30 22:00:17', '2026-04-30 22:00:17');
+INSERT INTO `supplier_qualification` VALUES (4, 1, 'BUSINESS_LICENSE', '南昌云晟健康科技有限公司', '64236424', '经营许可证', '2026-04-30', '2027-04-30', '上海市市场监督管理局', '', '', '有效', '2026-04-30 22:06:47', '2026-04-30 22:06:47');
+INSERT INTO `supplier_qualification` VALUES (6, 1, 'REGISTRATION_CERTIFICATE', '游离三碘甲状腺原酸', '国械注进201624045887', '产品检验报告', '2026-04-01', '2027-04-30', '检验机构', '', '', '有效', '2026-04-30 22:17:43', '2026-04-30 22:17:43');
+INSERT INTO `supplier_qualification` VALUES (7, 1, 'BUSINESS_LICENSE', '南昌云晟健康科技有限公司', '642364', '经营许可证', '2026-04-15', '2026-04-30', '上海市市场监督管理局', '', '', '即将过期', '2026-04-30 22:18:22', '2026-04-30 22:18:22');
 
 -- ----------------------------
 -- Table structure for sys_department
@@ -1529,63 +1557,14 @@ CREATE TABLE `user_token`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_token`(`user_token` ASC) USING BTREE,
   INDEX `idx_user_id`(`user_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 53 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user_token
 -- ----------------------------
-INSERT INTO `user_token` VALUES (1, 'd83e20b6-6657-4edc-ac81-d4c6aa33f11d', '2026-02-23 18:01:43', '2026-03-23 18:01:43', 1, 1);
-INSERT INTO `user_token` VALUES (2, 'c580bf25-3bbc-49db-a19c-39901efcc6fa', '2026-03-16 14:05:41', '2026-04-16 14:05:41', 1, 1);
-INSERT INTO `user_token` VALUES (3, '608e9676-0f2b-467e-853e-fd2edb226c11', '2026-03-16 14:06:46', '2026-04-16 14:06:46', 1, 1);
-INSERT INTO `user_token` VALUES (4, 'df262d66-c601-4561-b6ec-1d310974d305', '2026-03-16 20:16:17', '2026-04-16 20:16:17', 1, 1);
-INSERT INTO `user_token` VALUES (5, '1a98f4d5-9ba8-4fab-accf-2aadbc59ce8a', '2026-03-16 22:56:07', '2026-04-16 22:56:07', 1, 1);
-INSERT INTO `user_token` VALUES (6, '7e73ce2e-b55a-45bb-aaa6-f4cabc2a7fc2', '2026-03-16 23:04:13', '2026-04-16 23:04:13', 1, 1);
-INSERT INTO `user_token` VALUES (7, '6b899123-477a-4fcf-9c4a-f40d25cc3f34', '2026-03-16 23:04:53', '2026-04-16 23:04:53', 1, 1);
-INSERT INTO `user_token` VALUES (8, '1ed864ff-7ed7-4b66-8185-9becb5f912cf', '2026-03-16 23:07:27', '2026-04-16 23:07:27', 1, 1);
-INSERT INTO `user_token` VALUES (9, '8b6b9770-4e2e-4472-9242-95b216ac1f78', '2026-03-17 13:20:37', '2026-04-17 13:20:37', 1, 1);
-INSERT INTO `user_token` VALUES (10, 'baf1aaae-830f-4257-95e2-490083d10edb', '2026-03-17 13:20:50', '2026-04-17 13:20:50', 1, 1);
-INSERT INTO `user_token` VALUES (11, 'e93838b7-42ba-4cc2-ac0c-997ccd37ec37', '2026-03-17 13:21:00', '2026-04-17 13:21:00', 1, 1);
-INSERT INTO `user_token` VALUES (12, 'a7e8a0ea-d75e-4b61-8717-5c507f7a93b1', '2026-03-17 13:21:12', '2026-04-17 13:21:12', 1, 1);
-INSERT INTO `user_token` VALUES (13, 'dec905c8-9877-4349-b24a-5d378d0e85d1', '2026-03-17 13:21:23', '2026-04-17 13:21:23', 1, 1);
-INSERT INTO `user_token` VALUES (14, '6a2a5dc7-761e-4c1e-b61f-c2a6c4aae931', '2026-03-17 13:21:36', '2026-04-17 13:21:36', 1, 1);
-INSERT INTO `user_token` VALUES (15, 'a441f5e1-b810-4c25-9bc9-31cdaa4463f6', '2026-03-17 13:21:42', '2026-04-17 13:21:42', 1, 1);
-INSERT INTO `user_token` VALUES (16, '4ebfc385-894b-44b7-961b-c6b434ba6867', '2026-03-17 13:32:38', '2026-04-17 13:32:38', 1, 1);
-INSERT INTO `user_token` VALUES (17, '900030f6-6cfc-4605-bb55-effded265be5', '2026-03-17 13:32:51', '2026-04-17 13:32:51', 1, 1);
-INSERT INTO `user_token` VALUES (18, 'fda78b4f-8634-4827-a129-b7ac9ef19df7', '2026-03-17 13:37:11', '2026-04-17 13:37:11', 1, 1);
-INSERT INTO `user_token` VALUES (19, 'c1d9ff46-bfb8-45b2-8ec1-230f5cfe8c24', '2026-03-17 13:37:54', '2026-04-17 13:37:54', 1, 1);
-INSERT INTO `user_token` VALUES (20, '90ca0c84-128c-43df-b56d-45a4d102e527', '2026-03-17 13:44:15', '2026-04-17 13:44:15', 1, 1);
-INSERT INTO `user_token` VALUES (21, '95c6cff9-87d9-49c8-a4f9-239eba7630ff', '2026-03-17 13:44:26', '2026-04-17 13:44:26', 1, 1);
-INSERT INTO `user_token` VALUES (22, 'e86cbfe6-ef50-4079-8591-2a04796be41d', '2026-03-17 13:44:48', '2026-04-17 13:44:48', 1, 1);
-INSERT INTO `user_token` VALUES (23, '25fbbd65-840c-47f0-bec5-0517e937a108', '2026-03-17 13:55:21', '2026-04-17 13:55:21', 1, 1);
-INSERT INTO `user_token` VALUES (24, '5390bd9e-84b1-43ff-8646-1c28b8b99779', '2026-03-17 13:55:46', '2026-04-17 13:55:46', 1, 1);
-INSERT INTO `user_token` VALUES (25, '29b0bd28-ec47-4caf-8680-203bf1c868fd', '2026-03-17 14:18:33', '2026-04-17 14:18:33', 1, 1);
-INSERT INTO `user_token` VALUES (26, 'aaa6f661-54ad-40cb-99c2-dee751674b2f', '2026-03-17 14:18:38', '2026-04-17 14:18:38', 1, 1);
-INSERT INTO `user_token` VALUES (27, 'cad2518a-04b9-4fc1-a0be-bcfcd5d1608d', '2026-03-17 14:42:01', '2026-04-17 14:42:01', 1, 1);
-INSERT INTO `user_token` VALUES (28, 'd28c6146-e926-4d71-ae75-e64dfde64aa1', '2026-03-17 18:51:36', '2026-04-17 18:51:36', 1, 1);
-INSERT INTO `user_token` VALUES (29, '1ca93d27-8e31-4bf6-8461-f522e7a0e210', '2026-03-17 21:05:05', '2026-04-17 21:05:05', 1, 1);
-INSERT INTO `user_token` VALUES (30, '88356e05-ec12-436d-ad6a-f99c8da8e3e1', '2026-03-18 16:09:23', '2026-04-18 16:09:23', 1, 1);
-INSERT INTO `user_token` VALUES (31, '0fef5e3e-a446-4663-9663-d588f8b4260b', '2026-03-18 16:13:02', '2026-04-18 16:13:02', 1, 1);
-INSERT INTO `user_token` VALUES (32, '52b020e0-be34-483c-9d7f-855c3e13153f', '2026-03-18 19:02:54', '2026-04-18 19:02:54', 1, 1);
-INSERT INTO `user_token` VALUES (33, '62e8ac3c-5eab-4960-b250-15f37b015efe', '2026-03-18 19:05:20', '2026-04-18 19:05:20', 1, 1);
-INSERT INTO `user_token` VALUES (34, '01ac0b3d-fe19-43d7-8b71-4275a91fdbd8', '2026-03-24 10:58:14', '2026-04-24 10:58:14', 1, 1);
-INSERT INTO `user_token` VALUES (35, '95b6954d-3dce-4b9f-9bb8-21bd1d197bbf', '2026-03-24 11:07:06', '2026-04-24 11:07:06', 1, 1);
-INSERT INTO `user_token` VALUES (36, 'a620ce4c-5c61-4a28-93a0-03d2882fc7e9', '2026-03-24 12:25:29', '2026-04-24 12:25:29', 1, 1);
-INSERT INTO `user_token` VALUES (37, 'e49d38ac-30a3-49f7-b0c0-fab709a81fcc', '2026-03-24 13:06:31', '2026-04-24 13:06:31', 1, 1);
-INSERT INTO `user_token` VALUES (38, 'ee149f83-678c-4a2b-8c31-da348db49999', '2026-03-24 13:08:01', '2026-04-24 13:08:01', 1, 1);
-INSERT INTO `user_token` VALUES (39, '324d6faf-ec77-4a6e-ba6b-e16bbe78743e', '2026-03-24 13:10:18', '2026-04-24 13:10:18', 1, 1);
-INSERT INTO `user_token` VALUES (40, 'e947bb10-a50a-4b80-8b75-b7170598d85a', '2026-03-24 13:11:11', '2026-04-24 13:11:11', 1, 1);
-INSERT INTO `user_token` VALUES (41, 'c0695ad0-3e11-41b2-953b-be6617dc135c', '2026-03-24 14:23:29', '2026-04-24 14:23:29', 1, 1);
-INSERT INTO `user_token` VALUES (42, 'f3e072bf-b370-4188-84f3-a72824790bbe', '2026-03-24 14:28:55', '2026-04-24 14:28:55', 1, 1);
-INSERT INTO `user_token` VALUES (43, '26ca7e61-feb8-4468-83dd-8098b14b9dec', '2026-03-25 16:19:42', '2026-04-25 16:19:42', 1, 1);
-INSERT INTO `user_token` VALUES (44, '69c2a2c2-0de6-4577-a372-d040b0a4801c', '2026-03-25 21:06:32', '2026-04-25 21:06:32', 1, 1);
-INSERT INTO `user_token` VALUES (45, '3e685946-188a-46bb-a056-ae059bf036aa', '2026-03-26 10:06:00', '2026-04-26 10:06:00', 1, 1);
-INSERT INTO `user_token` VALUES (46, '00e5437c-8a4a-4094-9e2a-5d03659333d4', '2026-03-26 14:19:03', '2026-04-26 14:19:03', 1, 1);
-INSERT INTO `user_token` VALUES (47, 'cfd38128-f195-45a2-a83c-0d79a0c9547c', '2026-03-26 14:19:12', '2026-04-26 14:19:12', 1, 1);
-INSERT INTO `user_token` VALUES (48, '6f7b0bc7-947c-464c-869c-9d61c03fca39', '2026-03-26 15:04:19', '2026-04-26 15:04:19', 1, 1);
-INSERT INTO `user_token` VALUES (49, 'a75843c6-442c-4b17-9bc8-26155e40d787', '2026-03-26 15:05:40', '2026-04-26 15:05:40', 5, 1);
-INSERT INTO `user_token` VALUES (50, '7852d25b-6ecf-499e-a884-65b3ec89a51b', '2026-03-26 15:05:58', '2026-04-26 15:05:58', 1, 1);
-INSERT INTO `user_token` VALUES (51, '32eb1e5e-44e1-4e12-a3ac-92778c17aa53', '2026-03-26 21:45:39', '2026-04-26 21:45:39', 1, 1);
-INSERT INTO `user_token` VALUES (52, '3a936671-5f49-446f-aae5-5fe9645ddc6c', '2026-03-26 21:59:08', '2026-04-26 21:59:08', 1, 1);
+INSERT INTO `user_token` VALUES (1, 'a554e9b9-d17a-4895-a76c-d113f250dc89', '2026-04-30 21:53:18', '2026-05-30 21:53:18', 1, 1);
+INSERT INTO `user_token` VALUES (2, 'be6906f0-9476-483a-8925-6ad6e5b5404b', '2026-04-30 21:53:54', '2026-05-30 21:53:54', 1, 1);
+INSERT INTO `user_token` VALUES (3, '49af84b1-8965-44be-ba35-909b342862e0', '2026-04-30 22:24:17', '2026-05-30 22:24:17', 1, 1);
 
 -- ----------------------------
 -- Table structure for warehouse

@@ -1,1 +1,0 @@
-﻿SELECT id, receive_number, order_number, supplier_name, status FROM scm_purchase_receive ORDER BY id;
