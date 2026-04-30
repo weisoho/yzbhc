@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.yunsheng.yzb.mapper.SampleItemMapper" >
+  <resultMap id="BaseResultMap" type="com.yunsheng.yzb.model.SampleItem" >
+    <id column="id" property="id" jdbcType="INTEGER" />
+    <result column="item_name" property="itemName" jdbcType="VARCHAR" />
+    <result column="item_code" property="itemCode" jdbcType="VARCHAR" />
+    <result column="dep_id" property="depId" jdbcType="INTEGER" />
+    <result column="dep_name" property="depName" jdbcType="VARCHAR" />
+    <result column="item_state" property="itemState" jdbcType="INTEGER" />
+    <result column="remark" property="remark" jdbcType="VARCHAR" />
+    <result column="cdate" property="cdate" jdbcType="TIMESTAMP" />
+    <result column="udate" property="udate" jdbcType="TIMESTAMP" />
+    <result column="is_charge" property="isCharge" jdbcType="INTEGER" />
+    <result column="charge_code" property="chargeCode" jdbcType="VARCHAR" />
+  </resultMap>
+  <sql id="Example_Where_Clause" >
+    <where >
+      <foreach collection="oredCriteria" item="criteria" separator="or" >
+        <if test="criteria.valid" >
+          <trim prefix="(" suffix=")" prefixOverrides="and" >
+            <foreach collection="criteria.criteria" item="criterion" >
+              <choose >
+                <when test="criterion.noValue" >
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue" >
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue" >
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue" >
+                  and ${criterion.condition}
+                  <foreach collection="criterion.value" item="listItem" open="(" close=")" separator="," >
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Update_By_Example_Where_Clause" >
+    <where >
+      <foreach collection="example.oredCriteria" item="criteria" separator="or" >
+        <if test="criteria.valid" >
+          <trim prefix="(" suffix=")" prefixOverrides="and" >
+            <foreach collection="criteria.criteria" item="criterion" >
+              <choose >
+                <when test="criterion.noValue" >
+                  and ${criterion.condition}
+                </when>
+                <when test="criterion.singleValue" >
+                  and ${criterion.condition} #{criterion.value}
+                </when>
+                <when test="criterion.betweenValue" >
+                  and ${criterion.condition} #{criterion.value} and #{criterion.secondValue}
+                </when>
+                <when test="criterion.listValue" >
+                  and ${criterion.condition}
+                  <foreach collection="criterion.value" item="listItem" open="(" close=")" separator="," >
+                    #{listItem}
+                  </foreach>
+                </when>
+              </choose>
+            </foreach>
+          </trim>
+        </if>
+      </foreach>
+    </where>
+  </sql>
+  <sql id="Base_Column_List" >
+    id, item_name, item_code, dep_id, dep_name, item_state, remark, cdate, udate, is_charge, 
+    charge_code
+  </sql>
+  <select id="selectByExample" resultMap="BaseResultMap" parameterType="com.yunsheng.yzb.model.SampleItemExample" >
+    select
+    <if test="distinct" >
+      distinct
+    </if>
+    <include refid="Base_Column_List" />
+    from sample_item
+    <if test="_parameter != null" >
+      <include refid="Example_Where_Clause" />
+    </if>
+    <if test="orderByClause != null" >
+      order by ${orderByClause}
+    </if>
+  </select>
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Integer" >
+    select 
+    <include refid="Base_Column_List" />
+    from sample_item
+    where id = #{id,jdbcType=INTEGER}
+  </select>
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer" >
+    delete from sample_item
+    where id = #{id,jdbcType=INTEGER}
+  </delete>
+  <delete id="deleteByExample" parameterType="com.yunsheng.yzb.model.SampleItemExample" >
+    delete from sample_item
+    <if test="_parameter != null" >
+      <include refid="Example_Where_Clause" />
+    </if>
+  </delete>
+  <insert id="insert" parameterType="com.yunsheng.yzb.model.SampleItem" >
+    insert into sample_item (id, item_name, item_code, 
+      dep_id, dep_name, item_state, 
+      remark, cdate, udate, 
+      is_charge, charge_code)
+    values (#{id,jdbcType=INTEGER}, #{itemName,jdbcType=VARCHAR}, #{itemCode,jdbcType=VARCHAR}, 
+      #{depId,jdbcType=INTEGER}, #{depName,jdbcType=VARCHAR}, #{itemState,jdbcType=INTEGER}, 
+      #{remark,jdbcType=VARCHAR}, #{cdate,jdbcType=TIMESTAMP}, #{udate,jdbcType=TIMESTAMP}, 
+      #{isCharge,jdbcType=INTEGER}, #{chargeCode,jdbcType=VARCHAR})
+  </insert>
+  <insert id="insertSelective" parameterType="com.yunsheng.yzb.model.SampleItem" >
+    insert into sample_item
+    <trim prefix="(" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        id,
+      </if>
+      <if test="itemName != null" >
+        item_name,
+      </if>
+      <if test="itemCode != null" >
+        item_code,
+      </if>
+      <if test="depId != null" >
+        dep_id,
+      </if>
+      <if test="depName != null" >
+        dep_name,
+      </if>
+      <if test="itemState != null" >
+        item_state,
+      </if>
+      <if test="remark != null" >
+        remark,
+      </if>
+      <if test="cdate != null" >
+        cdate,
+      </if>
+      <if test="udate != null" >
+        udate,
+      </if>
+      <if test="isCharge != null" >
+        is_charge,
+      </if>
+      <if test="chargeCode != null" >
+        charge_code,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        #{id,jdbcType=INTEGER},
+      </if>
+      <if test="itemName != null" >
+        #{itemName,jdbcType=VARCHAR},
+      </if>
+      <if test="itemCode != null" >
+        #{itemCode,jdbcType=VARCHAR},
+      </if>
+      <if test="depId != null" >
+        #{depId,jdbcType=INTEGER},
+      </if>
+      <if test="depName != null" >
+        #{depName,jdbcType=VARCHAR},
+      </if>
+      <if test="itemState != null" >
+        #{itemState,jdbcType=INTEGER},
+      </if>
+      <if test="remark != null" >
+        #{remark,jdbcType=VARCHAR},
+      </if>
+      <if test="cdate != null" >
+        #{cdate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="udate != null" >
+        #{udate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="isCharge != null" >
+        #{isCharge,jdbcType=INTEGER},
+      </if>
+      <if test="chargeCode != null" >
+        #{chargeCode,jdbcType=VARCHAR},
+      </if>
+    </trim>
+  </insert>
+  <select id="countByExample" parameterType="com.yunsheng.yzb.model.SampleItemExample" resultType="java.lang.Integer" >
+    select count(*) from sample_item
+    <if test="_parameter != null" >
+      <include refid="Example_Where_Clause" />
+    </if>
+  </select>
+  <update id="updateByExampleSelective" parameterType="map" >
+    update sample_item
+    <set >
+      <if test="record.id != null" >
+        id = #{record.id,jdbcType=INTEGER},
+      </if>
+      <if test="record.itemName != null" >
+        item_name = #{record.itemName,jdbcType=VARCHAR},
+      </if>
+      <if test="record.itemCode != null" >
+        item_code = #{record.itemCode,jdbcType=VARCHAR},
+      </if>
+      <if test="record.depId != null" >
+        dep_id = #{record.depId,jdbcType=INTEGER},
+      </if>
+      <if test="record.depName != null" >
+        dep_name = #{record.depName,jdbcType=VARCHAR},
+      </if>
+      <if test="record.itemState != null" >
+        item_state = #{record.itemState,jdbcType=INTEGER},
+      </if>
+      <if test="record.remark != null" >
+        remark = #{record.remark,jdbcType=VARCHAR},
+      </if>
+      <if test="record.cdate != null" >
+        cdate = #{record.cdate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="record.udate != null" >
+        udate = #{record.udate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="record.isCharge != null" >
+        is_charge = #{record.isCharge,jdbcType=INTEGER},
+      </if>
+      <if test="record.chargeCode != null" >
+        charge_code = #{record.chargeCode,jdbcType=VARCHAR},
+      </if>
+    </set>
+    <if test="_parameter != null" >
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByExample" parameterType="map" >
+    update sample_item
+    set id = #{record.id,jdbcType=INTEGER},
+      item_name = #{record.itemName,jdbcType=VARCHAR},
+      item_code = #{record.itemCode,jdbcType=VARCHAR},
+      dep_id = #{record.depId,jdbcType=INTEGER},
+      dep_name = #{record.depName,jdbcType=VARCHAR},
+      item_state = #{record.itemState,jdbcType=INTEGER},
+      remark = #{record.remark,jdbcType=VARCHAR},
+      cdate = #{record.cdate,jdbcType=TIMESTAMP},
+      udate = #{record.udate,jdbcType=TIMESTAMP},
+      is_charge = #{record.isCharge,jdbcType=INTEGER},
+      charge_code = #{record.chargeCode,jdbcType=VARCHAR}
+    <if test="_parameter != null" >
+      <include refid="Update_By_Example_Where_Clause" />
+    </if>
+  </update>
+  <update id="updateByPrimaryKeySelective" parameterType="com.yunsheng.yzb.model.SampleItem" >
+    update sample_item
+    <set >
+      <if test="itemName != null" >
+        item_name = #{itemName,jdbcType=VARCHAR},
+      </if>
+      <if test="itemCode != null" >
+        item_code = #{itemCode,jdbcType=VARCHAR},
+      </if>
+      <if test="depId != null" >
+        dep_id = #{depId,jdbcType=INTEGER},
+      </if>
+      <if test="depName != null" >
+        dep_name = #{depName,jdbcType=VARCHAR},
+      </if>
+      <if test="itemState != null" >
+        item_state = #{itemState,jdbcType=INTEGER},
+      </if>
+      <if test="remark != null" >
+        remark = #{remark,jdbcType=VARCHAR},
+      </if>
+      <if test="cdate != null" >
+        cdate = #{cdate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="udate != null" >
+        udate = #{udate,jdbcType=TIMESTAMP},
+      </if>
+      <if test="isCharge != null" >
+        is_charge = #{isCharge,jdbcType=INTEGER},
+      </if>
+      <if test="chargeCode != null" >
+        charge_code = #{chargeCode,jdbcType=VARCHAR},
+      </if>
+    </set>
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.yunsheng.yzb.model.SampleItem" >
+    update sample_item
+    set item_name = #{itemName,jdbcType=VARCHAR},
+      item_code = #{itemCode,jdbcType=VARCHAR},
+      dep_id = #{depId,jdbcType=INTEGER},
+      dep_name = #{depName,jdbcType=VARCHAR},
+      item_state = #{itemState,jdbcType=INTEGER},
+      remark = #{remark,jdbcType=VARCHAR},
+      cdate = #{cdate,jdbcType=TIMESTAMP},
+      udate = #{udate,jdbcType=TIMESTAMP},
+      is_charge = #{isCharge,jdbcType=INTEGER},
+      charge_code = #{chargeCode,jdbcType=VARCHAR}
+    where id = #{id,jdbcType=INTEGER}
+  </update>
+</mapper>
