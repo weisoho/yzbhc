@@ -26,6 +26,8 @@ const SupplierInspectionReport = () => {
   const [pageSize, setPageSize] = useState(10);
   const [suppliers, setSuppliers] = useState([]);
   const [total, setTotal] = useState(0);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewRecord, setPreviewRecord] = useState(null);
 
   const datePickerProps = {
     style: { width: '100%' },
@@ -80,14 +82,15 @@ const SupplierInspectionReport = () => {
           const supplierName = supplier ? supplier.name : '未知供应商';
           return {
             key: certificate.id,
-            registeredCompany: supplierName,
+            registrantName: supplierName,
+            agentName: certificate.issuingAuthority || '-',
             productName: certificate.certificateName,
             registrationNumber: certificate.licenseNumber,
             packagingSpec: '标准包装',
-            storageCondition: '常温保存',
             effectiveDate: certificate.issueDate,
             expiryDate: certificate.expiryDate,
             attachment: certificate.attachmentName,
+            attachmentUrl: certificate.licenseFile,
             status: status
           };
         });
@@ -141,7 +144,7 @@ const SupplierInspectionReport = () => {
       productName: record.productName,
       registrationNumber: record.registrationNumber,
       packagingSpec: record.packagingSpec,
-      storageCondition: record.storageCondition,
+      agentName: record.agentName,
       effectiveDate: record.effectiveDate ? dayjs(record.effectiveDate) : null,
       expiryDate: record.expiryDate ? dayjs(record.expiryDate) : null
     });
@@ -165,9 +168,9 @@ const SupplierInspectionReport = () => {
         licenseType: '产品检验报告',  // 证件类别
         issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,  // 发证日期
         expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,  // 有效期
-        issuingAuthority: '检验机构',  // 发证机构
+        issuingAuthority: values.agentName || '检验机构',
         attachmentName: editFileList.length > 0 ? editFileList[editFileList.length - 1].name : editingRecord.attachment,  // 附件名称
-        licenseFile: ''  // 附件地址
+        licenseFile: editingRecord.attachmentUrl || ''
       };
       
       // 编辑注册证
@@ -219,9 +222,9 @@ const SupplierInspectionReport = () => {
 
   const columns = [
     { 
-      title: '供应商名称', 
-      dataIndex: 'registeredCompany', 
-      key: 'registeredCompany',
+      title: '注册人名称', 
+      dataIndex: 'registrantName', 
+      key: 'registrantName',
       width: 150,
       align: 'center',
       ellipsis: false,
@@ -236,6 +239,13 @@ const SupplierInspectionReport = () => {
           overflow: 'visible'
         }
       })
+    },
+    { 
+      title: '代理人名称',
+      dataIndex: 'agentName',
+      key: 'agentName',
+      width: 120,
+      align: 'center',
     },
     { 
       title: '产品名称', 
@@ -279,25 +289,6 @@ const SupplierInspectionReport = () => {
       title: '包装规格', 
       dataIndex: 'packagingSpec', 
       key: 'packagingSpec',
-      width: 100,
-      align: 'center',
-      ellipsis: false,
-      onHeaderCell: () => ({
-        style: {
-          whiteSpace: 'nowrap'
-        }
-      }),
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      })
-    },
-    { 
-      title: '储存条件', 
-      dataIndex: 'storageCondition', 
-      key: 'storageCondition',
       width: 100,
       align: 'center',
       ellipsis: false,
@@ -368,7 +359,15 @@ const SupplierInspectionReport = () => {
           whiteSpace: 'nowrap',
           overflow: 'visible'
         }
-      })
+      }),
+      render: (_, record) => (
+        <Button type="link" onClick={() => {
+          setPreviewRecord(record);
+          setPreviewVisible(true);
+        }}>
+          {record.attachment || '查看附件'}
+        </Button>
+      )
     },
     { 
       title: '状态', 
@@ -550,7 +549,7 @@ const SupplierInspectionReport = () => {
               licenseType: '产品检验报告',  // 证件类别
               issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,  // 发证日期
               expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,  // 有效期
-              issuingAuthority: '检验机构',  // 发证机构
+              issuingAuthority: values.agentName || '检验机构',
               attachmentName: fileList.length > 0 ? fileList[fileList.length - 1].name : '',  // 附件名称
               licenseFile: ''  // 附件地址
             };
@@ -585,10 +584,10 @@ const SupplierInspectionReport = () => {
         <Form form={form} layout="vertical">
           <Form.Item
             name="supplierId"
-            label="供应商名称"
-            rules={[{ required: true, message: '请选择供应商名称' }]}
+            label="注册人名称"
+            rules={[{ required: true, message: '请选择注册人名称' }]}
           >
-            <Select placeholder="请选择供应商名称" style={{ width: '100%' }}>
+            <Select placeholder="请选择注册人名称" style={{ width: '100%' }}>
               {suppliers.map(supplier => (
                 <Select.Option key={supplier.id} value={supplier.id}>
                   {supplier.name}
@@ -622,11 +621,11 @@ const SupplierInspectionReport = () => {
           </Form.Item>
           
           <Form.Item
-            name="storageCondition"
-            label="储存条件"
-            rules={[{ required: true, message: '请输入储存条件' }]}
+            name="agentName"
+            label="代理人名称"
+            rules={[{ required: true, message: '请输入代理人名称' }]}
           >
-            <Input placeholder="请输入储存条件" />
+            <Input placeholder="请输入代理人名称" />
           </Form.Item>
           
           <Form.Item
@@ -698,11 +697,11 @@ const SupplierInspectionReport = () => {
           </Form.Item>
           
           <Form.Item
-            name="storageCondition"
-            label="储存条件"
-            rules={[{ required: true, message: '请输入储存条件' }]}
+            name="agentName"
+            label="代理人名称"
+            rules={[{ required: true, message: '请输入代理人名称' }]}
           >
-            <Input placeholder="请输入储存条件" />
+            <Input placeholder="请输入代理人名称" />
           </Form.Item>
           
           <Form.Item
@@ -729,6 +728,54 @@ const SupplierInspectionReport = () => {
             </Upload>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="附件预览"
+        open={previewVisible}
+        onCancel={() => {
+          setPreviewVisible(false);
+          setPreviewRecord(null);
+        }}
+        footer={[
+          <Button key="download" onClick={() => {
+            if (previewRecord?.attachmentUrl) {
+              window.open(previewRecord.attachmentUrl, '_blank');
+            } else {
+              message.warning('当前附件暂无可访问地址');
+            }
+          }}>
+            下载附件
+          </Button>,
+          <Button key="open" onClick={() => {
+            if (previewRecord?.attachmentUrl) {
+              window.open(previewRecord.attachmentUrl, '_blank');
+            } else {
+              message.warning('当前附件暂无可访问地址');
+            }
+          }}>
+            查看大图
+          </Button>,
+          <Button key="close" type="primary" onClick={() => {
+            setPreviewVisible(false);
+            setPreviewRecord(null);
+          }}>
+            关闭
+          </Button>
+        ]}
+        width={960}
+      >
+        {previewRecord?.attachmentUrl ? (
+          <iframe
+            title="attachment-preview"
+            src={previewRecord.attachmentUrl}
+            style={{ width: '100%', height: 640, border: 'none' }}
+          />
+        ) : (
+          <div style={{ padding: 32, textAlign: 'center', color: '#8c8c8c' }}>
+            当前附件暂无可预览地址，请点击“编辑”后重新上传。
+          </div>
+        )}
       </Modal>
     </div>
   );

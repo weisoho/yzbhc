@@ -1,15 +1,4 @@
 services:
-  server:
-    image: docker.gitea.com/gitea:1.26.1-rootless
-    restart: unless-stopped
-    volumes:
-      - ./data:/var/lib/gitea
-      - ./config:/etc/gitea
-      - /etc/timezone:/etc/timezone:ro
-      - /etc/localtime:/etc/localtime:ro
-    ports:
-      - "3000:3000"
-      - "2222:2222"
   mysql:
     image: mysql:8.0.45
     container_name: yzbhc-mysql

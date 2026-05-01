@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Layout, Menu, ConfigProvider, Avatar, Modal, Radio, Spin } from 'antd';
-import { Link, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+import { Layout, Menu, ConfigProvider, Avatar, Modal, Radio } from 'antd';
+import { Link, Route, Routes, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import zhCN from 'antd/locale/zh_CN';
 
 // 导入组件
@@ -16,7 +16,6 @@ import CampusSelectorModal from './components/CampusSelectorModal.jsx';
 // 导入上下文
 import { TabProvider } from './contexts/TabContext.jsx';
 import { NoteProvider } from './contexts/NoteContext.jsx';
-import { usePageVisibility } from './contexts/PageVisibilityContext.jsx';
 import { useCampusContext } from './contexts/CampusContext.jsx';
 
 // 导入页面组件
@@ -108,11 +107,9 @@ const { Header, Content, Sider } = Layout;
 
 /**
  * 应用内容组件
- * 使用页面可见性上下文
  */
 const AppContent = () => {
-  // 使用页面可见性上下文
-  const { visibleKeys, isInitialized, isPageVisible } = usePageVisibility();
+  const navigate = useNavigate();
   
   // 使用院区上下文
   const {
@@ -132,6 +129,7 @@ const AppContent = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [backendMenuItems, setBackendMenuItems] = useState([]);
   const [backendMenuLoaded, setBackendMenuLoaded] = useState(false);
+  const [allowedRoutePaths, setAllowedRoutePaths] = useState([]);
   
   // 科室选择模态框可见状态
   const [isDepartmentModalVisible, setIsDepartmentModalVisible] = useState(false);
@@ -146,71 +144,6 @@ const AppContent = () => {
     }
   })();
   
-  // 主页功能设置（与 PageVisibilityContext 双向绑定）
-  const [homeFeatureSettings, setHomeFeatureSettings] = useState({
-    checkedKeys: [],
-    savedAt: null
-  });
-  
-  // 加载主页功能设置并与页面可见性同步
-  useEffect(() => {
-    const loadSettings = () => {
-      // 优先使用 PageVisibilityContext 的设置
-      if (isInitialized && visibleKeys.length > 0) {
-        const settings = {
-          checkedKeys: visibleKeys,
-          savedAt: new Date().toISOString()
-        };
-        setHomeFeatureSettings(settings);
-        // 同时保存到旧的存储位置以确保兼容性
-        localStorage.setItem('homeFeatureSettings', JSON.stringify(settings));
-        return;
-      }
-      
-      // 如果 PageVisibilityContext 未初始化，尝试从 localStorage 加载
-      const savedSettings = localStorage.getItem('homeFeatureSettings');
-      if (savedSettings) {
-        try {
-          const parsedSettings = JSON.parse(savedSettings);
-          setHomeFeatureSettings(parsedSettings);
-        } catch (error) {
-          console.error('Failed to parse home feature settings:', error);
-        }
-      }
-    };
-
-    loadSettings();
-  }, [isInitialized, visibleKeys]);
-  
-  // 监听设置变化事件（来自 GlobalNoteWindow 和 PageVisibilityContext）
-  useEffect(() => {
-    const handleSettingsChanged = (event) => {
-      if (event.detail && event.detail.checkedKeys) {
-        setHomeFeatureSettings(event.detail);
-      }
-    };
-
-    const handlePageVisibilityInitialized = (event) => {
-      if (event.detail && event.detail.visibleKeys) {
-        const settings = {
-          checkedKeys: event.detail.visibleKeys,
-          savedAt: new Date().toISOString()
-        };
-        setHomeFeatureSettings(settings);
-        // 同时保存到旧的存储位置以确保兼容性
-        localStorage.setItem('homeFeatureSettings', JSON.stringify(settings));
-      }
-    };
-
-    window.addEventListener('homeFeatureSettingsChanged', handleSettingsChanged);
-    window.addEventListener('pageVisibilityInitialized', handlePageVisibilityInitialized);
-
-    return () => {
-      window.removeEventListener('homeFeatureSettingsChanged', handleSettingsChanged);
-      window.removeEventListener('pageVisibilityInitialized', handlePageVisibilityInitialized);
-    };
-  }, []);
-
   // 获取当前路由位置
   const location = useLocation();
   
@@ -415,6 +348,22 @@ const AppContent = () => {
     });
   }, []);
 
+  const extractRoutePaths = useCallback((menuTree) => {
+    const paths = [];
+    const walk = (nodes = []) => {
+      nodes.forEach((node) => {
+        if (typeof node?.path === 'string' && node.path.startsWith('/')) {
+          paths.push(node.path);
+        }
+        if (Array.isArray(node?.children) && node.children.length > 0) {
+          walk(node.children);
+        }
+      });
+    };
+    walk(menuTree);
+    return Array.from(new Set(paths));
+  }, []);
+
   useEffect(() => {
     let active = true;
 
@@ -428,12 +377,15 @@ const AppContent = () => {
         if (response.code === 1 && Array.isArray(response.data) && !containsLegacyMenuPath(response.data)) {
           const mappedMenus = mapBackendMenuTree(response.data);
           setBackendMenuItems(mappedMenus);
+          setAllowedRoutePaths(extractRoutePaths(response.data));
         } else {
           setBackendMenuItems([]);
+          setAllowedRoutePaths([]);
         }
       } catch (error) {
         if (active) {
           setBackendMenuItems([]);
+          setAllowedRoutePaths([]);
         }
       } finally {
         if (active) {
@@ -449,85 +401,26 @@ const AppContent = () => {
     return () => {
       active = false;
     };
-  }, [containsLegacyMenuPath, isLoggedIn, mapBackendMenuTree]);
+  }, [containsLegacyMenuPath, extractRoutePaths, isLoggedIn, mapBackendMenuTree]);
 
-  /**
-   * 根据选中的key过滤菜单项
-   * 优先使用 PageVisibilityContext 的 isPageVisible 方法
-   * @param {Array} menuItems - 原始菜单项数组
-   * @param {Array} checkedKeys - 选中的key数组
-   * @returns {Array} 过滤后的菜单项数组
-   */
-  const filterMenuItems = useCallback((menuItems, checkedKeys) => {
-    return menuItems.reduce((filtered, item) => {
-      // 首页始终显示
-      if (item.key === '/') {
-        filtered.push(item);
-        return filtered;
-      }
-      
-      // 如果页面可见性已初始化，使用 isPageVisible 方法
-      if (isInitialized) {
-        const visible = isPageVisible(item.key);
-        
-        // 如果有子菜单，递归过滤
-        if (item.children && item.children.length > 0) {
-          const filteredChildren = filterMenuItems(item.children, []); // 传递空数组，强制使用 isPageVisible
-          // 如果子菜单有可见项，则保留当前项
-          if (filteredChildren.length > 0) {
-            filtered.push({
-              ...item,
-              children: filteredChildren
-            });
-          }
-        } else {
-          // 没有子菜单，根据页面可见性决定
-          if (visible) {
-            filtered.push(item);
-          }
-        }
-        return filtered;
-      }
-      
-      // 如果没有初始化，等待初始化完成
-      // 在初始化完成前，不显示任何菜单（除了首页）
-      if (!isInitialized) {
-        // 只显示首页
-        if (item.key === '/') {
-          filtered.push(item);
-        }
-        return filtered;
-      }
-      
-      // 如果没有选中任何项，显示所有菜单
-      if (!checkedKeys || checkedKeys.length === 0) {
-        filtered.push(item);
-        return filtered;
-      }
+  const hasRouteAccess = useCallback((pathname) => {
+    if (!pathname || pathname === '/' || pathname === '/login') {
+      return true;
+    }
+    if (!backendMenuLoaded || allowedRoutePaths.length === 0) {
+      return true;
+    }
+    return allowedRoutePaths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  }, [allowedRoutePaths, backendMenuLoaded]);
 
-      // 检查当前项是否在选中列表中
-      const isItemChecked = checkedKeys.includes(item.key);
-      
-      // 如果有子菜单，递归过滤
-      if (item.children && item.children.length > 0) {
-        const filteredChildren = filterMenuItems(item.children, checkedKeys);
-        // 如果子菜单有选中项或当前项被选中，则保留当前项
-        if (filteredChildren.length > 0 || isItemChecked) {
-          filtered.push({
-            ...item,
-            children: filteredChildren.length > 0 ? filteredChildren : item.children
-          });
-        }
-      } else {
-        // 没有子菜单，只根据选中状态决定
-        if (isItemChecked) {
-          filtered.push(item);
-        }
-      }
-      
-      return filtered;
-    }, []);
-  }, [isInitialized, isPageVisible]);
+  useEffect(() => {
+    if (!backendMenuLoaded) {
+      return;
+    }
+    if (!hasRouteAccess(location.pathname)) {
+      navigate('/', { replace: true });
+    }
+  }, [backendMenuLoaded, hasRouteAccess, location.pathname, navigate]);
 
   /**
    * 未登录状态处理
@@ -919,12 +812,6 @@ const AppContent = () => {
                       ]
                     },
                     {
-                      key: '/operation-log',
-                      icon: <ClockCircleOutlined />,
-                      label: <Link to="/operation-log">操作日志</Link>,
-                      style: { marginTop: 8 }
-                    },
-                    {
                       key: 'all-campus-management-group',
                       icon: <TeamOutlined />,
                       label: '院区管理',
@@ -943,28 +830,19 @@ const AppContent = () => {
                         { key: '/user-role-template', label: <Link to="/user-role-template">用户角色模板</Link> },
                       ]
                     },
+                    {
+                      key: '/operation-log',
+                      icon: <ClockCircleOutlined />,
+                      label: <Link to="/operation-log">操作日志</Link>,
+                      style: { marginTop: 8 }
+                    },
                   ];
 
                   const menuSource = backendMenuLoaded && backendMenuItems.length > 0
                     ? [originalMenuItems[0], ...backendMenuItems.filter((item) => item.key !== '/')]
                     : originalMenuItems;
 
-                  // 如果页面可见性未初始化，显示加载状态
-                  if (!isInitialized) {
-                    return (
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'center', 
-                        alignItems: 'center',
-                        height: '200px'
-                      }}>
-                        <Spin />
-                      </div>
-                    );
-                  }
-                  
-                  // 过滤菜单项
-                  const filteredMenuItems = filterMenuItems(menuSource, homeFeatureSettings.checkedKeys);
+                  const filteredMenuItems = menuSource;
 
                   return (
                     <Menu

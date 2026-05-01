@@ -161,6 +161,12 @@ public final class ScmRequest {
         @NotBlank(message = "发证机构不能为空")
         private String issuingAuthority;
 
+        /** 注册人名称。 */
+        private String registrantName;
+
+        /** 代理人名称。 */
+        private String agentName;
+
         /** 附件名称。 */
         private String attachmentName;
 

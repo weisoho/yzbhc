@@ -20,8 +20,7 @@ const SupplierBusinessLicense = () => {
   const [total, setTotal] = useState(0);
   const [searchParams, setSearchParams] = useState({
     licenseNumber: '',
-    supplierName: '',
-    unifiedSocialCreditCode: ''
+    supplierName: ''
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -41,7 +40,6 @@ const SupplierBusinessLicense = () => {
         supplierId: supplierId,
         certificateName: searchParams.supplierName,
         licenseNumber: searchParams.licenseNumber,
-        creditCode: searchParams.unifiedSocialCreditCode,
         pageNum: currentPage,
         pageSize: pageSize,
         type: 'BUSINESS_LICENSE'
@@ -153,7 +151,6 @@ const SupplierBusinessLicense = () => {
               issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,  // 发证日期
               expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,  // 有效期
               issuingAuthority: values.issuingAuthority,  // 发证机构
-              unifiedSocialCreditCode: values.unifiedSocialCreditCode,  // 统一社会信用代码
               legalRepresentative: values.legalRepresentative,  // 法定代表人
               attachmentName: editFileList.length > 0 ? editFileList[editFileList.length - 1].name : editingRecord.attachment,  // 附件名称
               licenseFile: ''  // 附件地址
@@ -229,23 +226,10 @@ const SupplierBusinessLicense = () => {
       })
     },
     { 
-      title: '供应商名称', 
+      title: '企业名称', 
       dataIndex: 'name', 
       key: 'name',
       width: 150,
-      align: 'center',
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      })
-    },
-    { 
-      title: '统一社会信用代码', 
-      dataIndex: 'unifiedSocialCreditCode', 
-      key: 'unifiedSocialCreditCode',
-      width: 200,
       align: 'center',
       onCell: () => ({
         style: {
@@ -398,15 +382,6 @@ const SupplierBusinessLicense = () => {
                 onChange={(e) => handleSearchChange('supplierName', e.target.value)}
               />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ whiteSpace: 'nowrap' }}>统一社会信用代码：</span>
-              <Input 
-                placeholder="请输入统一社会信用代码" 
-                style={{ width: 200 }} 
-                value={searchParams.unifiedSocialCreditCode}
-                onChange={(e) => handleSearchChange('unifiedSocialCreditCode', e.target.value)}
-              />
-            </div>
           </div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
             <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
@@ -462,7 +437,6 @@ const SupplierBusinessLicense = () => {
               issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,  // 发证日期
               expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,  // 有效期
               issuingAuthority: values.issuingAuthority,  // 发证机构
-              unifiedSocialCreditCode: values.unifiedSocialCreditCode,  // 统一社会信用代码
               legalRepresentative: values.legalRepresentative,  // 法定代表人
               attachmentName: fileList.length > 0 ? fileList[fileList.length - 1].name : '',  // 附件名称
               licenseFile: ''  // 附件地址
@@ -503,32 +477,21 @@ const SupplierBusinessLicense = () => {
       >
         <Form form={form} layout="vertical">
           <Form.Item
-            name="licenseNumber"
-            label="许可证编号"
-            rules={[{ required: true, message: '请输入许可证编号' }]}
-          >
-            <Input placeholder="请输入许可证编号" />
-          </Form.Item>
-          
-          <Form.Item
             name="name"
-            label="供应商名称"
-            rules={[{ required: true, message: '请选择供应商名称' }]}
+            label="企业名称"
+            rules={[{ required: true, message: '请选择企业名称' }]}
           >
             <Select 
-              placeholder="请选择供应商名称" 
+              placeholder="请选择企业名称" 
               style={{ width: '100%' }}
               onChange={(value) => {
                 // 查找选择的供应商
                 const selectedSupplier = suppliers.find(s => s.name === value);
                 if (selectedSupplier) {
-                  // 尝试不同的字段名称，确保能够获取到统一社会信用代码
-                  const creditCode = selectedSupplier.registrationNumber || selectedSupplier.registration_number || selectedSupplier.creditCode || selectedSupplier.credit_code || '';
                   // 尝试不同的字段名称，确保能够获取到法定代表人
                   const legalRep = selectedSupplier.legalRepresentative || selectedSupplier.legal_representative || '';
-                  // 自动填充统一社会信用代码和法定代表人
+                  // 自动填充法定代表人
                   form.setFieldsValue({
-                    unifiedSocialCreditCode: creditCode,
                     legalRepresentative: legalRep
                   });
                 }
@@ -541,13 +504,13 @@ const SupplierBusinessLicense = () => {
               ))}
             </Select>
           </Form.Item>
-          
+
           <Form.Item
-            name="unifiedSocialCreditCode"
-            label="统一社会信用代码"
-            rules={[{ required: true, message: '请输入统一社会信用代码' }]}
+            name="licenseNumber"
+            label="许可证编号"
+            rules={[{ required: true, message: '请输入许可证编号' }]}
           >
-            <Input placeholder="请输入统一社会信用代码" />
+            <Input placeholder="请输入许可证编号" />
           </Form.Item>
           
           <Form.Item
@@ -611,32 +574,21 @@ const SupplierBusinessLicense = () => {
       >
         <Form form={editForm} layout="vertical">
           <Form.Item
-            name="licenseNumber"
-            label="许可证编号"
-            rules={[{ required: true, message: '请输入许可证编号' }]}
-          >
-            <Input placeholder="请输入许可证编号" />
-          </Form.Item>
-          
-          <Form.Item
             name="name"
-            label="供应商名称"
-            rules={[{ required: true, message: '请选择供应商名称' }]}
+            label="企业名称"
+            rules={[{ required: true, message: '请选择企业名称' }]}
           >
             <Select 
-              placeholder="请选择供应商名称" 
+              placeholder="请选择企业名称" 
               style={{ width: '100%' }}
               onChange={(value) => {
                 // 查找选择的供应商
                 const selectedSupplier = suppliers.find(s => s.name === value);
                 if (selectedSupplier) {
-                  // 尝试不同的字段名称，确保能够获取到统一社会信用代码
-                  const creditCode = selectedSupplier.registrationNumber || selectedSupplier.registration_number || selectedSupplier.creditCode || selectedSupplier.credit_code || '';
                   // 尝试不同的字段名称，确保能够获取到法定代表人
                   const legalRep = selectedSupplier.legalRepresentative || selectedSupplier.legal_representative || '';
-                  // 自动填充统一社会信用代码和法定代表人
+                  // 自动填充法定代表人
                   editForm.setFieldsValue({
-                    unifiedSocialCreditCode: creditCode,
                     legalRepresentative: legalRep
                   });
                 }
@@ -649,13 +601,13 @@ const SupplierBusinessLicense = () => {
               ))}
             </Select>
           </Form.Item>
-          
+
           <Form.Item
-            name="unifiedSocialCreditCode"
-            label="统一社会信用代码"
-            rules={[{ required: true, message: '请输入统一社会信用代码' }]}
+            name="licenseNumber"
+            label="许可证编号"
+            rules={[{ required: true, message: '请输入许可证编号' }]}
           >
-            <Input placeholder="请输入统一社会信用代码" />
+            <Input placeholder="请输入许可证编号" />
           </Form.Item>
           
           <Form.Item

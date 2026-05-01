@@ -34,6 +34,10 @@ public class SupplierQualificationView {
     private LocalDate expiryDate;
     /** 发证机构。 */
     private String issuingAuthority;
+    /** 注册人名称。 */
+    private String registrantName;
+    /** 代理人名称。 */
+    private String agentName;
     /** 注册资本。 */
     private String registeredCapital;
     /** 注册日期。 */
