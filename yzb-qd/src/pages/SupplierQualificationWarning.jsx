@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Empty, Input, Segmented, Select, Space, Table, Tag, Typography, message } from 'antd';
 import { DownloadOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import moment from 'moment';
+import { useNavigate } from 'react-router-dom';
 import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api.js';
 
 const { Title, Text } = Typography;
@@ -24,26 +25,24 @@ const TAB_DEFINITIONS = {
 	registration: {
 		label: '注册证',
 		type: 'REGISTRATION_CERTIFICATE',
-		certificateLabel: '注册证号',
+		route: '/supplier-inspection-report',
 	},
 	businessLicense: {
 		label: '经营许可证',
 		type: 'BUSINESS_LICENSE',
-		certificateLabel: '许可证号',
+		route: '/supplier-business-license',
 	},
 	businessCertificate: {
 		label: '营业执照',
 		type: 'BUSINESS_CERTIFICATE',
-		certificateLabel: '营业执照号',
+		route: '/supplier-business-certificate',
 	},
 };
 
 const DEFAULT_FILTERS = {
+	supplierId: '',
 	supplierName: '',
-	certificateName: '',
-	certificateNumber: '',
 	status: '',
-	days: undefined,
 };
 
 const mapWarningStatus = (status) => {
@@ -99,7 +98,10 @@ const getRecordList = (pageData) => {
 	return [];
 };
 
+const getDisplayValue = (value) => (value || value === 0 ? value : '--');
+
 const SupplierQualificationWarning = () => {
+	const navigate = useNavigate();
 	const [mainTab, setMainTab] = useState('registration');
 	const [loading, setLoading] = useState(false);
 	const [rows, setRows] = useState([]);
@@ -118,10 +120,7 @@ const SupplierQualificationWarning = () => {
 				pageNum: 1,
 				pageSize: 500,
 				type: currentTabConfig.type,
-				certificateName: submittedFilters.certificateName || submittedFilters.supplierName,
-				licenseNumber: submittedFilters.certificateNumber,
 				warningStatus: mapWarningStatus(submittedFilters.status),
-				warningDays: submittedFilters.days,
 			});
 
 			if (response.code !== 1 || !response.data) {
@@ -134,18 +133,19 @@ const SupplierQualificationWarning = () => {
 					return {
 						key: String(item.id),
 						id: item.id,
-						supplierName: item.supplierName || '--',
-						certificateName: item.certificateName || '--',
-						certificateNumber: item.licenseNumber || '--',
-						certificateType: item.licenseType || item.type || '--',
-						issueDate: item.issueDate || '--',
-						expiryDate: item.expiryDate || '--',
-						issuingAuthority: item.issuingAuthority || '--',
+						supplierId: getDisplayValue(item.supplierId),
+						supplierName: getDisplayValue(item.supplierName),
+						certificateType: getDisplayValue(item.licenseType || item.type || currentTabConfig.label),
+						issueDate: getDisplayValue(item.issueDate),
+						expiryDate: getDisplayValue(item.expiryDate),
 						status,
 						daysUntilExpiry,
 					};
 				})
 				.filter((item) => {
+					if (submittedFilters.supplierId && !String(item.supplierId).includes(submittedFilters.supplierId)) {
+						return false;
+					}
 					if (submittedFilters.supplierName && !String(item.supplierName).includes(submittedFilters.supplierName)) {
 						return false;
 					}
@@ -181,6 +181,14 @@ const SupplierQualificationWarning = () => {
 	const handleReset = () => {
 		setFilters(DEFAULT_FILTERS);
 		setSubmittedFilters(DEFAULT_FILTERS);
+	};
+
+	const handleOpenQualification = (record) => {
+		if (!record?.supplierId || record.supplierId === '--') {
+			message.warning('当前记录缺少供应商ID，无法打开资质详情');
+			return;
+		}
+		navigate(`${currentTabConfig.route}/${record.supplierId}`);
 	};
 
 	const handleExportSelectedWarnings = async () => {
@@ -225,16 +233,24 @@ const SupplierQualificationWarning = () => {
 	};
 
 	const columns = useMemo(() => [
-		{ title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 180 },
-		{ title: '资质名称', dataIndex: 'certificateName', key: 'certificateName', width: 180 },
-		{ title: currentTabConfig.certificateLabel, dataIndex: 'certificateNumber', key: 'certificateNumber', width: 180 },
-		{ title: '资质类型', dataIndex: 'certificateType', key: 'certificateType', width: 140 },
-		{ title: '发证机构', dataIndex: 'issuingAuthority', key: 'issuingAuthority', width: 160 },
-		{ title: '发证日期', dataIndex: 'issueDate', key: 'issueDate', width: 120 },
-		{ title: '有效期至', dataIndex: 'expiryDate', key: 'expiryDate', width: 120 },
-		{ title: '剩余天数', dataIndex: 'daysUntilExpiry', key: 'daysUntilExpiry', width: 140, render: renderRemainingDays },
-		{ title: '预警状态', dataIndex: 'status', key: 'status', width: 120, render: renderStatusTag },
-	], [currentTabConfig.certificateLabel]);
+		{ title: '供应商ID', dataIndex: 'supplierId', key: 'supplierId', width: 120 },
+		{ title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 200 },
+		{ title: '发证日期', dataIndex: 'issueDate', key: 'issueDate', width: 140 },
+		{ title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', width: 140 },
+		{ title: '证件类型', dataIndex: 'certificateType', key: 'certificateType', width: 140 },
+		{ title: '状态', dataIndex: 'status', key: 'status', width: 120, render: renderStatusTag },
+		{
+			title: '操作',
+			key: 'action',
+			width: 120,
+			fixed: 'right',
+			render: (_, record) => (
+				<Button type="link" size="small" onClick={() => handleOpenQualification(record)}>
+					查看资质
+				</Button>
+			),
+		},
+	], [currentTabConfig.route, navigate]);
 
 	const pagedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
@@ -262,35 +278,22 @@ const SupplierQualificationWarning = () => {
 
 						<Space wrap size={12}>
 							<Input
+								placeholder="供应商ID"
+								value={filters.supplierId}
+								onChange={(event) => setFilters((prev) => ({ ...prev, supplierId: event.target.value }))}
+								style={{ width: 180 }}
+							/>
+							<Input
 								placeholder="供应商名称"
 								value={filters.supplierName}
 								onChange={(event) => setFilters((prev) => ({ ...prev, supplierName: event.target.value }))}
 								style={{ width: 220 }}
-							/>
-							<Input
-								placeholder="资质名称"
-								value={filters.certificateName}
-								onChange={(event) => setFilters((prev) => ({ ...prev, certificateName: event.target.value }))}
-								style={{ width: 220 }}
-							/>
-							<Input
-								placeholder={currentTabConfig.certificateLabel}
-								value={filters.certificateNumber}
-								onChange={(event) => setFilters((prev) => ({ ...prev, certificateNumber: event.target.value }))}
-								style={{ width: 200 }}
 							/>
 							<Select
 								options={STATUS_OPTIONS}
 								value={filters.status}
 								onChange={(value) => setFilters((prev) => ({ ...prev, status: value }))}
 								style={{ width: 150 }}
-							/>
-							<Select
-								options={WARNING_DAY_OPTIONS}
-								value={filters.days}
-								onChange={(value) => setFilters((prev) => ({ ...prev, days: value }))}
-								placeholder="到期天数"
-								style={{ width: 140 }}
 							/>
 						</Space>
 
@@ -325,7 +328,7 @@ const SupplierQualificationWarning = () => {
 								setPageSize(size);
 							},
 						}}
-						scroll={{ x: 1320 }}
+						scroll={{ x: 980 }}
 					/>
 				</Card>
 			</Space>
