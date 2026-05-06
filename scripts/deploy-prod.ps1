@@ -3,6 +3,8 @@ param(
     [string]$UserName = 'ubuntu',
     [string]$RemoteDir = '/home/yzb',
     [string]$JdkHome = 'C:\Program Files\Eclipse Adoptium\jdk-21.0.11.10-hotspot',
+    [string]$SshPassword = '',
+    [string]$SudoPassword = '',
     [switch]$SkipFrontendBuild,
     [switch]$SkipBackendBuild
 )
@@ -46,10 +48,26 @@ $composeSource = Join-Path $repoRoot 'docker\docker-compose.yml'
 $nginxSource = Join-Path $frontendDir 'nginx.conf'
 $sqlSource = Join-Path $backendDir 'sql\20260506_add_status_columns.sql'
 $remoteScriptSource = Join-Path $PSScriptRoot 'prod-remote-deploy.sh'
+$sshHelperSource = Join-Path $PSScriptRoot 'remote_ssh.py'
+$venvPython = Join-Path $repoRoot '.venv\Scripts\python.exe'
+$pythonCommand = if (Test-Path $venvPython) { $venvPython } else { Resolve-CommandPath -CommandName 'python.exe' }
 $npmCommand = Resolve-CommandPath -CommandName 'npm.cmd'
 $mavenCommand = Resolve-CommandPath -CommandName 'mvn.cmd'
 $sshCommand = Resolve-CommandPath -CommandName 'ssh.exe'
 $scpCommand = Resolve-CommandPath -CommandName 'scp.exe'
+
+if (-not $SshPassword -and $env:YZB_DEPLOY_SSH_PASSWORD) {
+    $SshPassword = $env:YZB_DEPLOY_SSH_PASSWORD
+}
+
+if (-not $SudoPassword) {
+    if ($env:YZB_DEPLOY_SUDO_PASSWORD) {
+        $SudoPassword = $env:YZB_DEPLOY_SUDO_PASSWORD
+    }
+    elseif ($SshPassword) {
+        $SudoPassword = $SshPassword
+    }
+}
 
 if (-not (Test-Path $frontendDir)) {
     throw 'Frontend directory yzb-qd was not found.'
@@ -73,6 +91,10 @@ if (-not (Test-Path $sqlSource)) {
 
 if (-not (Test-Path $remoteScriptSource)) {
     throw 'Remote deploy script template was not found.'
+}
+
+if (-not (Test-Path $sshHelperSource)) {
+    throw 'SSH helper script was not found.'
 }
 
 if (-not $SkipBackendBuild -and -not (Test-Path $JdkHome)) {
@@ -140,11 +162,6 @@ Invoke-Step 'Prepare deployment artifacts' {
 }
 
 Invoke-Step 'Upload artifacts to server' {
-    & $sshCommand "${UserName}@${HostName}" "mkdir -p ${RemoteDir}/.deploy"
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Failed to create the remote deployment directory.'
-    }
-
     $uploadSources = @(
         (Join-Path $artifactDir 'docker-compose.yml')
         (Join-Path $artifactDir 'nginx.conf')
@@ -154,16 +171,61 @@ Invoke-Step 'Upload artifacts to server' {
         (Join-Path $artifactDir 'remote-deploy.sh')
     )
 
-    & $scpCommand @uploadSources "${UserName}@${HostName}:${RemoteDir}/.deploy/"
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Failed to upload deployment artifacts.'
+    if ($SshPassword) {
+        & $pythonCommand $sshHelperSource --host $HostName --username $UserName --password $SshPassword mkdir --path "${RemoteDir}/.deploy"
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Failed to create the remote deployment directory.'
+        }
+
+        $uploadArgs = @(
+            $sshHelperSource
+            '--host'
+            $HostName
+            '--username'
+            $UserName
+            '--password'
+            $SshPassword
+            'upload'
+            '--remote-dir'
+            "${RemoteDir}/.deploy"
+        )
+
+        foreach ($uploadSource in $uploadSources) {
+            $uploadArgs += '--local-file'
+            $uploadArgs += $uploadSource
+        }
+
+        & $pythonCommand @uploadArgs
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Failed to upload deployment artifacts.'
+        }
+    }
+    else {
+        & $sshCommand "${UserName}@${HostName}" "mkdir -p ${RemoteDir}/.deploy"
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Failed to create the remote deployment directory.'
+        }
+
+        & $scpCommand @uploadSources "${UserName}@${HostName}:${RemoteDir}/.deploy/"
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Failed to upload deployment artifacts.'
+        }
     }
 }
 
 Invoke-Step 'Run remote deployment script' {
-    & $sshCommand "${UserName}@${HostName}" "chmod +x ${RemoteDir}/.deploy/remote-deploy.sh && sudo bash ${RemoteDir}/.deploy/remote-deploy.sh"
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Remote deployment failed.'
+    if ($SshPassword) {
+        $remoteCommand = "chmod +x ${RemoteDir}/.deploy/remote-deploy.sh && bash ${RemoteDir}/.deploy/remote-deploy.sh"
+        & $pythonCommand $sshHelperSource --host $HostName --username $UserName --password $SshPassword run --command-text $remoteCommand --sudo-password $SudoPassword
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Remote deployment failed.'
+        }
+    }
+    else {
+        & $sshCommand "${UserName}@${HostName}" "chmod +x ${RemoteDir}/.deploy/remote-deploy.sh && sudo bash ${RemoteDir}/.deploy/remote-deploy.sh"
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Remote deployment failed.'
+        }
     }
 }
 
