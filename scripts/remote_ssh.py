@@ -1,4 +1,5 @@
 import argparse
+import os
 import posixpath
 import shlex
 import sys
@@ -54,7 +55,7 @@ def upload_files(client, remote_dir, local_files):
     with client.open_sftp() as sftp:
         ensure_remote_dir(sftp, remote_dir)
         for local_file in local_files:
-            remote_file = posixpath.join(remote_dir, posixpath.basename(local_file))
+            remote_file = posixpath.join(remote_dir, os.path.basename(local_file))
             sftp.put(local_file, remote_file)
             print(f"uploaded {local_file} -> {remote_file}")
 
