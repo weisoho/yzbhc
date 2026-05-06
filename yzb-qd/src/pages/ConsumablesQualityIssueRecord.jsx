@@ -13,6 +13,12 @@ const normalizeList = (payload) => {
   return [];
 };
 
+const issueStatusMeta = {
+  1: { label: '待处理', color: 'default' },
+  2: { label: '处理中', color: 'processing' },
+  3: { label: '已完成', color: 'success' },
+};
+
 const formatDate = (value) => (value ? String(value).replace('T', ' ').slice(0, 19) : '-');
 
 const toInventoryOptions = (list) => list.map((item) => ({
@@ -182,11 +188,29 @@ const ConsumablesQualityIssueRecord = () => {
     { title: '物资名称', dataIndex: 'materialName', key: 'materialName', width: 160 },
     { title: '规格', dataIndex: 'specification', key: 'specification', width: 120 },
     { title: '型号', dataIndex: 'model', key: 'model', width: 120 },
+    { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', width: 160 },
     { title: '批号', dataIndex: 'batchNumber', key: 'batchNumber', width: 140 },
-    { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 160 },
+    { title: '生产日期', dataIndex: 'productionDate', key: 'productionDate', width: 140, render: formatDate },
+    { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', width: 140, render: formatDate },
+    { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 160 },
     { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 160 },
+    { title: '采购价格', dataIndex: 'purchasePrice', key: 'purchasePrice', width: 120, render: (value) => value != null ? `¥${Number(value).toFixed(2)}` : '-' },
+    { title: '申领科室', dataIndex: 'departmentName', key: 'departmentName', width: 140 },
+    { title: '入库单号', dataIndex: 'stockInOrderNo', key: 'stockInOrderNo', width: 160 },
+    { title: '采购单号', dataIndex: 'purchaseOrderNo', key: 'purchaseOrderNo', width: 160 },
+    { title: '出库单号', dataIndex: 'outboundOrderNo', key: 'outboundOrderNo', width: 160 },
     { title: '问题数量', dataIndex: 'quantity', key: 'quantity', width: 100 },
     { title: '发生时间', dataIndex: 'occurrenceDate', key: 'occurrenceDate', width: 180, render: formatDate },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (value) => {
+        const meta = issueStatusMeta[value] || { label: '-', color: 'default' };
+        return <span style={{ color: meta.color === 'success' ? '#52c41a' : meta.color === 'processing' ? '#1677ff' : '#8c8c8c' }}>{meta.label}</span>;
+      },
+    },
     { title: '问题描述', dataIndex: 'issueDescription', key: 'issueDescription', ellipsis: true },
     {
       title: '操作',
@@ -248,7 +272,7 @@ const ConsumablesQualityIssueRecord = () => {
           loading={loading}
           columns={columns}
           dataSource={records}
-          scroll={{ x: 1680 }}
+          scroll={{ x: 2800 }}
           pagination={{
             current: currentPage,
             pageSize,

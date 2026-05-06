@@ -94,10 +94,10 @@ const PurchaseOrderQuery = () => {
             quantity: item.quantity,
             price: item.unitPrice,
             amount: item.amount,
+            supplier: order.supplierName,
             manufacturer: item.manufacturer,
             registrationNumber: item.registrationNumber,
             createDate: item.createTime,
-            approveDate: item.updateTime
           }))
         }));
         setOrders(orderList);
@@ -169,10 +169,9 @@ const PurchaseOrderQuery = () => {
     { title: '采购价格', dataIndex: 'price', key: 'price', width: 100, render: (value) => `¥${value.toFixed(2)}` },
     { title: '采购数量', dataIndex: 'quantity', key: 'quantity', width: 100 },
     { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', width: 150, render: (value) => value || '-' },
-    { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 120, render: (value) => value || '-' },
+    { title: '供应商名称', dataIndex: 'supplier', key: 'supplier', width: 140, render: (value) => value || '-' },
     { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 150, render: (value) => value || '-' },
     { title: '创建日期', dataIndex: 'createDate', key: 'createDate', width: 120, render: (value) => value || '-' },
-    { title: '审核日期', dataIndex: 'approveDate', key: 'approveDate', width: 120, render: (value) => value || '-' },
   ];
 
   const columns = [
@@ -202,6 +201,7 @@ const PurchaseOrderQuery = () => {
       }
     },
     { title: '采购分院', dataIndex: 'department', key: 'department', width: 100 },
+    { title: '供应商名称', dataIndex: 'supplier', key: 'supplier', width: 140, render: (value) => value || '-' },
     { title: '申请人', dataIndex: 'applicant', key: 'applicant', width: 80 },
     { title: '采购数量', dataIndex: 'quantity', key: 'quantity', width: 100, render: (qty) => `${qty} 种` },
     { title: '合计金额', dataIndex: 'totalAmount', key: 'totalAmount', width: 120, render: (amount) => `¥${amount?.toFixed(2)}` },

@@ -20,10 +20,20 @@ const InventoryTransfer = () => {
 
   const transferColumns = [
     { title: '调拨单号', dataIndex: 'transferNumber', key: 'transferNumber' },
+    { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName' },
+    { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode' },
     { title: '商品名称', dataIndex: 'materialName', key: 'materialName' },
+    { title: '物资类型', dataIndex: 'materialType', key: 'materialType' },
     { title: '规格型号', dataIndex: 'specification', key: 'specification' },
+    { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber' },
+    { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer' },
+    { title: '生产批号', dataIndex: 'batchNumber', key: 'batchNumber' },
+    { title: '生产日期', dataIndex: 'productionDate', key: 'productionDate' },
+    { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate' },
     { title: '调出仓库', dataIndex: 'fromWarehouse', key: 'fromWarehouse' },
     { title: '调入仓库', dataIndex: 'toWarehouse', key: 'toWarehouse' },
+    { title: '所属科室', dataIndex: 'department', key: 'department' },
+    { title: '采购金额', dataIndex: 'purchaseAmount', key: 'purchaseAmount', render: (value) => value != null ? `¥${Number(value).toFixed(2)}` : '-' },
     { title: '调拨数量', dataIndex: 'quantity', key: 'quantity' },
     { title: '单位', dataIndex: 'unit', key: 'unit' },
     { title: '调拨日期', dataIndex: 'transferDate', key: 'transferDate' },
@@ -75,10 +85,20 @@ const InventoryTransfer = () => {
         const data = response.data.records.map(item => ({
           key: item.id,
           transferNumber: item.transferNumber,
+          supplierName: item.supplierName,
+          materialCode: item.materialCode,
           materialName: item.materialName,
+          materialType: item.materialType,
           specification: item.specification,
+          registrationNumber: item.registrationNumber,
+          manufacturer: item.manufacturer,
+          batchNumber: item.batchNumber,
+          productionDate: item.productionDate,
+          expiryDate: item.expiryDate,
           fromWarehouse: item.fromWarehouse,
           toWarehouse: item.toWarehouse,
+          department: item.departmentName || item.department,
+          purchaseAmount: item.purchaseAmount || item.purchasePrice,
           quantity: item.quantity,
           unit: item.unit,
           transferDate: item.transferDate,
@@ -236,7 +256,7 @@ const InventoryTransfer = () => {
             }
           }} 
           size="small"
-          scroll={{ x: 1600 }}
+          scroll={{ x: 2600 }}
         />
       </div>
     </div>

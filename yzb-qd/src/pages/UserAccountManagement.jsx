@@ -400,6 +400,25 @@ const UserAccountManagement = () => {
       },
     },
     {
+      title: '院区编码',
+      key: 'campusCode',
+      width: 140,
+      render: (_, record) => {
+        const campusId = resolveCampusIdByDepartmentId(record.depId, campusOptions);
+        const campus = campusOptions.find((item) => Number(item.id) === Number(campusId));
+        return campus?.deptCode || '-';
+      },
+    },
+    {
+      title: '部门编码',
+      key: 'departmentCode',
+      width: 140,
+      render: (_, record) => {
+        const department = findDepartmentById(departmentOptions, record.depId);
+        return department?.deptCode || '-';
+      },
+    },
+    {
       title: '所属部门',
       dataIndex: 'userDep',
       key: 'userDep',
@@ -420,6 +439,12 @@ const UserAccountManagement = () => {
       dataIndex: 'accountType',
       key: 'accountType',
       width: 120,
+    },
+    {
+      title: '登录密码',
+      key: 'loginPassword',
+      width: 120,
+      render: () => '******',
     },
     {
       title: '仓库范围',

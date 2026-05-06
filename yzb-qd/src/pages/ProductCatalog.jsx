@@ -94,7 +94,7 @@ const ProductCatalog = () => {
           purchasePrice: product.purchasePrice,
           qualificationId: product.qualificationId,
           supplierId: product.supplierId,
-          supplierName: product.supplierName,
+          supplierName: product.supplierName || product.supplier,
           registrationNumber: product.registrationNumber,
           manufacturer: product.manufacturer,
           storageCondition: product.storageCondition,
@@ -261,14 +261,13 @@ const ProductCatalog = () => {
     },
     { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode', width: 120 },
     { title: '物资名称', dataIndex: 'name', key: 'name', width: 150 },
-    { title: '物资类型', dataIndex: 'materialType', key: 'materialType', width: 100 },
+    { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 150 },
+    { title: '物资类型', dataIndex: 'materialType', key: 'materialType', width: 120 },
     { title: '规格', dataIndex: 'specification', key: 'specification', width: 150 },
     { title: '型号', dataIndex: 'model', key: 'model', width: 150 },
-    { title: '最小包装', dataIndex: 'minPackage', key: 'minPackage', width: 120 },
-    { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
+    { title: '包装单位', dataIndex: 'minPackage', key: 'minPackage', width: 120 },
     { title: '采购价格', dataIndex: 'purchasePrice', key: 'purchasePrice', width: 100, render: (price) => `¥${price}` },
     { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', width: 180 },
-    { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 150 },
     { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 200 },
     { title: '储存条件', dataIndex: 'storageCondition', key: 'storageCondition', width: 100 },
     { title: '状态', dataIndex: 'status', key: 'status', width: 80,
@@ -329,9 +328,9 @@ const ProductCatalog = () => {
               />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ whiteSpace: 'nowrap' }}>供应商：</span>
+              <span style={{ whiteSpace: 'nowrap' }}>供应商名称：</span>
               <Input 
-                placeholder="请输入供应商"
+                placeholder="请输入供应商名称"
                 value={searchParams.supplier}
                 allowClear
                 style={{ width: 200 }}
@@ -348,6 +347,19 @@ const ProductCatalog = () => {
                 onChange={(e) => handleSearchChange('manufacturer', e.target.value)}
               />
             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ whiteSpace: 'nowrap' }}>状态：</span>
+              <Select
+                placeholder="请选择状态"
+                allowClear
+                value={searchParams.status || undefined}
+                style={{ width: 160 }}
+                onChange={(value) => handleSearchChange('status', value || '')}
+              >
+                <Option value="active">启用</Option>
+                <Option value="inactive">停用</Option>
+              </Select>
+            </div>
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
             <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
@@ -358,7 +370,8 @@ const ProductCatalog = () => {
                 materialCode: '',
                 name: '',
                 supplier: '',
-                manufacturer: ''
+                manufacturer: '',
+                status: ''
               });
             }}>
               重置

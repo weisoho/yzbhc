@@ -26,7 +26,7 @@ services:
       start_period: 30s
 
   backend:
-    image: eclipse-temurin:8-jre
+    image: eclipse-temurin:21-jre
     container_name: yzbhc-backend
     restart: unless-stopped
     depends_on:

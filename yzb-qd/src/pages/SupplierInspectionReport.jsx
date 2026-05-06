@@ -63,37 +63,28 @@ const SupplierInspectionReport = () => {
         licenseNumber: searchParams.registrationNumber,
         pageNum: currentPage,
         pageSize: pageSize,
-        type: 'INSPECTION_REPORT'  // 添加type参数，查询注册证类型
+        type: 'REGISTRATION_CERTIFICATE'
       };
       // 使用新的不带供应商ID的资质查询接口，查询所有供应商的资质记录
       const response = await api.get('/api/scm/suppliers/qualifications', params);
       if (response.code === 1 && response.data) {
-        console.log('资质数据:', response.data);
-        console.log('供应商列表:', suppliers);
         const records = Array.isArray(response.data?.records) ? response.data.records : [];
         const totalCount = typeof response.data?.total === 'number' ? response.data.total : records.length;
-        const certificateList = records.map(certificate => {
-          // 计算状态
-          const status = certificate.expiryDate && new Date(certificate.expiryDate) < new Date() ? '已过期' : '有效';
-          // 根据supplierId从供应商列表中查找对应的供应商名称
-          console.log('当前资质的supplierId:', certificate.supplierId);
-          const supplier = suppliers.find(s => s.id === certificate.supplierId);
-          console.log('找到的供应商:', supplier);
-          const supplierName = supplier ? supplier.name : '未知供应商';
-          return {
-            key: certificate.id,
-            registrantName: supplierName,
-            agentName: certificate.issuingAuthority || '-',
-            productName: certificate.certificateName,
-            registrationNumber: certificate.licenseNumber,
-            packagingSpec: '标准包装',
-            effectiveDate: certificate.issueDate,
-            expiryDate: certificate.expiryDate,
-            attachment: certificate.attachmentName,
-            attachmentUrl: certificate.licenseFile,
-            status: status
-          };
-        });
+        const certificateList = records.map(certificate => ({
+          key: certificate.id,
+          supplierId: certificate.supplierId,
+          supplierName: certificate.supplierName || '-',
+          registrantName: certificate.registrantName || certificate.supplierName || '-',
+          registrantAddress: certificate.address || '-',
+          agentName: certificate.agentName || '-',
+          productName: certificate.certificateName || '-',
+          registrationNumber: certificate.licenseNumber || '-',
+          effectiveDate: certificate.issueDate,
+          expiryDate: certificate.expiryDate,
+          attachment: certificate.attachmentName,
+          attachmentUrl: certificate.licenseFile,
+          status: certificate.status || '-'
+        }));
         setRegistrationCertificates(certificateList);
         setTotal(totalCount);
       } else {
@@ -115,12 +106,9 @@ const SupplierInspectionReport = () => {
     loadSuppliers();
   }, []);
 
-  // 当供应商列表加载完成后，加载注册证列表
   useEffect(() => {
-    if (suppliers.length > 0) {
-      loadRegistrationCertificates();
-    }
-  }, [suppliers, currentPage, pageSize]);
+    loadRegistrationCertificates();
+  }, [currentPage, pageSize]);
 
   // 处理搜索输入变化
   const handleSearchChange = (field, value) => {
@@ -162,13 +150,15 @@ const SupplierInspectionReport = () => {
       
       // 构建注册证数据
       const certificateData = {
-        type: 'INSPECTION_REPORT',  // 资质类型
-        certificateName: values.productName,  // 资质名称
-        licenseNumber: values.registrationNumber,  // 证件编号
-        licenseType: '产品检验报告',  // 证件类别
-        issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,  // 发证日期
-        expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,  // 有效期
-        issuingAuthority: values.agentName || '检验机构',
+        type: 'REGISTRATION_CERTIFICATE',
+        certificateName: values.productName,
+        licenseNumber: values.registrationNumber,
+        licenseType: '注册证',
+        issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,
+        expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,
+        issuingAuthority: values.agentName || editingRecord?.agentName || '未填写',
+        registrantName: editingRecord?.registrantName || editingRecord?.supplierName || '',
+        agentName: values.agentName || '',
         attachmentName: editFileList.length > 0 ? editFileList[editFileList.length - 1].name : editingRecord.attachment,  // 附件名称
         licenseFile: editingRecord.attachmentUrl || ''
       };
@@ -222,9 +212,9 @@ const SupplierInspectionReport = () => {
 
   const columns = [
     { 
-      title: '注册人名称', 
-      dataIndex: 'registrantName', 
-      key: 'registrantName',
+      title: '供应商名称', 
+      dataIndex: 'supplierName', 
+      key: 'supplierName',
       width: 150,
       align: 'center',
       ellipsis: false,
@@ -239,6 +229,21 @@ const SupplierInspectionReport = () => {
           overflow: 'visible'
         }
       })
+    },
+    { 
+      title: '注册人名称',
+      dataIndex: 'registrantName',
+      key: 'registrantName',
+      width: 150,
+      align: 'center',
+    },
+    {
+      title: '注册人住所',
+      dataIndex: 'registrantAddress',
+      key: 'registrantAddress',
+      width: 180,
+      align: 'center',
+      render: (value) => value || '-',
     },
     { 
       title: '代理人名称',
@@ -271,25 +276,6 @@ const SupplierInspectionReport = () => {
       dataIndex: 'registrationNumber', 
       key: 'registrationNumber',
       width: 120,
-      align: 'center',
-      ellipsis: false,
-      onHeaderCell: () => ({
-        style: {
-          whiteSpace: 'nowrap'
-        }
-      }),
-      onCell: () => ({
-        style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
-        }
-      })
-    },
-    { 
-      title: '包装规格', 
-      dataIndex: 'packagingSpec', 
-      key: 'packagingSpec',
-      width: 100,
       align: 'center',
       ellipsis: false,
       onHeaderCell: () => ({
@@ -543,13 +529,15 @@ const SupplierInspectionReport = () => {
             
             // 构建注册证数据
             const certificateData = {
-              type: 'INSPECTION_REPORT',  // 资质类型
-              certificateName: values.productName,  // 资质名称
-              licenseNumber: values.registrationNumber,  // 证件编号
-              licenseType: '产品检验报告',  // 证件类别
-              issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,  // 发证日期
-              expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,  // 有效期
-              issuingAuthority: values.agentName || '检验机构',
+              type: 'REGISTRATION_CERTIFICATE',
+              certificateName: values.productName,
+              licenseNumber: values.registrationNumber,
+              licenseType: '注册证',
+              issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,
+              expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,
+              issuingAuthority: values.agentName || '未填写',
+              registrantName: suppliers.find((supplier) => supplier.id === values.supplierId)?.name || '',
+              agentName: values.agentName || '',
               attachmentName: fileList.length > 0 ? fileList[fileList.length - 1].name : '',  // 附件名称
               licenseFile: ''  // 附件地址
             };
@@ -584,10 +572,10 @@ const SupplierInspectionReport = () => {
         <Form form={form} layout="vertical">
           <Form.Item
             name="supplierId"
-            label="注册人名称"
-            rules={[{ required: true, message: '请选择注册人名称' }]}
+            label="供应商名称"
+            rules={[{ required: true, message: '请选择供应商名称' }]}
           >
-            <Select placeholder="请选择注册人名称" style={{ width: '100%' }}>
+            <Select placeholder="请选择已有供应商" style={{ width: '100%' }}>
               {suppliers.map(supplier => (
                 <Select.Option key={supplier.id} value={supplier.id}>
                   {supplier.name}
@@ -610,14 +598,6 @@ const SupplierInspectionReport = () => {
             rules={[{ required: true, message: '请输入注册证编号' }]}
           >
             <Input placeholder="请输入注册证编号" />
-          </Form.Item>
-          
-          <Form.Item
-            name="packagingSpec"
-            label="包装规格"
-            rules={[{ required: true, message: '请输入包装规格' }]}
-          >
-            <Input placeholder="请输入包装规格" />
           </Form.Item>
           
           <Form.Item
@@ -686,14 +666,6 @@ const SupplierInspectionReport = () => {
             rules={[{ required: true, message: '请输入注册证编号' }]}
           >
             <Input placeholder="请输入注册证编号" />
-          </Form.Item>
-          
-          <Form.Item
-            name="packagingSpec"
-            label="包装规格"
-            rules={[{ required: true, message: '请输入包装规格' }]}
-          >
-            <Input placeholder="请输入包装规格" />
           </Form.Item>
           
           <Form.Item

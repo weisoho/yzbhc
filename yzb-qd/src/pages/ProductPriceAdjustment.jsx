@@ -12,6 +12,7 @@ const ProductPriceAdjustment = () => {
     name: '',
     supplier: '',
     manufacturer: '',
+    status: '',
   });
 
   const [adjustModalVisible, setAdjustModalVisible] = useState(false);
@@ -63,8 +64,10 @@ const ProductPriceAdjustment = () => {
           unit: product.unit,
           purchasePrice: product.purchasePrice,
           registrationNumber: product.registrationNumber,
-          supplier: product.supplier,
+          supplier: product.supplier || product.supplierName,
           manufacturer: product.manufacturer,
+          storageCondition: product.storageCondition,
+          status: product.status,
           adjustmentReason: product.adjustmentReason,
           currentPrice: product.currentPrice,
           costPrice: product.costPrice
@@ -158,7 +161,7 @@ const ProductPriceAdjustment = () => {
       title: '物资类型',
       dataIndex: 'materialType',
       key: 'materialType',
-      width: 100,
+      width: 120,
     },
     {
       title: '规格',
@@ -173,16 +176,10 @@ const ProductPriceAdjustment = () => {
       width: 100,
     },
     {
-      title: '最小包装',
+      title: '包装单位',
       dataIndex: 'minPackage',
       key: 'minPackage',
       width: 120,
-    },
-    {
-      title: '单位',
-      dataIndex: 'unit',
-      key: 'unit',
-      width: 80,
     },
     {
       title: '注册证号',
@@ -191,7 +188,7 @@ const ProductPriceAdjustment = () => {
       width: 180,
     },
     {
-      title: '供应商',
+      title: '供应商名称',
       dataIndex: 'supplier',
       key: 'supplier',
       width: 150,
@@ -201,6 +198,12 @@ const ProductPriceAdjustment = () => {
       dataIndex: 'manufacturer',
       key: 'manufacturer',
       width: 200,
+    },
+    {
+      title: '储存条件',
+      dataIndex: 'storageCondition',
+      key: 'storageCondition',
+      width: 120,
     },
     {
       title: '调价原因',
@@ -221,6 +224,17 @@ const ProductPriceAdjustment = () => {
       key: 'currentPrice',
       width: 100,
       render: (price) => price != null ? `¥${Number(price).toFixed(2)}` : '-',
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (status) => (
+        <Tag color={status === 'active' ? 'green' : 'red'}>
+          {status === 'active' ? '启用' : '停用'}
+        </Tag>
+      ),
     },
   ];
 
@@ -459,7 +473,7 @@ const ProductPriceAdjustment = () => {
                 />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ whiteSpace: 'nowrap' }}>供应商：</span>
+                <span style={{ whiteSpace: 'nowrap' }}>供应商名称：</span>
                 <Input
                   placeholder="请输入供应商名称进行模糊查询"
                   style={{ width: 180 }}
@@ -476,12 +490,25 @@ const ProductPriceAdjustment = () => {
                   onChange={(e) => setSearchParams({ ...searchParams, manufacturer: e.target.value })}
                 />
               </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ whiteSpace: 'nowrap' }}>状态：</span>
+                <Select
+                  placeholder="请选择状态"
+                  allowClear
+                  style={{ width: 160 }}
+                  value={searchParams.status || undefined}
+                  onChange={(value) => setSearchParams({ ...searchParams, status: value || '' })}
+                >
+                  <Option value="active">启用</Option>
+                  <Option value="inactive">停用</Option>
+                </Select>
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
               <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
                 搜索
               </Button>
-              <Button onClick={() => setSearchParams({ materialCode: '', name: '', supplier: '', manufacturer: '' })}>
+              <Button onClick={() => setSearchParams({ materialCode: '', name: '', supplier: '', manufacturer: '', status: '' })}>
                 重置
               </Button>
               <Button type="primary" icon={<EditOutlined />} onClick={() => {

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Button, Table, Form, Input, Space, Modal, Popconfirm, Checkbox, Radio, Row, Col, message, DatePicker } from 'antd';
+import { Card, Button, Table, Form, Input, Space, Modal, Popconfirm, Checkbox, Radio, Row, Col, Select, message, DatePicker } from 'antd';
 import dayjs from 'dayjs';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, DownloadOutlined, EyeOutlined } from '@ant-design/icons';
 import { FORM_STYLES, getFormLayoutStyle, getModalConfig } from '../utils/formStyles.js';
@@ -7,7 +7,7 @@ import api from '../utils/api.js';
 
 
 const CREDIT_CODE_REGEX = /^[0-9A-Z]{18}$/;
-const MOBILE_PHONE_REGEX = /^1\d{10}$/;
+const CONTACT_PHONE_REGEX = /^1[3-9]\d{9}$|^0\d{2,3}-?\d{7,8}$/;
 const NUMERIC_AMOUNT_REGEX = /^\d+(\.\d+)?$/;
 
 
@@ -24,15 +24,16 @@ const SupplierMaintenance = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [total, setTotal] = useState(0);
   const [searchParams, setSearchParams] = useState({
     name: '',
+    contactPerson: '',
     legalRepresentative: '',
-    phone: ''
+    phone: '',
+    status: ''
   });
 
   const normalizeCreditCode = (value) => (value ? value.trim().toUpperCase() : value);
-
-  const sanitizePhoneInput = (value) => (value || '').replace(/\D/g, '').slice(0, 11);
 
   const sanitizeCapitalInput = (value) => {
     const sanitized = (value || '').replace(/[^\d.]/g, '');
@@ -56,8 +57,10 @@ const SupplierMaintenance = () => {
       // 构建查询参数
       const params = {
         name: searchParams.name,
+        contactPerson: searchParams.contactPerson,
         legalRepresentative: searchParams.legalRepresentative,
         contactPhone: searchParams.phone,
+        status: searchParams.status,
         pageNum: currentPage,
         pageSize: pageSize
       };
@@ -68,15 +71,19 @@ const SupplierMaintenance = () => {
         const supplierList = response.data.records.map(supplier => ({
           key: supplier.id,
           name: supplier.name,
+          supplierCode: supplier.supplierCode,
           enterpriseType: supplier.enterpriseType,
           creditCode: supplier.creditCode,
           legalRepresentative: supplier.legalRepresentative,
           registeredCapital: supplier.registeredCapital,
           registrationDate: supplier.registrationDate,
+          contactPerson: supplier.contactPerson,
           phone: supplier.contactPhone, // 后端返回的是contactPhone，前端期望的是phone
-          address: supplier.address
+          address: supplier.address,
+          status: supplier.status,
         }));
         setSuppliers(supplierList);
+        setTotal(response.data.total || supplierList.length);
       } else {
         message.error(response.msg || response.message || '加载供应商列表失败');
       }
@@ -111,13 +118,16 @@ const SupplierMaintenance = () => {
     setEditingRecord(record);
     form.setFieldsValue({
       name: record.name,
+      supplierCode: record.supplierCode,
       enterpriseType: record.enterpriseType,
       creditCode: record.creditCode,
       legalRepresentative: record.legalRepresentative,
       registeredCapital: record.registeredCapital,
       registrationDate: record.registrationDate ? dayjs(record.registrationDate) : null,
+      contactPerson: record.contactPerson,
       phone: record.phone,
-      address: record.address
+      address: record.address,
+      status: record.status || '不可用'
     });
     setVisible(true);
   };
@@ -132,7 +142,7 @@ const SupplierMaintenance = () => {
       const supplierData = {
         name: values.name,
         enterpriseType: values.enterpriseType,
-        contactPerson: values.legalRepresentative, // 使用法定代表人作为联系人
+        contactPerson: values.contactPerson?.trim(),
         contactPhone: values.phone.trim(),
         address: values.address,
         creditCode: normalizeCreditCode(values.creditCode),
@@ -299,11 +309,21 @@ const SupplierMaintenance = () => {
       render: (_, record, index) => (currentPage - 1) * pageSize + index + 1
     },
     { 
-      title: '名称', 
+      title: '供应商名称', 
       dataIndex: 'name', 
       key: 'name',
       ellipsis: false,
       align: 'center',
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { whiteSpace: 'nowrap' } })
+    },
+    {
+      title: '供应商编码',
+      dataIndex: 'supplierCode',
+      key: 'supplierCode',
+      ellipsis: false,
+      align: 'center',
+      render: (value) => value || '-',
       onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
       onCell: () => ({ style: { whiteSpace: 'nowrap' } })
     },
@@ -353,6 +373,16 @@ const SupplierMaintenance = () => {
       onCell: () => ({ style: { whiteSpace: 'nowrap' } })
     },
     { 
+      title: '企业联系人', 
+      dataIndex: 'contactPerson', 
+      key: 'contactPerson',
+      ellipsis: false,
+      align: 'center',
+      render: (value) => value || '-',
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { whiteSpace: 'nowrap' } })
+    },
+    { 
       title: '联系电话', 
       dataIndex: 'phone', 
       key: 'phone',
@@ -367,6 +397,20 @@ const SupplierMaintenance = () => {
       key: 'address',
       ellipsis: false,
       align: 'center',
+      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
+      onCell: () => ({ style: { whiteSpace: 'nowrap' } })
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      ellipsis: false,
+      align: 'center',
+      render: (value) => (
+        <span style={{ color: value === '可用' ? '#52c41a' : '#fa8c16', fontWeight: 600 }}>
+          {value || '不可用'}
+        </span>
+      ),
       onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
       onCell: () => ({ style: { whiteSpace: 'nowrap' } })
     },
@@ -423,6 +467,12 @@ const SupplierMaintenance = () => {
               onChange={(e) => handleSearchChange('name', e.target.value)}
             />
             <Input 
+              placeholder="请输入企业联系人" 
+              style={{ width: 200 }} 
+              value={searchParams.contactPerson}
+              onChange={(e) => handleSearchChange('contactPerson', e.target.value)}
+            />
+            <Input 
               placeholder="请输入法定代表人" 
               style={{ width: 200 }} 
               value={searchParams.legalRepresentative}
@@ -433,6 +483,17 @@ const SupplierMaintenance = () => {
               style={{ width: 200 }} 
               value={searchParams.phone}
               onChange={(e) => handleSearchChange('phone', e.target.value)}
+            />
+            <Select
+              placeholder="请选择状态"
+              allowClear
+              style={{ width: 160 }}
+              value={searchParams.status || undefined}
+              onChange={(value) => handleSearchChange('status', value || '')}
+              options={[
+                { label: '可用', value: '可用' },
+                { label: '不可用', value: '不可用' },
+              ]}
             />
           </div>
           <div style={{ display: 'flex', gap: '12px' }}>
@@ -461,6 +522,7 @@ const SupplierMaintenance = () => {
           dataSource={suppliers} 
           loading={loading}
           pagination={{ 
+            total,
             pageSize: pageSize,
             current: currentPage,
             onChange: async (page, size) => {
@@ -493,7 +555,8 @@ const SupplierMaintenance = () => {
           form={form} 
           {...getFormLayoutStyle('edit')}
           initialValues={{
-            enterpriseType: "经营企业"
+            enterpriseType: "经营企业",
+            status: '不可用'
           }}
         >
           <Form.Item
@@ -512,10 +575,31 @@ const SupplierMaintenance = () => {
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
                 name="name"
-                label="名称"
+                label="供应商名称"
                 rules={[{ required: true, message: '请输入名称' }]}
               >
                 <Input placeholder="请输入名称" />
+              </Form.Item>
+            </Col>
+            <Col span={FORM_STYLES.form.edit.colSpan}>
+              <Form.Item
+                name="supplierCode"
+                label="供应商编码"
+                extra="由系统自动生成，无需手工录入"
+              >
+                <Input placeholder="保存后自动生成" disabled />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={FORM_STYLES.form.edit.rowGutter}>
+            <Col span={FORM_STYLES.form.edit.colSpan}>
+              <Form.Item
+                name="contactPerson"
+                label="企业联系人"
+                rules={[{ required: true, message: '请输入企业联系人' }]}
+              >
+                <Input placeholder="请输入企业联系人" />
               </Form.Item>
             </Col>
             <Col span={FORM_STYLES.form.edit.colSpan}>
@@ -596,7 +680,6 @@ const SupplierMaintenance = () => {
               <Form.Item
                 name="phone"
                 label="联系电话"
-                getValueFromEvent={(event) => sanitizePhoneInput(event?.target?.value)}
                 rules={[
                   { required: true, message: '请输入联系电话' },
                   {
@@ -605,8 +688,8 @@ const SupplierMaintenance = () => {
                         return Promise.resolve();
                       }
 
-                      if (!MOBILE_PHONE_REGEX.test(value.trim())) {
-                        return Promise.reject(new Error('请输入11位手机号'));
+                      if (!CONTACT_PHONE_REGEX.test(value.trim())) {
+                        return Promise.reject(new Error('请输入11位手机号或区号-座机号码'));
                       }
 
                       return Promise.resolve();
@@ -614,7 +697,7 @@ const SupplierMaintenance = () => {
                   }
                 ]}
               >
-                <Input placeholder="请输入联系电话" maxLength={11} inputMode="numeric" />
+                <Input placeholder="请输入联系电话" />
               </Form.Item>
             </Col>
           </Row>
@@ -627,6 +710,21 @@ const SupplierMaintenance = () => {
                 rules={[{ required: true, message: '请输入联系地址' }]}
               >
                 <Input placeholder="请输入联系地址" />
+              </Form.Item>
+            </Col>
+            <Col span={FORM_STYLES.form.edit.colSpan}>
+              <Form.Item
+                name="status"
+                label="状态"
+                extra="供应商状态由系统根据资质有效性自动维护"
+              >
+                <Select
+                  disabled
+                  options={[
+                    { label: '可用', value: '可用' },
+                    { label: '不可用', value: '不可用' },
+                  ]}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -653,12 +751,18 @@ const SupplierMaintenance = () => {
               </Col>
               <Col span={FORM_STYLES.form.edit.colSpan}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 'bold' }}>名称：</span>
+                  <span style={{ fontWeight: 'bold' }}>供应商名称：</span>
                   <span>{viewingRecord.name}</span>
                 </div>
               </Col>
             </Row>
             <Row gutter={FORM_STYLES.form.edit.rowGutter}>
+              <Col span={FORM_STYLES.form.edit.colSpan}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontWeight: 'bold' }}>供应商编码：</span>
+                  <span>{viewingRecord.supplierCode || '-'}</span>
+                </div>
+              </Col>
               <Col span={FORM_STYLES.form.edit.colSpan}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <span style={{ fontWeight: 'bold' }}>统一社会信用代码：</span>
@@ -703,14 +807,14 @@ const SupplierMaintenance = () => {
             <Row gutter={FORM_STYLES.form.edit.rowGutter}>
               <Col span={FORM_STYLES.form.edit.colSpan}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 'bold' }}>联系人：</span>
-                  <span>{viewingRecord.contactPerson}</span>
+                  <span style={{ fontWeight: 'bold' }}>企业联系人：</span>
+                  <span>{viewingRecord.contactPerson || '-'}</span>
                 </div>
               </Col>
               <Col span={FORM_STYLES.form.edit.colSpan}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <span style={{ fontWeight: 'bold' }}>状态：</span>
-                  <span>{viewingRecord.status === 1 ? '可用' : '不可用'}</span>
+                  <span>{viewingRecord.status || '不可用'}</span>
                 </div>
               </Col>
             </Row>

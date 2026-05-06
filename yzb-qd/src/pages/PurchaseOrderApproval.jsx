@@ -69,6 +69,7 @@ const PurchaseOrderApproval = () => {
         const orderList = response.data.records.map(order => ({
           key: order.id,
           orderNo: order.orderNumber,
+          supplierName: order.supplierName,
           department: order.departmentName,
           createTime: order.createTime,
           status: order.status,
@@ -82,6 +83,9 @@ const PurchaseOrderApproval = () => {
             quantity: item.quantity,
             amount: item.amount,
             manufacturer: item.manufacturer,
+            registrationNumber: item.registrationNumber,
+            materialType: item.materialType,
+            supplierName: order.supplierName,
             specification: item.specification,
             model: item.model,
             unit: item.unit,
@@ -156,8 +160,11 @@ const PurchaseOrderApproval = () => {
     { title: '订单号', dataIndex: 'orderNo', key: 'orderNo' },
     { title: '物资编码', dataIndex: 'productCode', key: 'productCode' },
     { title: '商品名称', dataIndex: 'product', key: 'product' },
+    { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName' },
+    { title: '物资类型', dataIndex: 'materialType', key: 'materialType' },
     { title: '规格', dataIndex: 'specification', key: 'specification' },
     { title: '型号', dataIndex: 'model', key: 'model' },
+    { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber' },
     { title: '订货数量', dataIndex: 'quantity', key: 'quantity' },
     { title: '订货单位', dataIndex: 'unit', key: 'unit' },
     { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer' },
@@ -264,6 +271,7 @@ const PurchaseOrderApproval = () => {
       )
     },
     { title: '采购单号', dataIndex: 'orderNo', key: 'orderNo' },
+    { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName' },
     { title: '采购分院', dataIndex: 'department', key: 'department' },
     { 
       title: '物资数量', 
@@ -747,6 +755,10 @@ const PurchaseOrderApproval = () => {
                   </div>
                 </div>
                 <div>
+                  <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>供应商名称</div>
+                  <div style={{ fontWeight: '500' }}>{currentOrder.supplierName || '-'}</div>
+                </div>
+                <div>
                   <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>采购数量</div>
                   <div style={{ fontWeight: '500', color: '#1890ff' }}>{currentOrder.totalQuantity || currentOrder.quantity || 0}</div>
                 </div>
@@ -781,10 +793,13 @@ const PurchaseOrderApproval = () => {
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#fafafa' }}>
+                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>供应商名称</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资编码</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '150px' }}>物资名称</th>
+                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>物资类型</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>规格</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>型号</th>
+                    <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '140px' }}>注册证号</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '80px' }}>单位</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '100px' }}>采购价格</th>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>采购数量</th>
@@ -800,10 +815,13 @@ const PurchaseOrderApproval = () => {
                     // 汇总视图：显示多个明细项
                     currentOrder.items.map((item, index) => (
                       <tr key={index} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                        <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.supplierName || currentOrder.supplierName || '-'}</td>
                         <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.productCode}</td>
                         <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.product}</td>
+                        <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.materialType || '-'}</td>
                         <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.specification}</td>
                         <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.model}</td>
+                        <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{item.registrationNumber || '-'}</td>
                         <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
                           <input
                             type="text"
@@ -868,10 +886,13 @@ const PurchaseOrderApproval = () => {
                   ) : (
                     // 明细视图：显示单个明细项
                     <tr style={{ borderBottom: '1px solid #f0f0f0' }}>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{currentOrder.supplierName || '-'}</td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{currentOrder.productCode}</td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{currentOrder.product}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{currentOrder.materialType || '-'}</td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{currentOrder.specification}</td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{currentOrder.model}</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>{currentOrder.registrationNumber || '-'}</td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0' }}>
                           <input
                             type="text"
@@ -936,7 +957,7 @@ const PurchaseOrderApproval = () => {
                   {/* 汇总行（仅汇总视图显示） */}
                   {currentOrder.items && currentOrder.items.length > 0 && (
                     <tr style={{ backgroundColor: '#f6ffed', borderTop: '2px solid #52c41a' }}>
-                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', fontWeight: 'bold' }} colSpan="6">合计</td>
+                      <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', fontWeight: 'bold' }} colSpan="8">合计</td>
                       <td style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', fontWeight: 'bold', color: '#1890ff' }}>
                         {calculateTotals().totalQuantity}
                       </td>

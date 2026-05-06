@@ -48,7 +48,7 @@ import SupplierQualificationWarning from './pages/SupplierQualificationWarning.j
 import ProductCatalog from './pages/ProductCatalog.jsx';
 import ProductPriceAdjustment from './pages/ProductPriceAdjustment.jsx';
 import UDIMaintenance from './pages/UDIMaintenance.jsx';
-import UserAccountCreation from './pages/UserAccountCreation.jsx';
+import UserRoleTemplate from './pages/UserAccountCreation.jsx';
 import UserPermissionSettings from './pages/UserPermissionSettings.jsx';
 import UserAccountManagement from './pages/UserAccountManagement.jsx';
 import DepartmentManagement from './pages/DepartmentManagement.jsx';
@@ -959,8 +959,8 @@ const AppContent = () => {
                     <Route path="/product-catalog" element={<ProductCatalog />} />
                     <Route path="/product-price-adjustment" element={<ProductPriceAdjustment />} />
                     <Route path="/udi-maintenance" element={<UDIMaintenance />} />
-                    <Route path="/user-account-creation" element={<UserAccountCreation />} />
-                    <Route path="/user-role-template" element={<UserAccountCreation />} />
+                    <Route path="/user-account-creation" element={<Navigate to="/user-account-management" replace />} />
+                    <Route path="/user-role-template" element={<UserRoleTemplate />} />
                     <Route path="/user-permission-settings" element={<UserPermissionSettings />} />
                     <Route path="/user-account-management" element={<UserAccountManagement />} />
                     <Route path="/department-management" element={<DepartmentManagement />} />

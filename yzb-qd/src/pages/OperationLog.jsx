@@ -97,24 +97,6 @@ const OperationLog = () => {
   // 表格列定义
   const columns = [
     {
-      title: '操作时间',
-      dataIndex: 'time',
-      key: 'time',
-      width: 180,
-      render: (time) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <ClockCircleOutlined style={{ color: '#667eea', fontSize: 14 }} />
-          {time}
-        </div>
-      )
-    },
-    {
-      title: '操作人员',
-      dataIndex: 'user',
-      key: 'user',
-      width: 120
-    },
-    {
       title: '操作类型',
       dataIndex: 'type',
       key: 'type',
@@ -130,24 +112,6 @@ const OperationLog = () => {
       dataIndex: 'content',
       key: 'content',
       ellipsis: { showTitle: false },
-    },
-    {
-      title: '操作状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status) => {
-        const isSuccess = status === 'success' || status === '1' || status === true;
-        const isWarning = status === 'warning';
-        return (
-          <Tag 
-            color={isSuccess ? 'green' : isWarning ? 'orange' : 'red'} 
-            style={{ borderRadius: 12, padding: '2px 8px', fontSize: 12 }}
-          >
-            {isSuccess ? '成功' : isWarning ? '警告' : '失败'}
-          </Tag>
-        );
-      }
     },
     {
       title: 'IP地址',

@@ -47,6 +47,7 @@ public class AdverseEventController {
             model.setEventNo(SnGenerateUtil.generate("BL", adverseEventRecordMapper.selectLatestNo()));
             model.setRecorderId(user == null ? null : user.getId());
             model.setRecorderName(user == null ? null : (StringUtils.hasText(user.getRealName()) ? user.getRealName() : user.getUserName()));
+            model.setStatus(model.getStatus() == null ? 1 : model.getStatus());
             model.setCreateTime(LocalDateTime.now());
             model.setUpdateTime(LocalDateTime.now());
             model.setDeleteFlag(0);
@@ -65,6 +66,7 @@ public class AdverseEventController {
         current.setInvolvedProject(model.getInvolvedProject());
         current.setEventName(model.getEventName());
         current.setOccurrenceDate(model.getOccurrenceDate());
+        current.setStatus(model.getStatus() == null ? current.getStatus() : model.getStatus());
         current.setEventSummary(model.getEventSummary());
         current.setInvestigationSituation(model.getInvestigationSituation());
         current.setEventAnalysis(model.getEventAnalysis());

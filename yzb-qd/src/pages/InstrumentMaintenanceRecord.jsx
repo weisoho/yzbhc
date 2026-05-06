@@ -72,7 +72,9 @@ const InstrumentMaintenanceRecord = () => {
           deviceName: record.assetName,
           serialNo: record.assetCode,
           recordNo: record.repairNo,
-          maintenanceDate: record.repairDate
+          maintenanceDate: record.repairDate,
+          departmentName: record.useDepartment || record.departmentName,
+          status: record.repairStatus || record.status,
         }));
         setMaintenanceRecords(records);
         setTotal(data.total);
@@ -107,6 +109,12 @@ const InstrumentMaintenanceRecord = () => {
       key: 'deviceName', 
       width: 150 
     },
+    {
+      title: '使用科室',
+      dataIndex: 'departmentName',
+      key: 'departmentName',
+      width: 140
+    },
     { 
       title: '序列号', 
       dataIndex: 'serialNo', 
@@ -140,6 +148,13 @@ const InstrumentMaintenanceRecord = () => {
       key: 'maintenanceDate', 
       width: 120,
       sorter: (a, b) => new Date(a.maintenanceDate) - new Date(b.maintenanceDate)
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (value) => <Tag color={value === '已完成' ? 'green' : value === '维修中' ? 'orange' : 'blue'}>{value || '-'}</Tag>
     },
     {
       title: '附件', 

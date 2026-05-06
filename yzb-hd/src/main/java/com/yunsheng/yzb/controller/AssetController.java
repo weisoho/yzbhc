@@ -52,10 +52,18 @@ public class AssetController {
     @PostMapping("/selectAsset")
     public AjaxResult<PageOutputDto<Asset>> selectAsset(String assetCode , String assetName,Integer pageNum,Integer pageSize,
                                   Integer assetState,Integer depId,Integer assetTypeid, Date purchaseStart, Date purchaseEnd){
-        PageHelper.startPage(pageNum, pageSize);
+        PageHelper.startPage(defaultPageNum(pageNum), defaultPageSize(pageSize));
         List<Asset> list = assetMapper.selectAsset(assetCode, assetName,assetState,depId,assetTypeid,purchaseStart,purchaseEnd);
         PageInfo<Asset> pageInfo = new PageInfo<>(list);
         return AjaxResult.res(1,"成功", ClassCastUtil.pageInfoToPageOutputDto(pageInfo));
+    }
+
+    private int defaultPageNum(Integer pageNum) {
+        return pageNum == null || pageNum < 1 ? 1 : pageNum;
+    }
+
+    private int defaultPageSize(Integer pageSize) {
+        return pageSize == null || pageSize < 1 ? 10 : pageSize;
     }
 
 }

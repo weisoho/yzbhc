@@ -98,13 +98,17 @@ const PurchaseReceipt = () => {
           status: order.status,
           itemCount: order.itemCount,
           totalAmount: order.totalAmount,
-          items: order.items ? order.items.map((item) => ({
+          items: (order.items || order.details || []).map((item) => ({
             key: item.id,
             id: item.id,
             productCode: item.materialCode,
             productName: item.materialName,
+            supplierName: order.supplierName,
+            materialType: item.materialType,
             specification: item.specification,
             model: item.model,
+            manufacturer: item.manufacturer,
+            registrationNumber: item.registrationNumber,
             batchNumber: item.batchNumber,
             productionDate: item.productionDate,
             expiryDate: item.expiryDate,
@@ -113,7 +117,7 @@ const PurchaseReceipt = () => {
             quantity: item.quantity,
             amount: item.amount,
             status: item.status
-          })) : []
+          }))
         }));
         setData(orderList);
         setFilteredData(orderList);
@@ -301,6 +305,12 @@ const PurchaseReceipt = () => {
       width: 120
     },
     {
+      title: '供应商名称',
+      dataIndex: 'supplierName',
+      key: 'supplierName',
+      width: 160
+    },
+    {
       title: '物资数量',
       dataIndex: 'itemCount',
       key: 'itemCount',
@@ -385,10 +395,22 @@ const PurchaseReceipt = () => {
       width: 120
     },
     {
+      title: '供应商名称',
+      dataIndex: 'supplierName',
+      key: 'supplierName',
+      width: 160
+    },
+    {
       title: '商品名称',
       dataIndex: 'productName',
       key: 'productName',
       width: 180
+    },
+    {
+      title: '物资类型',
+      dataIndex: 'materialType',
+      key: 'materialType',
+      width: 120
     },
     {
       title: '规格',
@@ -401,6 +423,18 @@ const PurchaseReceipt = () => {
       dataIndex: 'model',
       key: 'model',
       width: 120
+    },
+    {
+      title: '注册证号',
+      dataIndex: 'registrationNumber',
+      key: 'registrationNumber',
+      width: 160
+    },
+    {
+      title: '生产厂家',
+      dataIndex: 'manufacturer',
+      key: 'manufacturer',
+      width: 180
     },
     {
       title: '单位',
@@ -446,6 +480,7 @@ const PurchaseReceipt = () => {
           ...item,
           orderNumber: order.orderNumber,
           supplierName: order.supplierName,
+          department: order.department,
           orderDate: order.orderDate,
           orderStatus: order.status
         });
@@ -792,10 +827,14 @@ const PurchaseReceipt = () => {
                       />
                     )
                   },
+                  { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 150 },
                   { title: '物资编码', dataIndex: 'productCode', key: 'productCode', width: 120 },
                   { title: '物资名称', dataIndex: 'productName', key: 'productName', width: 150 },
+                  { title: '物资类型', dataIndex: 'materialType', key: 'materialType', width: 120 },
                   { title: '规格', dataIndex: 'specification', key: 'specification', width: 100 },
                   { title: '型号', dataIndex: 'model', key: 'model', width: 100 },
+                  { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', width: 160 },
+                  { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 160 },
                   { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
                   { title: '采购价格', dataIndex: 'price', key: 'price', width: 100, render: (value) => `¥${value?.toFixed(2)}` },
                   { title: '采购数量', dataIndex: 'quantity', key: 'quantity', width: 100 },

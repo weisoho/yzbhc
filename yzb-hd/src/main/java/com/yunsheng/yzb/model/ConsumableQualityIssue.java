@@ -23,6 +23,7 @@ public class ConsumableQualityIssue {
     private LocalDate expiryDate;
     private Integer quantity;
     private LocalDateTime occurrenceDate;
+    private Integer status;
     private String issueDescription;
     private String attachment;
     private Integer creatorId;

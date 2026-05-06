@@ -37,6 +37,8 @@ const DepartmentManagement = () => {
         status: item.status,
         parentId: item.parentId,
         parentName: parent?.deptName || currentCampus || '当前院区',
+        parentCode: parent?.deptCode || currentCampusNode?.deptCode || '-',
+        principal: item.leader,
       };
     });
   }, [currentCampus, normalizedTree, scopedDepartments]);
@@ -162,6 +164,24 @@ const DepartmentManagement = () => {
 
   const columns = [
     {
+      title: '院区名称',
+      dataIndex: 'parentName',
+      key: 'parentName',
+      width: 160,
+    },
+    {
+      title: '院区编码',
+      dataIndex: 'parentCode',
+      key: 'parentCode',
+      width: 140,
+    },
+    {
+      title: '部门编码',
+      dataIndex: 'deptCode',
+      key: 'deptCode',
+      width: 140,
+    },
+    {
       title: '部门名称',
       dataIndex: 'deptName',
       key: 'deptName',
@@ -173,12 +193,6 @@ const DepartmentManagement = () => {
       ),
     },
     {
-      title: '上级节点',
-      dataIndex: 'parentName',
-      key: 'parentName',
-      width: 160,
-    },
-    {
       title: '部门经理',
       dataIndex: 'leader',
       key: 'leader',
@@ -186,11 +200,11 @@ const DepartmentManagement = () => {
       render: (leader) => leader ? <Tag color="blue" icon={<UserOutlined />}>{leader}</Tag> : <Tag>未设置</Tag>,
     },
     {
-      title: '联系电话',
-      dataIndex: 'phone',
-      key: 'phone',
+      title: '负责人',
+      dataIndex: 'principal',
+      key: 'principal',
       width: 140,
-      render: (phone) => phone || '-',
+      render: (value) => value || '-',
     },
     {
       title: '状态',

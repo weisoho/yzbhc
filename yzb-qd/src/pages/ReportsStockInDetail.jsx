@@ -9,19 +9,30 @@ const { RangePicker } = DatePicker;
 
 const ReportsStockInDetail = () => {
   const stockInDetails = [
-    { key: '1', date: '2024-02-20', supplier: '供应商A', materialName: '一次性注射器', specification: '10ml', quantity: 1000, unit: '支', warehouse: '仓库1', operator: '张三' },
-    { key: '2', date: '2024-02-19', supplier: '供应商B', materialName: '输液器', specification: '500ml', quantity: 500, unit: '个', warehouse: '仓库2', operator: '李四' },
-    { key: '3', date: '2024-02-18', supplier: '供应商A', materialName: '医用棉签', specification: '100支/包', quantity: 200, unit: '包', warehouse: '仓库1', operator: '王五' },
+    { key: '1', date: '2024-02-20', supplier: '供应商A', materialCode: 'WZ-001', materialName: '一次性注射器', specification: '10ml', model: 'A10', manufacturer: '厂商甲', registrationNumber: 'ZC-2024-001', batchNumber: 'PH20240201', productionDate: '2024-01-01', expiryDate: '2027-01-01', quantity: 1000, unit: '支', price: 0.57, purchaseOrderNo: 'CG-20240220-01', warehouse: '仓库1', department: '内科', status: '已入库', operator: '张三' },
+    { key: '2', date: '2024-02-19', supplier: '供应商B', materialCode: 'WZ-002', materialName: '输液器', specification: '500ml', model: 'B05', manufacturer: '厂商乙', registrationNumber: 'ZC-2024-002', batchNumber: 'PH20240115', productionDate: '2024-01-15', expiryDate: '2026-12-31', quantity: 500, unit: '个', price: 3.2, purchaseOrderNo: 'CG-20240219-02', warehouse: '仓库2', department: '外科', status: '已入库', operator: '李四' },
+    { key: '3', date: '2024-02-18', supplier: '供应商A', materialCode: 'WZ-003', materialName: '医用棉签', specification: '100支/包', model: 'C01', manufacturer: '厂商丙', registrationNumber: 'ZC-2024-003', batchNumber: 'PH20240108', productionDate: '2024-01-08', expiryDate: '2026-06-30', quantity: 200, unit: '包', price: 5.6, purchaseOrderNo: 'CG-20240218-03', warehouse: '仓库1', department: '儿科', status: '已入库', operator: '王五' },
   ];
 
   const columns = [
     { title: '入库日期', dataIndex: 'date', key: 'date' },
-    { title: '供应商', dataIndex: 'supplier', key: 'supplier' },
+    { title: '供应商名称', dataIndex: 'supplier', key: 'supplier' },
+    { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode' },
     { title: '商品名称', dataIndex: 'materialName', key: 'materialName' },
-    { title: '规格型号', dataIndex: 'specification', key: 'specification' },
+    { title: '规格', dataIndex: 'specification', key: 'specification' },
+    { title: '型号', dataIndex: 'model', key: 'model' },
+    { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber' },
+    { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer' },
+    { title: '生产批号', dataIndex: 'batchNumber', key: 'batchNumber' },
+    { title: '生产日期', dataIndex: 'productionDate', key: 'productionDate' },
+    { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate' },
+    { title: '采购价格', dataIndex: 'price', key: 'price', render: (value) => `¥${Number(value).toFixed(2)}` },
     { title: '入库数量', dataIndex: 'quantity', key: 'quantity' },
     { title: '单位', dataIndex: 'unit', key: 'unit' },
+    { title: '采购单号', dataIndex: 'purchaseOrderNo', key: 'purchaseOrderNo' },
+    { title: '申领科室', dataIndex: 'department', key: 'department' },
     { title: '入库仓库', dataIndex: 'warehouse', key: 'warehouse' },
+    { title: '状态', dataIndex: 'status', key: 'status' },
     { title: '操作人', dataIndex: 'operator', key: 'operator' },
   ];
 
@@ -69,7 +80,7 @@ const ReportsStockInDetail = () => {
             justifyContent: 'center',
             marginTop: '16px'
           }
-        }} size="small" />
+        }} size="small" scroll={{ x: 2400 }} />
       </div>
     </div>
   );

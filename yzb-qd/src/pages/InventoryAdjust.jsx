@@ -25,13 +25,24 @@ const InventoryAdjust = () => {
       if (response.code === 1 && response.data) {
         const inventoryList = response.data.records.map(item => ({
           key: item.id,
+          materialCode: item.materialCode,
           materialName: item.materialName,
+          supplierName: item.supplierName,
+          materialType: item.materialType,
           specification: item.specification,
           model: item.model,
+          manufacturer: item.manufacturer,
+          registrationNumber: item.registrationNumber,
+          batchNumber: item.batchNumber,
+          productionDate: item.productionDate,
+          expiryDate: item.expiryDate,
+          department: item.departmentName || item.department,
+          purchaseAmount: item.purchasePrice,
+          storageCondition: item.storageCondition,
           unit: item.unit,
-          currentQuantity: item.quantity,
-          minQuantity: item.minQuantity,
-          maxQuantity: item.maxQuantity,
+          currentQuantity: item.stockQuantity ?? item.quantity,
+          minQuantity: item.minQuantity ?? item.minStock,
+          maxQuantity: item.maxQuantity ?? item.maxStock,
           status: item.status
         }));
         setInventoryData(inventoryList);
@@ -103,9 +114,20 @@ const InventoryAdjust = () => {
 
   const batchAuditColumns = [
     { title: '序号', key: 'index', width: 60, render: (text, record, index) => index + 1 },
+    { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode', width: 120 },
     { title: '商品名称', dataIndex: 'materialName', key: 'materialName', width: 150 },
+    { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 150 },
+    { title: '物资类型', dataIndex: 'materialType', key: 'materialType', width: 120 },
     { title: '规格', dataIndex: 'specification', key: 'specification', width: 150 },
     { title: '型号', dataIndex: 'model', key: 'model', width: 150 },
+    { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 150 },
+    { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', width: 150 },
+    { title: '生产批号', dataIndex: 'batchNumber', key: 'batchNumber', width: 120 },
+    { title: '生产日期', dataIndex: 'productionDate', key: 'productionDate', width: 120 },
+    { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', width: 120 },
+    { title: '所属科室', dataIndex: 'department', key: 'department', width: 120 },
+    { title: '采购金额', dataIndex: 'purchaseAmount', key: 'purchaseAmount', width: 120, render: (value) => value != null ? `¥${Number(value).toFixed(2)}` : '-' },
+    { title: '储存条件', dataIndex: 'storageCondition', key: 'storageCondition', width: 120 },
     { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
     { title: '当前库存', dataIndex: 'currentQuantity', key: 'currentQuantity', width: 100 },
     { title: '最低预警', dataIndex: 'minQuantity', key: 'minQuantity', width: 100 },
@@ -166,7 +188,8 @@ const InventoryAdjust = () => {
               marginTop: '16px'
             }
           }} 
-          size="small" 
+          size="small"
+          scroll={{ x: 2500 }}
         />
       </div>
 

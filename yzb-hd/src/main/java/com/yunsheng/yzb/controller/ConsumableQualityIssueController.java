@@ -52,6 +52,7 @@ public class ConsumableQualityIssueController {
             return AjaxResult.res(0, "记录不存在", null);
         }
         current.setOccurrenceDate(model.getOccurrenceDate());
+        current.setStatus(model.getStatus() == null ? current.getStatus() : model.getStatus());
         current.setIssueDescription(model.getIssueDescription());
         current.setAttachment(model.getAttachment());
         current.setUpdateTime(LocalDateTime.now());
@@ -106,6 +107,7 @@ public class ConsumableQualityIssueController {
         record.setExpiryDate(inventory.getExpiryDate());
         record.setQuantity(model.getQuantity());
         record.setOccurrenceDate(model.getOccurrenceDate() == null ? LocalDateTime.now() : model.getOccurrenceDate());
+        record.setStatus(model.getStatus() == null ? 1 : model.getStatus());
         record.setIssueDescription(model.getIssueDescription());
         record.setAttachment(model.getAttachment());
         record.setCreatorId(user == null ? null : user.getId());

@@ -13,6 +13,12 @@ const normalizeList = (payload) => {
   return [];
 };
 
+const adverseStatusMeta = {
+  1: '待处理',
+  2: '处理中',
+  3: '已完成',
+};
+
 const formatDate = (value) => (value ? String(value).replace('T', ' ').slice(0, 19) : '-');
 
 const MedicalDeviceAdverseEvent = () => {
@@ -165,8 +171,16 @@ const MedicalDeviceAdverseEvent = () => {
     { title: '性别', dataIndex: 'gender', key: 'gender', width: 80 },
     { title: '年龄', dataIndex: 'age', key: 'age', width: 80 },
     { title: '患者/条码号', dataIndex: 'patientId', key: 'patientId', width: 160 },
+    { title: '住院号', dataIndex: 'hospitalizationNo', key: 'hospitalizationNo', width: 160 },
     { title: '涉及项目', dataIndex: 'involvedProject', key: 'involvedProject', width: 160 },
     { title: '发生时间', dataIndex: 'occurrenceDate', key: 'occurrenceDate', width: 180, render: formatDate },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (value) => adverseStatusMeta[value] || '-',
+    },
     { title: '事件概述', dataIndex: 'eventSummary', key: 'eventSummary', ellipsis: true },
     {
       title: '操作',
@@ -222,7 +236,7 @@ const MedicalDeviceAdverseEvent = () => {
           loading={loading}
           columns={columns}
           dataSource={records}
-          scroll={{ x: 1580 }}
+          scroll={{ x: 1900 }}
           pagination={{
             current: currentPage,
             pageSize,

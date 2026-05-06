@@ -49,13 +49,23 @@ const ReportsStockInSummary = () => {
 
       const records = normalizeList(response.data).map((item, index) => ({
         key: `${item.materialName || 'material'}-${item.inventory || 'inventory'}-${index}`,
+        materialCode: item.materialCode || '-',
         materialName: item.materialName || '-',
+        supplier: item.supplierName || '-',
         specification: item.specification || '-',
         model: item.model || '-',
+        manufacturer: item.manufacturer || '-',
+        registrationNumber: item.registrationNumber || '-',
+        batchNumber: item.batchNumber || '-',
+        productionDate: item.productionDate || '-',
+        expiryDate: item.expiryDate || '-',
         unit: item.unit || '-',
         totalQuantity: item.allStockNum || 0,
+        price: item.purchasePrice || 0,
+        purchaseOrderNo: item.orderNumber || '-',
+        department: item.departmentName || '-',
         warehouse: item.inventory || '-',
-        supplier: item.supplierName || '-',
+        status: item.status || '-',
       }));
 
       setRows(records);
@@ -117,22 +127,32 @@ const ReportsStockInSummary = () => {
       message.warning('当前没有可导出的数据');
       return;
     }
-    exportCsv('仓库入库汇总.csv', ['materialName', 'specification', 'model', 'unit', 'totalQuantity', 'warehouse', 'supplier'], filteredRows);
+    exportCsv('仓库入库汇总.csv', ['materialCode', 'materialName', 'supplier', 'specification', 'model', 'manufacturer', 'registrationNumber', 'batchNumber', 'productionDate', 'expiryDate', 'unit', 'price', 'totalQuantity', 'purchaseOrderNo', 'department', 'warehouse', 'status'], filteredRows);
     message.success(`已导出 ${filteredRows.length} 条记录`);
   };
 
   const columns = [
+    { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode', align: 'center', width: 120 },
     { title: '商品名称', dataIndex: 'materialName', key: 'materialName', align: 'center' },
+    { title: '供应商名称', dataIndex: 'supplier', key: 'supplier', align: 'center', width: 180 },
     {
       title: '规格型号',
       key: 'specification',
       align: 'center',
       render: (_, record) => `${record.specification || '-'} / ${record.model || '-'}`,
     },
+    { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', align: 'center', width: 160 },
+    { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', align: 'center', width: 160 },
+    { title: '生产批号', dataIndex: 'batchNumber', key: 'batchNumber', align: 'center', width: 140 },
+    { title: '生产日期', dataIndex: 'productionDate', key: 'productionDate', align: 'center', width: 120 },
+    { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', align: 'center', width: 120 },
     { title: '单位', dataIndex: 'unit', key: 'unit', align: 'center', width: 90 },
+    { title: '采购价格', dataIndex: 'price', key: 'price', align: 'center', width: 110, render: (value) => `¥${Number(value || 0).toFixed(2)}` },
     { title: '总入库数量', dataIndex: 'totalQuantity', key: 'totalQuantity', align: 'center', width: 120 },
+    { title: '采购单号', dataIndex: 'purchaseOrderNo', key: 'purchaseOrderNo', align: 'center', width: 160 },
+    { title: '申领科室', dataIndex: 'department', key: 'department', align: 'center', width: 140 },
     { title: '入库仓库', dataIndex: 'warehouse', key: 'warehouse', align: 'center', width: 140 },
-    { title: '供应商', dataIndex: 'supplier', key: 'supplier', align: 'center', width: 180 },
+    { title: '状态', dataIndex: 'status', key: 'status', align: 'center', width: 100 },
   ];
 
   return (
@@ -196,6 +216,7 @@ const ReportsStockInSummary = () => {
           showTotal: (total) => `共 ${total} 条记录`,
         }}
         size="small"
+        scroll={{ x: 2400 }}
       />
     </div>
   );

@@ -57,12 +57,13 @@ const InventoryDetail = () => {
     { title: '物资类型', dataIndex: 'category', key: 'category', width: 100 },
     { title: '规格', dataIndex: 'specification', key: 'specification', width: 120 },
     { title: '型号', dataIndex: 'model', key: 'model', width: 100 },
+    { title: '所属科室', dataIndex: 'department', key: 'department', width: 120 },
     { title: '批号', dataIndex: 'batchNumber', key: 'batchNumber', width: 120 },
     { title: '生产日期', dataIndex: 'productionDate', key: 'productionDate', width: 120 },
     { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', width: 120 },
     { title: '最小包装', dataIndex: 'minPackage', key: 'minPackage', width: 120 },
     { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
-    { title: '采购价格', dataIndex: 'purchasePrice', key: 'purchasePrice', width: 100, render: (price) => `¥${price?.toFixed(2) || '0.00'}` },
+    { title: '采购金额', dataIndex: 'purchasePrice', key: 'purchasePrice', width: 100, render: (price) => `¥${price?.toFixed(2) || '0.00'}` },
     { title: '库存数量', dataIndex: 'currentStock', key: 'currentStock', width: 100, 
       render: (currentStock, record) => {
         let color = 'default';
@@ -129,6 +130,7 @@ const InventoryDetail = () => {
           category: item.materialType,
           specification: item.specification,
           model: item.model,
+          department: item.departmentName || item.ownerDepartment || item.department,
           batchNumber: item.batchNumber,
           productionDate: item.productionDate,
           expiryDate: item.expiryDate,

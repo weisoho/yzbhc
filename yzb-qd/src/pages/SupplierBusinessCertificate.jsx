@@ -71,14 +71,18 @@ const SupplierBusinessCertificate = () => {
         if (Array.isArray(records)) {
           const certificateList = records.map(item => ({
             key: item.id,
+            supplierId: item.supplierId,
             name: item.supplierName,
             unifiedSocialCreditCode: item.creditCode,
             legalRepresentative: item.legalRepresentative,
             registeredCapital: item.registeredCapital,
             establishmentDate: item.registrationDate,
+            expiryDate: item.expiryDate,
             address: item.address,
             registrationAuthority: item.issuingAuthority,
-            attachment: item.attachmentName
+            attachment: item.attachmentName,
+            attachmentUrl: item.licenseFile,
+            status: item.status,
           }));
           setBusinessCertificates(certificateList);
           setTotal(totalCount);
@@ -129,11 +133,13 @@ const SupplierBusinessCertificate = () => {
     setEditingRecord(record);
     // 设置编辑表单数据
     editForm.setFieldsValue({
+      supplierId: record.supplierId,
       name: record.name,
       unifiedSocialCreditCode: record.unifiedSocialCreditCode,
       legalRepresentative: record.legalRepresentative,
       registeredCapital: record.registeredCapital,
       establishmentDate: record.establishmentDate ? dayjs(record.establishmentDate) : null,
+      expiryDate: record.expiryDate ? dayjs(record.expiryDate) : dayjs('2099-12-31'),
       address: record.address,
       registrationAuthority: record.registrationAuthority
     });
@@ -150,7 +156,7 @@ const SupplierBusinessCertificate = () => {
       const values = await editForm.validateFields();
       
       // 从选择的供应商名称查找供应商ID
-      const selectedSupplier = suppliers.find(s => s.name === values.name);
+      const selectedSupplier = suppliers.find(s => s.id === values.supplierId);
       if (!selectedSupplier) {
         message.error('未找到选中的供应商信息');
         return;
@@ -158,20 +164,19 @@ const SupplierBusinessCertificate = () => {
       
       // 构建营业执照数据
       const certificateData = {
-        type: 'BUSINESS_CERTIFICATE',  // 资质类型
-        certificateName: values.name,  // 资质名称
-        licenseNumber: values.unifiedSocialCreditCode,  // 证件编号
-        licenseType: '营业执照',  // 证件类别
-        issueDate: values.establishmentDate ? values.establishmentDate.format('YYYY-MM-DD') : null,  // 发证日期
-        expiryDate: '2030-01-01',  // 有效期（默认10年）
-        issuingAuthority: values.registrationAuthority,  // 发证机构
-        unifiedSocialCreditCode: values.unifiedSocialCreditCode,  // 统一社会信用代码
-        legalRepresentative: values.legalRepresentative,  // 法定代表人
-        registeredCapital: values.registeredCapital,  // 注册资本
-        address: values.address,  // 住所
-        supplierId: selectedSupplier.id,  // 供应商ID
-        attachmentName: editFileList.length > 0 ? editFileList[editFileList.length - 1].name : editingRecord.attachment,  // 附件名称
-        licenseFile: ''  // 附件地址
+        type: 'BUSINESS_CERTIFICATE',
+        certificateName: selectedSupplier.name,
+        licenseNumber: values.unifiedSocialCreditCode,
+        licenseType: '营业执照',
+        issueDate: values.establishmentDate ? values.establishmentDate.format('YYYY-MM-DD') : null,
+        expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : '2099-12-31',
+        issuingAuthority: values.registrationAuthority,
+        legalRepresentative: values.legalRepresentative,
+        registeredCapital: values.registeredCapital,
+        address: values.address,
+        supplierId: selectedSupplier.id,
+        attachmentName: editFileList.length > 0 ? editFileList[editFileList.length - 1].name : editingRecord.attachment,
+        licenseFile: editingRecord.attachmentUrl || ''
       };
       
       // 编辑营业执照
@@ -318,6 +323,25 @@ const SupplierBusinessCertificate = () => {
         }
       })
     },
+    {
+      title: '失效日期',
+      dataIndex: 'expiryDate',
+      key: 'expiryDate',
+      width: 120,
+      align: 'center',
+      render: (value) => value || '-',
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
+    },
     { 
       title: '住所', 
       dataIndex: 'address', 
@@ -344,6 +368,25 @@ const SupplierBusinessCertificate = () => {
       width: 120,
       align: 'center',
       ellipsis: false,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      align: 'center',
+      render: (value) => value || '-',
       onHeaderCell: () => ({
         style: {
           whiteSpace: 'nowrap'
@@ -517,8 +560,7 @@ const SupplierBusinessCertificate = () => {
             setSubmitting(true);
             const values = await form.validateFields();
             
-            // 从选择的供应商名称查找供应商ID
-            const selectedSupplier = suppliers.find(s => s.name === values.name);
+            const selectedSupplier = suppliers.find(s => s.id === values.supplierId);
             if (!selectedSupplier) {
               message.error('未找到选中的供应商信息');
               return;
@@ -526,19 +568,18 @@ const SupplierBusinessCertificate = () => {
             
             // 构建营业执照数据
             const certificateData = {
-              type: 'BUSINESS_CERTIFICATE',  // 资质类型
-              certificateName: values.name,  // 资质名称
-              licenseNumber: values.unifiedSocialCreditCode,  // 证件编号
-              licenseType: '营业执照',  // 证件类别
-              issueDate: values.establishmentDate ? values.establishmentDate.format('YYYY-MM-DD') : null,  // 发证日期
-              expiryDate: '2030-01-01',  // 有效期（默认10年）
-              issuingAuthority: values.registrationAuthority,  // 发证机构
-              unifiedSocialCreditCode: values.unifiedSocialCreditCode,  // 统一社会信用代码
-              legalRepresentative: values.legalRepresentative,  // 法定代表人
-              registeredCapital: values.registeredCapital,  // 注册资本
-              address: values.address,  // 住所
-              attachmentName: fileList.length > 0 ? fileList[fileList.length - 1].name : '',  // 附件名称
-              licenseFile: ''  // 附件地址
+              type: 'BUSINESS_CERTIFICATE',
+              certificateName: selectedSupplier.name,
+              licenseNumber: values.unifiedSocialCreditCode,
+              licenseType: '营业执照',
+              issueDate: values.establishmentDate ? values.establishmentDate.format('YYYY-MM-DD') : null,
+              expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : '2099-12-31',
+              issuingAuthority: values.registrationAuthority,
+              legalRepresentative: values.legalRepresentative,
+              registeredCapital: values.registeredCapital,
+              address: values.address,
+              attachmentName: fileList.length > 0 ? fileList[fileList.length - 1].name : '',
+              licenseFile: ''
             };
             
             // 新增营业执照
@@ -572,7 +613,7 @@ const SupplierBusinessCertificate = () => {
       >
         <Form form={form} layout="vertical">
           <Form.Item
-            name="name"
+            name="supplierId"
             label="供应商名称"
             rules={[{ required: true, message: '请选择供应商名称' }]}
           >
@@ -580,27 +621,26 @@ const SupplierBusinessCertificate = () => {
               placeholder="请选择供应商名称" 
               style={{ width: '100%' }}
               onChange={(value) => {
-                // 查找选择的供应商
-                const selectedSupplier = suppliers.find(s => s.name === value);
+                const selectedSupplier = suppliers.find(s => s.id === value);
                 if (selectedSupplier) {
-                  // 尝试不同的字段名称，确保能够获取到统一社会信用代码
-                  const creditCode = selectedSupplier.registrationNumber || selectedSupplier.registration_number || selectedSupplier.creditCode || selectedSupplier.credit_code || '';
-                  // 尝试不同的字段名称，确保能够获取到法定代表人
-                  const legalRep = selectedSupplier.legalRepresentative || selectedSupplier.legal_representative || '';
-                  // 自动填充统一社会信用代码和法定代表人
                   form.setFieldsValue({
-                    unifiedSocialCreditCode: creditCode,
-                    legalRepresentative: legalRep
+                    name: selectedSupplier.name,
+                    unifiedSocialCreditCode: selectedSupplier.creditCode || '',
+                    legalRepresentative: selectedSupplier.legalRepresentative || ''
                   });
                 }
               }}
             >
               {suppliers.map(supplier => (
-                <Select.Option key={supplier.id} value={supplier.name}>
+                <Select.Option key={supplier.id} value={supplier.id}>
                   {supplier.name}
                 </Select.Option>
               ))}
             </Select>
+          </Form.Item>
+
+          <Form.Item name="name" label="企业名称">
+            <Input placeholder="自动带出" disabled />
           </Form.Item>
           
           <Form.Item
@@ -634,6 +674,15 @@ const SupplierBusinessCertificate = () => {
             rules={[{ required: true, message: '请选择成立日期' }]}
           >
             <DatePicker {...datePickerProps} placeholder="请选择成立日期" />
+          </Form.Item>
+
+          <Form.Item
+            name="expiryDate"
+            label="失效日期"
+            initialValue={dayjs('2099-12-31')}
+            rules={[{ required: true, message: '请选择失效日期' }]}
+          >
+            <DatePicker {...datePickerProps} placeholder="请选择失效日期" />
           </Form.Item>
           
           <Form.Item
@@ -681,35 +730,35 @@ const SupplierBusinessCertificate = () => {
       >
         <Form form={editForm} layout="vertical">
           <Form.Item
-            name="name"
+            name="supplierId"
             label="供应商名称"
             rules={[{ required: true, message: '请选择供应商名称' }]}
           >
             <Select 
               placeholder="请选择供应商名称" 
+              disabled
               style={{ width: '100%' }}
               onChange={(value) => {
-                // 查找选择的供应商
-                const selectedSupplier = suppliers.find(s => s.name === value);
+                const selectedSupplier = suppliers.find(s => s.id === value);
                 if (selectedSupplier) {
-                  // 尝试不同的字段名称，确保能够获取到统一社会信用代码
-                  const creditCode = selectedSupplier.registrationNumber || selectedSupplier.registration_number || selectedSupplier.creditCode || selectedSupplier.credit_code || '';
-                  // 尝试不同的字段名称，确保能够获取到法定代表人
-                  const legalRep = selectedSupplier.legalRepresentative || selectedSupplier.legal_representative || '';
-                  // 自动填充统一社会信用代码和法定代表人
                   editForm.setFieldsValue({
-                    unifiedSocialCreditCode: creditCode,
-                    legalRepresentative: legalRep
+                    name: selectedSupplier.name,
+                    unifiedSocialCreditCode: selectedSupplier.creditCode || '',
+                    legalRepresentative: selectedSupplier.legalRepresentative || ''
                   });
                 }
               }}
             >
               {suppliers.map(supplier => (
-                <Select.Option key={supplier.id} value={supplier.name}>
+                <Select.Option key={supplier.id} value={supplier.id}>
                   {supplier.name}
                 </Select.Option>
               ))}
             </Select>
+          </Form.Item>
+
+          <Form.Item name="name" label="企业名称">
+            <Input placeholder="自动带出" disabled />
           </Form.Item>
           
           <Form.Item
@@ -743,6 +792,14 @@ const SupplierBusinessCertificate = () => {
             rules={[{ required: true, message: '请选择成立日期' }]}
           >
             <DatePicker {...datePickerProps} placeholder="请选择成立日期" />
+          </Form.Item>
+
+          <Form.Item
+            name="expiryDate"
+            label="失效日期"
+            rules={[{ required: true, message: '请选择失效日期' }]}
+          >
+            <DatePicker {...datePickerProps} placeholder="请选择失效日期" />
           </Form.Item>
           
           <Form.Item

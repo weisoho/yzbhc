@@ -1,11 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Button, Table, Input, Space, Popconfirm, Select, Modal, Form, InputNumber, message } from 'antd';
+import React, { useEffect, useState } from 'react';
+import { Card, Button, Table, Input, Space, Popconfirm, Select, Modal, Form, message } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import api from '../utils/api.js';
 
 const { Option } = Select;
 
+const normalizeList = (payload) => {
+  if (Array.isArray(payload?.records)) {
+    return payload.records;
+  }
+  if (Array.isArray(payload?.list)) {
+    return payload.list;
+  }
+  return [];
+};
+
+const assetStateOptions = [
+  { label: '启用', value: 1 },
+  { label: '停用', value: 0 },
+];
+
 const FixedAssetsDictionary = () => {
+  const [searchForm] = Form.useForm();
   const [visible, setVisible] = useState(false);
   const [editingAsset, setEditingAsset] = useState(null);
   const [form] = Form.useForm();
@@ -13,35 +29,57 @@ const FixedAssetsDictionary = () => {
   const [pageSize, setPageSize] = useState(10);
   const [assetTypes, setAssetTypes] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [lastQuery, setLastQuery] = useState({});
 
-  // 加载资产类型列表
   useEffect(() => {
-    loadAssetTypes();
-  }, []);
+    loadAssetTypes(lastQuery, currentPage, pageSize);
+  }, [currentPage, lastQuery, pageSize]);
 
-  const loadAssetTypes = async () => {
+  const loadAssetTypes = async (query = {}, page = 1, size = 10) => {
     try {
       setLoading(true);
-      const response = await api.post('/yzb/selectAssetType', {
-        pageNum: currentPage,
-        pageSize: pageSize
+      const response = await api.request('/api/assetType/selectAssetType', {
+        method: 'POST',
+        params: {
+          pageNum: page,
+          pageSize: size,
+          assetCode: query.assetCode,
+          assetName: query.assetName,
+          assetState: query.assetState,
+        },
       });
       if (response.code === 1 && response.data) {
-        const types = response.data.list.map(type => ({
+        const list = normalizeList(response.data);
+        const types = list.map((type) => ({
           key: type.id,
           id: type.id,
-          code: type.assetCode,
-          name: type.assetName,
-          description: type.assetDesc,
-          status: type.assetState === 1 ? '启用' : '停用'
+          code: type.assetCode || '-',
+          name: type.assetName || '-',
+          description: type.assetDesc || '-',
+          status: type.assetState,
         }));
         setAssetTypes(types);
+        setTotal(response.data.total || types.length);
       }
     } catch (error) {
       message.error('加载资产类型列表失败');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = async (values) => {
+    setLastQuery(values);
+    setCurrentPage(1);
+    await loadAssetTypes(values, 1, pageSize);
+  };
+
+  const handleReset = async () => {
+    searchForm.resetFields();
+    setLastQuery({});
+    setCurrentPage(1);
+    await loadAssetTypes({}, 1, pageSize);
   };
 
   const columns = [
@@ -54,8 +92,8 @@ const FixedAssetsDictionary = () => {
       key: 'status', 
       width: 100,
       render: (status) => (
-        <span style={{ color: status === '启用' ? '#52c41a' : '#f5222d' }}>
-          {status}
+        <span style={{ color: status === 1 ? '#52c41a' : '#f5222d' }}>
+          {status === 1 ? '启用' : '停用'}
         </span>
       )
     },
@@ -67,13 +105,13 @@ const FixedAssetsDictionary = () => {
         <Space size="middle">
           <a onClick={() => handleEdit(record)}><EditOutlined />编辑</a>
           <Popconfirm
-            title={`确定要${record.status === '启用' ? '停用' : '启用'}这个资产类型吗？`}
+            title={`确定要${record.status === 1 ? '停用' : '启用'}这个资产类型吗？`}
             onConfirm={() => handleToggleStatus(record)}
             okText="确定"
             cancelText="取消"
           >
-            <a style={{ color: record.status === '启用' ? '#f5222d' : '#52c41a' }}>
-              {record.status === '启用' ? '停用' : '启用'}
+            <a style={{ color: record.status === 1 ? '#f5222d' : '#52c41a' }}>
+              {record.status === 1 ? '停用' : '启用'}
             </a>
           </Popconfirm>
         </Space>
@@ -101,18 +139,18 @@ const FixedAssetsDictionary = () => {
   const handleToggleStatus = async (record) => {
     try {
       setLoading(true);
-      const newStatus = record.status === '启用' ? 0 : 1;
-      const response = await api.post('/yzb/updateAssetType', {
-        id: record.id,
-        assetCode: record.code,
-        assetName: record.name,
-        assetDesc: record.description,
-        assetState: newStatus
+      const newStatus = record.status === 1 ? 0 : 1;
+      const response = await api.request('/api/assetType/updateAssetTypeState', {
+        method: 'POST',
+        params: {
+          id: record.id,
+          assetState: newStatus,
+        },
       });
       if (response.code === 1) {
         const newStatusText = newStatus === 1 ? '启用' : '停用';
         message.success(`已${newStatusText}资产类型：${record.name}`);
-        loadAssetTypes();
+        await loadAssetTypes(lastQuery, currentPage, pageSize);
       } else {
         message.error('状态更新失败');
       }
@@ -129,13 +167,15 @@ const FixedAssetsDictionary = () => {
       const values = await form.validateFields();
       
       if (editingAsset) {
-        // 编辑资产类型
-        const response = await api.post('/yzb/updateAssetType', {
-          id: editingAsset.id,
-          assetCode: values.code,
-          assetName: values.name,
-          assetDesc: values.description,
-          assetState: values.status === '启用' ? 1 : 0
+        const response = await api.request('/api/assetType/updateAssetType', {
+          method: 'POST',
+          params: {
+            id: editingAsset.id,
+            assetCode: values.code,
+            assetName: values.name,
+            assetDesc: values.description,
+            assetState: values.status,
+          },
         });
         if (response.code === 1) {
           message.success('修改成功');
@@ -143,12 +183,14 @@ const FixedAssetsDictionary = () => {
           message.error('修改失败');
         }
       } else {
-        // 新增资产类型
-        const response = await api.post('/yzb/addAssetType', {
-          assetCode: values.code,
-          assetName: values.name,
-          assetDesc: values.description,
-          assetState: values.status === '启用' ? 1 : 0
+        const response = await api.request('/api/assetType/addAssetType', {
+          method: 'POST',
+          params: {
+            assetCode: values.code,
+            assetName: values.name,
+            assetDesc: values.description,
+            assetState: values.status,
+          },
         });
         if (response.code === 1) {
           message.success('新增成功');
@@ -159,7 +201,7 @@ const FixedAssetsDictionary = () => {
       
       setVisible(false);
       form.resetFields();
-      loadAssetTypes();
+      await loadAssetTypes(lastQuery, currentPage, pageSize);
     } catch (error) {
       console.error('表单验证失败:', error);
     } finally {
@@ -177,19 +219,26 @@ const FixedAssetsDictionary = () => {
       <h1 style={{ marginBottom: 24 }}>资产字典维护</h1>
       
       <Card style={{ marginBottom: 16 }}>
-        <Space wrap style={{ width: '100%' }}>
-          <Input placeholder="资产类型编码" style={{ width: 150, minWidth: '120px' }} />
-          <Input placeholder="资产类型名称" style={{ width: 150, minWidth: '120px' }} />
-          <Select placeholder="状态" style={{ width: 120, minWidth: '100px' }}>
-            <Option value="all">全部</Option>
-            <Option value="启用">启用</Option>
-            <Option value="停用">停用</Option>
-          </Select>
-          <Button type="primary" icon={<SearchOutlined />}>查询</Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            新增资产类型
-          </Button>
-        </Space>
+        <Form form={searchForm} layout="inline" onFinish={handleSearch}>
+          <Form.Item name="assetCode">
+            <Input placeholder="资产类型编码" style={{ width: 150 }} allowClear />
+          </Form.Item>
+          <Form.Item name="assetName">
+            <Input placeholder="资产类型名称" style={{ width: 150 }} allowClear />
+          </Form.Item>
+          <Form.Item name="assetState">
+            <Select placeholder="状态" allowClear style={{ width: 120 }} options={assetStateOptions} />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit" icon={<SearchOutlined />}>查询</Button>
+              <Button onClick={handleReset}>重置</Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+                新增资产类型
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
       </Card>
       
       <div style={{ overflowX: 'auto' }}>
@@ -200,10 +249,10 @@ const FixedAssetsDictionary = () => {
           pagination={{ 
             pageSize: pageSize,
             current: currentPage,
+            total,
             onChange: (page, size) => {
               setCurrentPage(page);
               setPageSize(size);
-              loadAssetTypes();
             },
             showSizeChanger: true,
             showQuickJumper: true,
@@ -254,8 +303,8 @@ const FixedAssetsDictionary = () => {
             rules={[{ required: true, message: '请选择状态' }]}
           >
             <Select placeholder="请选择状态">
-              <Option value="启用">启用</Option>
-              <Option value="停用">停用</Option>
+              <Option value={1}>启用</Option>
+              <Option value={0}>停用</Option>
             </Select>
           </Form.Item>
         </Form>

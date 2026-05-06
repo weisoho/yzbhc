@@ -52,12 +52,24 @@ const StockOutDetail = () => {
           key: item.id || index.toString(),
           date: item.outboundDate,
           department: item.departmentName,
+          supplierName: item.supplierName,
+          productCode: item.materialCode || item.productCode,
           materialName: item.materialName,
+          materialType: item.materialType,
           specification: item.specification,
+          model: item.model,
+          manufacturer: item.manufacturer,
+          registrationNumber: item.registrationNumber,
+          batchNumber: item.batchNumber,
+          productionDate: item.productionDate,
+          expiryDate: item.expiryDate,
+          outboundNumber: item.outboundNumber || item.outboundNo || item.outboundOrderNumber,
+          purchaseAmount: item.purchaseAmount || item.purchasePrice,
           quantity: item.outboundQuantity,
           unit: item.unit,
           operator: item.operatorName,
-          reason: item.reason
+          reason: item.reason,
+          status: item.status
         }));
         setConsumptionDetails(data);
         setTotal(response.data.total || 0);
@@ -97,16 +109,27 @@ const StockOutDetail = () => {
 
   const columns = [
     { title: '消耗日期', dataIndex: 'date', key: 'date', align: 'center' },
+    { title: '出库单号', dataIndex: 'outboundNumber', key: 'outboundNumber', align: 'center' },
     { title: '领用科室', dataIndex: 'department', key: 'department', align: 'center' },
+    { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', align: 'center' },
+    { title: '物资编码', dataIndex: 'productCode', key: 'productCode', align: 'center' },
     { title: '商品名称', dataIndex: 'materialName', key: 'materialName', align: 'center' },
+    { title: '物资类型', dataIndex: 'materialType', key: 'materialType', align: 'center' },
     { 
       title: '规格型号', 
       key: 'specModel', 
       align: 'center',
       render: (record) => `${record.specification || '-'} / ${record.model || '-'}`
     },
+    { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', align: 'center' },
+    { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', align: 'center' },
+    { title: '生产批号', dataIndex: 'batchNumber', key: 'batchNumber', align: 'center' },
+    { title: '生产日期', dataIndex: 'productionDate', key: 'productionDate', align: 'center' },
+    { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', align: 'center' },
+    { title: '采购金额', dataIndex: 'purchaseAmount', key: 'purchaseAmount', align: 'center', render: (value) => value != null ? `¥${Number(value).toFixed(2)}` : '-' },
     { title: '消耗数量', dataIndex: 'quantity', key: 'quantity', align: 'center' },
     { title: '单位', dataIndex: 'unit', key: 'unit', align: 'center' },
+    { title: '状态', dataIndex: 'status', key: 'status', align: 'center' },
     { title: '操作人', dataIndex: 'operator', key: 'operator', align: 'center' },
     { title: '消耗原因', dataIndex: 'reason', key: 'reason', align: 'center' },
     { 
@@ -165,6 +188,7 @@ const StockOutDetail = () => {
         rowKey="key"
         size="small"
         bordered
+        scroll={{ x: 2400 }}
       />
     </div>
   );

@@ -52,6 +52,7 @@ const SupplierBusinessLicense = () => {
         if (Array.isArray(records)) {
           const licenseList = records.map(item => ({
             key: item.id,
+            supplierId: item.supplierId,
             licenseNumber: item.licenseNumber,
             name: item.supplierName,
             unifiedSocialCreditCode: item.creditCode,
@@ -59,7 +60,9 @@ const SupplierBusinessLicense = () => {
             issuingAuthority: item.issuingAuthority,
             effectiveDate: item.issueDate,
             expiryDate: item.expiryDate,
-            attachment: item.attachmentName
+            attachment: item.attachmentName,
+            attachmentUrl: item.licenseFile,
+            status: item.status,
           }));
           setBusinessLicenses(licenseList);
           setTotal(totalCount);
@@ -122,6 +125,7 @@ const SupplierBusinessLicense = () => {
     setEditingRecord(record);
     // 设置编辑表单数据
     editForm.setFieldsValue({
+      supplierId: record.supplierId,
       licenseNumber: record.licenseNumber,
       name: record.name,
       unifiedSocialCreditCode: record.unifiedSocialCreditCode,
@@ -158,11 +162,13 @@ const SupplierBusinessLicense = () => {
       
       // 编辑许可证
       // 从选择的供应商名称查找供应商ID
-      const selectedSupplier = suppliers.find(s => s.name === values.name);
+      const selectedSupplier = suppliers.find(s => s.id === values.supplierId);
       if (!selectedSupplier) {
         message.error('未找到选中的供应商信息');
         return;
       }
+      licenseData.certificateName = selectedSupplier.name;
+      licenseData.registrantName = selectedSupplier.name;
       // 确保许可证数据中的supplierId正确
       licenseData.supplierId = selectedSupplier.id;
       const response = await api.put(`/api/scm/suppliers/qualifications/${editingRecord.key}`, licenseData);
@@ -226,11 +232,25 @@ const SupplierBusinessLicense = () => {
       })
     },
     { 
-      title: '企业名称', 
+      title: '供应商名称', 
       dataIndex: 'name', 
       key: 'name',
       width: 150,
       align: 'center',
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
+    },
+    {
+      title: '统一社会信用代码',
+      dataIndex: 'unifiedSocialCreditCode',
+      key: 'unifiedSocialCreditCode',
+      width: 180,
+      align: 'center',
+      render: (value) => value || '-',
       onCell: () => ({
         style: {
           whiteSpace: 'nowrap',
@@ -296,6 +316,20 @@ const SupplierBusinessLicense = () => {
       key: 'attachment',
       width: 150,
       align: 'center',
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'visible'
+        }
+      })
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      align: 'center',
+      render: (value) => value || '-',
       onCell: () => ({
         style: {
           whiteSpace: 'nowrap',
@@ -429,26 +463,25 @@ const SupplierBusinessLicense = () => {
             const values = await form.validateFields();
             
             // 构建许可证数据
-            const licenseData = {
-              type: 'BUSINESS_LICENSE',  // 资质类型
-              certificateName: values.name,  // 资质名称
-              licenseNumber: values.licenseNumber,  // 证件编号
-              licenseType: '经营许可证',  // 证件类别
-              issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,  // 发证日期
-              expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,  // 有效期
-              issuingAuthority: values.issuingAuthority,  // 发证机构
-              legalRepresentative: values.legalRepresentative,  // 法定代表人
-              attachmentName: fileList.length > 0 ? fileList[fileList.length - 1].name : '',  // 附件名称
-              licenseFile: ''  // 附件地址
-            };
-            
-            // 新增许可证
-            // 从选择的供应商名称查找供应商ID
-            const selectedSupplier = suppliers.find(s => s.name === values.name);
+            const selectedSupplier = suppliers.find(s => s.id === values.supplierId);
             if (!selectedSupplier) {
               message.error('未找到选中的供应商信息');
               return;
             }
+
+            const licenseData = {
+              type: 'BUSINESS_LICENSE',
+              certificateName: selectedSupplier.name,
+              licenseNumber: values.licenseNumber,
+              licenseType: '经营许可证',
+              issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,
+              expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,
+              issuingAuthority: values.issuingAuthority,
+              legalRepresentative: values.legalRepresentative,
+              registrantName: selectedSupplier.name,
+              attachmentName: fileList.length > 0 ? fileList[fileList.length - 1].name : '',
+              licenseFile: ''
+            };
             const response = await api.post(`/api/scm/suppliers/${selectedSupplier.id}/qualifications`, licenseData);
             if (response.code === 1) {
               message.success('经营许可证新增成功');
@@ -477,32 +510,39 @@ const SupplierBusinessLicense = () => {
       >
         <Form form={form} layout="vertical">
           <Form.Item
-            name="name"
-            label="企业名称"
-            rules={[{ required: true, message: '请选择企业名称' }]}
+            name="supplierId"
+            label="供应商名称"
+            rules={[{ required: true, message: '请选择供应商名称' }]}
           >
             <Select 
-              placeholder="请选择企业名称" 
+              placeholder="请选择供应商名称" 
               style={{ width: '100%' }}
               onChange={(value) => {
-                // 查找选择的供应商
-                const selectedSupplier = suppliers.find(s => s.name === value);
+                const selectedSupplier = suppliers.find(s => s.id === value);
                 if (selectedSupplier) {
-                  // 尝试不同的字段名称，确保能够获取到法定代表人
-                  const legalRep = selectedSupplier.legalRepresentative || selectedSupplier.legal_representative || '';
-                  // 自动填充法定代表人
+                  const legalRep = selectedSupplier.legalRepresentative || '';
                   form.setFieldsValue({
+                    name: selectedSupplier.name,
+                    unifiedSocialCreditCode: selectedSupplier.creditCode || '',
                     legalRepresentative: legalRep
                   });
                 }
               }}
             >
               {suppliers.map(supplier => (
-                <Select.Option key={supplier.id} value={supplier.name}>
+                <Select.Option key={supplier.id} value={supplier.id}>
                   {supplier.name}
                 </Select.Option>
               ))}
             </Select>
+          </Form.Item>
+
+          <Form.Item name="name" label="企业名称">
+            <Input placeholder="自动带出" disabled />
+          </Form.Item>
+
+          <Form.Item name="unifiedSocialCreditCode" label="统一社会信用代码">
+            <Input placeholder="自动带出" disabled />
           </Form.Item>
 
           <Form.Item
@@ -574,32 +614,40 @@ const SupplierBusinessLicense = () => {
       >
         <Form form={editForm} layout="vertical">
           <Form.Item
-            name="name"
-            label="企业名称"
-            rules={[{ required: true, message: '请选择企业名称' }]}
+            name="supplierId"
+            label="供应商名称"
+            rules={[{ required: true, message: '请选择供应商名称' }]}
           >
             <Select 
-              placeholder="请选择企业名称" 
+              placeholder="请选择供应商名称" 
+              disabled
               style={{ width: '100%' }}
               onChange={(value) => {
-                // 查找选择的供应商
-                const selectedSupplier = suppliers.find(s => s.name === value);
+                const selectedSupplier = suppliers.find(s => s.id === value);
                 if (selectedSupplier) {
-                  // 尝试不同的字段名称，确保能够获取到法定代表人
-                  const legalRep = selectedSupplier.legalRepresentative || selectedSupplier.legal_representative || '';
-                  // 自动填充法定代表人
+                  const legalRep = selectedSupplier.legalRepresentative || '';
                   editForm.setFieldsValue({
+                    name: selectedSupplier.name,
+                    unifiedSocialCreditCode: selectedSupplier.creditCode || '',
                     legalRepresentative: legalRep
                   });
                 }
               }}
             >
               {suppliers.map(supplier => (
-                <Select.Option key={supplier.id} value={supplier.name}>
+                <Select.Option key={supplier.id} value={supplier.id}>
                   {supplier.name}
                 </Select.Option>
               ))}
             </Select>
+          </Form.Item>
+
+          <Form.Item name="name" label="企业名称">
+            <Input placeholder="自动带出" disabled />
+          </Form.Item>
+
+          <Form.Item name="unifiedSocialCreditCode" label="统一社会信用代码">
+            <Input placeholder="自动带出" disabled />
           </Form.Item>
 
           <Form.Item

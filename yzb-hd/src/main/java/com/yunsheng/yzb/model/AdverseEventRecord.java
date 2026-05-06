@@ -16,6 +16,7 @@ public class AdverseEventRecord {
     private String involvedProject;
     private String eventName;
     private LocalDateTime occurrenceDate;
+    private Integer status;
     private String eventSummary;
     private String investigationSituation;
     private String eventAnalysis;

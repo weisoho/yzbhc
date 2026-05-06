@@ -49,11 +49,22 @@ const ReportsLossSummary = () => {
 
       const records = normalizeList(response.data).map((item, index) => ({
         key: `${item.materialName || 'material'}-${item.warehouse || 'warehouse'}-${index}`,
+        materialCode: item.materialCode || '-',
         materialName: item.materialName || '-',
+        supplierName: item.supplierName || '-',
         specification: item.specification || '-',
         model: item.model || '-',
+        manufacturer: item.manufacturer || '-',
+        registrationNumber: item.registrationNumber || '-',
+        batchNumber: item.batchNumber || '-',
+        productionDate: item.productionDate || '-',
+        expiryDate: item.expiryDate || '-',
         unit: item.unit || '-',
         warehouse: item.warehouse || '-',
+        department: item.departmentName || '-',
+        purchaseAmount: item.purchaseAmount || item.purchasePrice || 0,
+        outOrderNo: item.outboundNumber || item.outboundNo || '-',
+        status: item.status || '-',
         beginningInventory: item.lassMonthNum || 0,
         monthlyPurchase: item.orderMonthNum || 0,
         monthlyInventory: item.checkMonthNum || 0,
@@ -113,20 +124,31 @@ const ReportsLossSummary = () => {
       message.warning('当前没有可导出的数据');
       return;
     }
-    exportCsv('损耗汇总.csv', ['materialName', 'specification', 'model', 'unit', 'warehouse', 'beginningInventory', 'monthlyPurchase', 'monthlyInventory', 'loss', 'lossRate'], filteredRows);
+    exportCsv('损耗汇总.csv', ['materialCode', 'materialName', 'supplierName', 'specification', 'model', 'manufacturer', 'registrationNumber', 'batchNumber', 'productionDate', 'expiryDate', 'unit', 'purchaseAmount', 'department', 'warehouse', 'outOrderNo', 'status', 'beginningInventory', 'monthlyPurchase', 'monthlyInventory', 'loss', 'lossRate'], filteredRows);
     message.success(`已导出 ${filteredRows.length} 条记录`);
   };
 
   const columns = [
+    { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode', align: 'center', width: 120 },
     { title: '商品名称', dataIndex: 'materialName', key: 'materialName', align: 'center' },
+    { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', align: 'center', width: 180 },
     {
       title: '规格型号',
       key: 'specification',
       align: 'center',
       render: (_, record) => `${record.specification || '-'} / ${record.model || '-'}`,
     },
+    { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', align: 'center', width: 160 },
+    { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', align: 'center', width: 160 },
+    { title: '生产批号', dataIndex: 'batchNumber', key: 'batchNumber', align: 'center', width: 140 },
+    { title: '生产日期', dataIndex: 'productionDate', key: 'productionDate', align: 'center', width: 120 },
+    { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', align: 'center', width: 120 },
     { title: '单位', dataIndex: 'unit', key: 'unit', align: 'center', width: 90 },
+    { title: '采购金额', dataIndex: 'purchaseAmount', key: 'purchaseAmount', align: 'center', width: 120, render: (value) => `¥${Number(value || 0).toFixed(2)}` },
+    { title: '所属科室', dataIndex: 'department', key: 'department', align: 'center', width: 140 },
     { title: '仓库', dataIndex: 'warehouse', key: 'warehouse', align: 'center', width: 140 },
+    { title: '出库单号', dataIndex: 'outOrderNo', key: 'outOrderNo', align: 'center', width: 160 },
+    { title: '状态', dataIndex: 'status', key: 'status', align: 'center', width: 100 },
     { title: '上月盘点量', dataIndex: 'beginningInventory', key: 'beginningInventory', align: 'center', width: 120 },
     { title: '本月订货量', dataIndex: 'monthlyPurchase', key: 'monthlyPurchase', align: 'center', width: 120 },
     { title: '本月盘点量', dataIndex: 'monthlyInventory', key: 'monthlyInventory', align: 'center', width: 120 },
@@ -193,7 +215,7 @@ const ReportsLossSummary = () => {
           showTotal: (total) => `共 ${total} 条记录`,
         }}
         size="small"
-        scroll={{ x: 1200 }}
+        scroll={{ x: 2600 }}
       />
     </div>
   );

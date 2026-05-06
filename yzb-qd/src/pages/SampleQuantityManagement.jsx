@@ -40,6 +40,7 @@ const mapDepartmentOption = (item) => ({
 const mapProjectOption = (item) => ({
   label: `${item.itemName || '-'}${item.itemCode ? ` (${item.itemCode})` : ''}`,
   value: item.id,
+  itemCode: item.itemCode,
   itemName: item.itemName,
   depId: item.depId,
   depName: item.depName,
@@ -54,10 +55,12 @@ const mapRecord = (item, projectMap) => {
     departmentId: item.depId,
     departmentName: item.depName || '-',
     projectId: item.itemId,
+    projectCode: item.itemCode || project?.itemCode || '-',
     projectName: item.itemName || project?.itemName || '-',
     quantity: item.detectionNum || 0,
     operator: item.userName || '-',
     remark: item.remark || '-',
+    status: item.status || (moment(item.sampleDate).isSame(moment(), 'day') ? '可编辑' : '锁定'),
     canOperate: moment(item.sampleDate).isSame(moment(), 'day'),
   };
 };
@@ -322,6 +325,12 @@ const SampleQuantityManagement = () => {
       width: 160,
     },
     {
+      title: '项目编码',
+      dataIndex: 'projectCode',
+      key: 'projectCode',
+      width: 140,
+    },
+    {
       title: '项目名称',
       dataIndex: 'projectName',
       key: 'projectName',
@@ -340,11 +349,11 @@ const SampleQuantityManagement = () => {
       width: 120,
     },
     {
-      title: '可编辑',
-      dataIndex: 'canOperate',
-      key: 'canOperate',
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
       width: 100,
-      render: (value) => <Tag color={value ? 'green' : 'default'}>{value ? '当天' : '锁定'}</Tag>,
+      render: (_, record) => <Tag color={record.canOperate ? 'green' : 'default'}>{record.canOperate ? '可编辑' : '锁定'}</Tag>,
     },
     {
       title: '备注',
