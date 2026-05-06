@@ -87,7 +87,7 @@
       distinct
     </if>
     <include refid="Base_Column_List" />
-    from repair
+    from asset_repair
     <if test="_parameter != null" >
       <include refid="Example_Where_Clause" />
     </if>
@@ -98,21 +98,21 @@
   <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Integer" >
     select 
     <include refid="Base_Column_List" />
-    from repair
+    from asset_repair
     where id = #{id,jdbcType=INTEGER}
   </select>
   <delete id="deleteByPrimaryKey" parameterType="java.lang.Integer" >
-    delete from repair
+    delete from asset_repair
     where id = #{id,jdbcType=INTEGER}
   </delete>
   <delete id="deleteByExample" parameterType="com.yunsheng.yzb.model.RepairExample" >
-    delete from repair
+    delete from asset_repair
     <if test="_parameter != null" >
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
   <insert id="insert" parameterType="com.yunsheng.yzb.model.Repair" >
-    insert into repair (id, asset_id, repair_code, 
+    insert into asset_repair (id, asset_id, repair_code, 
       repair_date, finish_date, repair_type, 
       repair_reason, repair_content, repair_bus, 
       repair_person, repair_fee, repair_status, 
@@ -126,7 +126,7 @@
       )
   </insert>
   <insert id="insertSelective" parameterType="com.yunsheng.yzb.model.Repair" >
-    insert into repair
+    insert into asset_repair
     <trim prefix="(" suffix=")" suffixOverrides="," >
       <if test="id != null" >
         id,
@@ -223,13 +223,13 @@
     </trim>
   </insert>
   <select id="countByExample" parameterType="com.yunsheng.yzb.model.RepairExample" resultType="java.lang.Integer" >
-    select count(*) from repair
+    select count(*) from asset_repair
     <if test="_parameter != null" >
       <include refid="Example_Where_Clause" />
     </if>
   </select>
   <update id="updateByExampleSelective" parameterType="map" >
-    update repair
+    update asset_repair
     <set >
       <if test="record.id != null" >
         id = #{record.id,jdbcType=INTEGER},
@@ -282,7 +282,7 @@
     </if>
   </update>
   <update id="updateByExample" parameterType="map" >
-    update repair
+    update asset_repair
     set id = #{record.id,jdbcType=INTEGER},
       asset_id = #{record.assetId,jdbcType=INTEGER},
       repair_code = #{record.repairCode,jdbcType=VARCHAR},
@@ -303,7 +303,7 @@
     </if>
   </update>
   <update id="updateByPrimaryKeySelective" parameterType="com.yunsheng.yzb.model.Repair" >
-    update repair
+    update asset_repair
     <set >
       <if test="assetId != null" >
         asset_id = #{assetId,jdbcType=INTEGER},
@@ -351,7 +351,7 @@
     where id = #{id,jdbcType=INTEGER}
   </update>
   <update id="updateByPrimaryKey" parameterType="com.yunsheng.yzb.model.Repair" >
-    update repair
+    update asset_repair
     set asset_id = #{assetId,jdbcType=INTEGER},
       repair_code = #{repairCode,jdbcType=VARCHAR},
       repair_date = #{repairDate,jdbcType=TIMESTAMP},
@@ -382,7 +382,7 @@
     aa.repair_reason repairReason,
     aa.repair_fee repairFee,
     aa.repair_status repairStatus
-    from repair aa join asset bb on aa.asset_id=bb.id
+    from asset_repair aa join asset bb on aa.asset_id=bb.id
     where 1=1
     <if test="assetCode!=null and assetCode!=''">
       AND bb.asset_code LIKE concat('%', #{assetCode},'%')

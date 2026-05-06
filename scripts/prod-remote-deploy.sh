@@ -9,6 +9,8 @@ MYSQL_CONTAINER="${MYSQL_CONTAINER:-yzbhc-mysql}"
 BACKEND_CONTAINER="${BACKEND_CONTAINER:-yzbhc-backend}"
 NGINX_CONTAINER="${NGINX_CONTAINER:-yzbhc-nginx}"
 SQL_FILE="$DEPLOY_DIR/20260506_add_status_columns.sql"
+PATCHES_DIR="$REMOTE_DIR/patches"
+PATCH_JAR="$DEPLOY_DIR/attachment-fix-patch.jar"
 TIMESTAMP="$(date +%Y%m%d%H%M%S)"
 
 compose() {
@@ -68,6 +70,7 @@ MYSQL_ROOT_PASSWORD="$(resolve_mysql_root_password)"
 backup_if_exists "$COMPOSE_FILE" "$COMPOSE_FILE.bak.$TIMESTAMP"
 backup_if_exists "$REMOTE_DIR/nginx.conf" "$REMOTE_DIR/nginx.conf.bak.$TIMESTAMP"
 backup_if_exists "$REMOTE_DIR/yzb.jar" "$REMOTE_DIR/yzb.jar.bak.$TIMESTAMP"
+backup_if_exists "$PATCHES_DIR/attachment-fix-patch.jar" "$PATCHES_DIR/attachment-fix-patch.jar.bak.$TIMESTAMP"
 
 if [ -d "$REMOTE_DIR/dist" ]; then
   rm -rf "$REMOTE_DIR/dist.bak.$TIMESTAMP"
@@ -77,6 +80,10 @@ fi
 cp "$DEPLOY_DIR/docker-compose.yml" "$COMPOSE_FILE"
 cp "$DEPLOY_DIR/nginx.conf" "$REMOTE_DIR/nginx.conf"
 cp "$DEPLOY_DIR/yzb.jar" "$REMOTE_DIR/yzb.jar"
+mkdir -p "$PATCHES_DIR"
+if [ -f "$PATCH_JAR" ]; then
+  cp "$PATCH_JAR" "$PATCHES_DIR/attachment-fix-patch.jar"
+fi
 rm -rf "$REMOTE_DIR/dist"
 tar -xzf "$DEPLOY_DIR/frontend-dist.tar.gz" -C "$REMOTE_DIR"
 

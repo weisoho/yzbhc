@@ -1,11 +1,16 @@
 package com.yunsheng.yzb.service.impl;
 
 import com.yunsheng.yzb.service.UploadFileService;
+import com.yunsheng.yzb.vo.UploadFileInfo;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.UUID;
 
 /**
@@ -13,35 +18,31 @@ import java.util.UUID;
  */
 @Service
 public class UploadFileServiceImpl implements UploadFileService {
+    @Value("${UPLOAD_PATH:/app/uploads/}")
+    private String uploadPath;
+
     @Override
-    public String uploadFile(MultipartFile multipartFile) {
+    public UploadFileInfo uploadFile(MultipartFile multipartFile) {
         if (multipartFile.isEmpty()) {
             return null;
         }
-        //图片的新名字，使用uuid为了图片名字的唯一性，防止重名
-        String name = UUID.randomUUID().toString().replace("-","");
-        /*
-         * 获取上传图片的后缀
-         * multipartFile.getOriginalFilename()获取图片名字，例如：picture.png
-         * substring和lastIndexOf都是String的方法，不会自己搜
-         */
+        String originalFilename = multipartFile.getOriginalFilename();
+        String extension = "";
+        if (StringUtils.hasText(originalFilename) && originalFilename.contains(".")) {
+            extension = originalFilename.substring(originalFilename.lastIndexOf('.'));
+        }
 
-        String type = multipartFile.getOriginalFilename().
-                substring(multipartFile.getOriginalFilename().lastIndexOf('.'));
+        String storedName = UUID.randomUUID().toString().replace("-", "") + extension;
+        Path uploadDirectory = Paths.get(uploadPath).normalize();
+        Path targetPath = uploadDirectory.resolve(storedName).normalize();
 
-        //保存图片的路径，我们存放在resources下static下的image
-        //修改后的代码
-        String value = "F:/project/bus/src/main/resources/static/upimg/";
-        //创建文件
-        File file = new File(value+name+type);
         try {
-            //transferTo 图片复制
-            multipartFile.transferTo(file);
+            Files.createDirectories(uploadDirectory);
+            multipartFile.transferTo(targetPath.toFile());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        //String fname=multipartFile.getOriginalFilename();
-       // return file.getAbsolutePath();
-        return name+type;
+
+        return new UploadFileInfo(originalFilename, storedName, "/api/files/" + storedName);
     }
 }

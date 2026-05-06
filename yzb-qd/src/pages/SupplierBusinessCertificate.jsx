@@ -33,6 +33,14 @@ const SupplierBusinessCertificate = () => {
   const [pageSize, setPageSize] = useState(10);
   const [suppliers, setSuppliers] = useState([]);
 
+  const formatDate = (value) => {
+    if (!value) {
+      return '--';
+    }
+    const parsed = dayjs(value);
+    return parsed.isValid() ? parsed.format('YYYY-MM-DD') : '--';
+  };
+
   const datePickerProps = {
     style: { width: '100%' },
     inputReadOnly: true,
@@ -321,7 +329,8 @@ const SupplierBusinessCertificate = () => {
           whiteSpace: 'nowrap',
           overflow: 'visible'
         }
-      })
+      }),
+      render: (value) => formatDate(value)
     },
     {
       title: '失效日期',

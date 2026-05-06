@@ -5,6 +5,14 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutli
 import dayjs from 'dayjs';
 import api from '../utils/api.js';
 
+const getUploadedFileMeta = (file) => {
+  const payload = file?.response?.data;
+  return {
+    attachmentName: payload?.originalName || file?.name || '',
+    attachmentUrl: payload?.url || file?.url || '',
+  };
+};
+
 const SupplierInspectionReport = () => {
   const { supplierId } = useParams();
   const [visible, setVisible] = useState(false);
@@ -36,6 +44,13 @@ const SupplierInspectionReport = () => {
   };
 
   const getErrorMessage = (error, fallback) => error?.msg || error?.message || error?.data?.msg || error?.data?.message || fallback;
+  const formatDate = (value) => {
+    if (!value) {
+      return '--';
+    }
+    const parsed = dayjs(value);
+    return parsed.isValid() ? parsed.format('YYYY-MM-DD') : '--';
+  };
 
   // 加载供应商列表
   const loadSuppliers = async () => {
@@ -74,16 +89,17 @@ const SupplierInspectionReport = () => {
           key: certificate.id,
           supplierId: certificate.supplierId,
           supplierName: certificate.supplierName || '-',
-          registrantName: certificate.registrantName || certificate.supplierName || '-',
+          registrantName: certificate.registrantName || '-',
           registrantAddress: certificate.address || '-',
-          agentName: certificate.agentName || '-',
+          agentName: certificate.agentName || certificate.issuingAuthority || '-',
           productName: certificate.certificateName || '-',
           registrationNumber: certificate.licenseNumber || '-',
+          packagingSpec: certificate.packagingSpec || '标准包装',
           effectiveDate: certificate.issueDate,
           expiryDate: certificate.expiryDate,
           attachment: certificate.attachmentName,
           attachmentUrl: certificate.licenseFile,
-          status: certificate.status || '-'
+          status: certificate.status || (certificate.expiryDate && new Date(certificate.expiryDate) < new Date() ? '已过期' : '有效')
         }));
         setRegistrationCertificates(certificateList);
         setTotal(totalCount);
@@ -129,6 +145,7 @@ const SupplierInspectionReport = () => {
     setEditingRecord(record);
     // 设置编辑表单数据
     editForm.setFieldsValue({
+      registrantName: record.registrantName,
       productName: record.productName,
       registrationNumber: record.registrationNumber,
       packagingSpec: record.packagingSpec,
@@ -147,6 +164,7 @@ const SupplierInspectionReport = () => {
     try {
       setSubmitting(true);
       const values = await editForm.validateFields();
+      const uploadedFile = editFileList.length > 0 ? getUploadedFileMeta(editFileList[editFileList.length - 1]) : null;
       
       // 构建注册证数据
       const certificateData = {
@@ -157,10 +175,10 @@ const SupplierInspectionReport = () => {
         issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,
         expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,
         issuingAuthority: values.agentName || editingRecord?.agentName || '未填写',
-        registrantName: editingRecord?.registrantName || editingRecord?.supplierName || '',
+        registrantName: values.registrantName || '',
         agentName: values.agentName || '',
-        attachmentName: editFileList.length > 0 ? editFileList[editFileList.length - 1].name : editingRecord.attachment,  // 附件名称
-        licenseFile: editingRecord.attachmentUrl || ''
+        attachmentName: uploadedFile?.attachmentName || editingRecord.attachment || '',
+        licenseFile: uploadedFile?.attachmentUrl || editingRecord.attachmentUrl || ''
       };
       
       // 编辑注册证
@@ -215,9 +233,9 @@ const SupplierInspectionReport = () => {
       title: '供应商名称', 
       dataIndex: 'supplierName', 
       key: 'supplierName',
-      width: 150,
+      width: 260,
       align: 'center',
-      ellipsis: false,
+      ellipsis: true,
       onHeaderCell: () => ({
         style: {
           whiteSpace: 'nowrap'
@@ -234,31 +252,10 @@ const SupplierInspectionReport = () => {
       title: '注册人名称',
       dataIndex: 'registrantName',
       key: 'registrantName',
-      width: 150,
+      width: 260,
       align: 'center',
-    },
-    {
-      title: '注册人住所',
-      dataIndex: 'registrantAddress',
-      key: 'registrantAddress',
-      width: 180,
-      align: 'center',
+      ellipsis: true,
       render: (value) => value || '-',
-    },
-    { 
-      title: '代理人名称',
-      dataIndex: 'agentName',
-      key: 'agentName',
-      width: 120,
-      align: 'center',
-    },
-    { 
-      title: '产品名称', 
-      dataIndex: 'productName', 
-      key: 'productName',
-      width: 150,
-      align: 'center',
-      ellipsis: false,
       onHeaderCell: () => ({
         style: {
           whiteSpace: 'nowrap'
@@ -267,7 +264,69 @@ const SupplierInspectionReport = () => {
       onCell: () => ({
         style: {
           whiteSpace: 'nowrap',
-          overflow: 'visible'
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }
+      })
+    },
+    {
+      title: '注册人住所',
+      dataIndex: 'registrantAddress',
+      key: 'registrantAddress',
+      width: 260,
+      align: 'center',
+      ellipsis: true,
+      render: (value) => value || '-',
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }
+      })
+    },
+    { 
+      title: '代理人名称',
+      dataIndex: 'agentName',
+      key: 'agentName',
+      width: 180,
+      align: 'center',
+      ellipsis: true,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
+        }
+      })
+    },
+    { 
+      title: '产品名称', 
+      dataIndex: 'productName', 
+      key: 'productName',
+      width: 220,
+      align: 'center',
+      ellipsis: true,
+      onHeaderCell: () => ({
+        style: {
+          whiteSpace: 'nowrap'
+        }
+      }),
+      onCell: () => ({
+        style: {
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
         }
       })
     },
@@ -275,9 +334,9 @@ const SupplierInspectionReport = () => {
       title: '注册证编号', 
       dataIndex: 'registrationNumber', 
       key: 'registrationNumber',
-      width: 120,
+      width: 200,
       align: 'center',
-      ellipsis: false,
+      ellipsis: true,
       onHeaderCell: () => ({
         style: {
           whiteSpace: 'nowrap'
@@ -286,7 +345,8 @@ const SupplierInspectionReport = () => {
       onCell: () => ({
         style: {
           whiteSpace: 'nowrap',
-          overflow: 'visible'
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
         }
       })
     },
@@ -307,7 +367,8 @@ const SupplierInspectionReport = () => {
           whiteSpace: 'nowrap',
           overflow: 'visible'
         }
-      })
+      }),
+      render: (value) => formatDate(value)
     },
     { 
       title: '失效日期', 
@@ -326,15 +387,16 @@ const SupplierInspectionReport = () => {
           whiteSpace: 'nowrap',
           overflow: 'visible'
         }
-      })
+      }),
+      render: (value) => formatDate(value)
     },
     { 
       title: '附件', 
       dataIndex: 'attachment', 
       key: 'attachment',
-      width: 150,
+      width: 120,
       align: 'center',
-      ellipsis: false,
+      ellipsis: true,
       onHeaderCell: () => ({
         style: {
           whiteSpace: 'nowrap'
@@ -343,15 +405,16 @@ const SupplierInspectionReport = () => {
       onCell: () => ({
         style: {
           whiteSpace: 'nowrap',
-          overflow: 'visible'
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
         }
       }),
       render: (_, record) => (
-        <Button type="link" onClick={() => {
+        <Button type="link" size="small" onClick={() => {
           setPreviewRecord(record);
           setPreviewVisible(true);
-        }}>
-          {record.attachment || '查看附件'}
+        }} disabled={!record.attachment && !record.attachmentUrl}>
+          {record.attachment || record.attachmentUrl ? '查看附件' : '-'}
         </Button>
       )
     },
@@ -359,7 +422,7 @@ const SupplierInspectionReport = () => {
       title: '状态', 
       dataIndex: 'status', 
       key: 'status',
-      width: 80,
+      width: 110,
       align: 'center',
       ellipsis: false,
       onHeaderCell: () => ({
@@ -370,7 +433,7 @@ const SupplierInspectionReport = () => {
       onCell: () => ({
         style: {
           whiteSpace: 'nowrap',
-          overflow: 'visible'
+          overflow: 'hidden'
         }
       }),
       render: (status) => (
@@ -385,7 +448,7 @@ const SupplierInspectionReport = () => {
     { 
       title: '操作', 
       key: 'action',
-      width: 150,
+      width: 170,
       align: 'center',
       ellipsis: false,
       onHeaderCell: () => ({
@@ -396,13 +459,17 @@ const SupplierInspectionReport = () => {
       onCell: () => ({
         style: {
           whiteSpace: 'nowrap',
-          overflow: 'visible'
+          overflow: 'hidden'
         }
       }),
       render: (_, record) => (
-        <Space size="middle">
-          <a onClick={() => handleEdit(record)}><EditOutlined />编辑</a>
-          <a style={{ color: 'red' }} onClick={() => handleDelete(record.key)}><DeleteOutlined />删除</a>
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+          <Button type="link" size="small" onClick={() => handleEdit(record)}>
+            <EditOutlined />编辑
+          </Button>
+          <Button type="link" size="small" danger onClick={() => handleDelete(record.key)}>
+            <DeleteOutlined />删除
+          </Button>
         </Space>
       )
     },
@@ -418,9 +485,9 @@ const SupplierInspectionReport = () => {
     onChange(info) {
       setFileList(info.fileList);
       if (info.file.status === 'done') {
-        // 文件上传成功
+        message.success('附件上传成功');
       } else if (info.file.status === 'error') {
-        // 文件上传失败
+        message.error('附件上传失败');
       }
     },
   };
@@ -435,9 +502,9 @@ const SupplierInspectionReport = () => {
     onChange(info) {
       setEditFileList(info.fileList);
       if (info.file.status === 'done') {
-        // 文件上传成功
+        message.success('附件上传成功');
       } else if (info.file.status === 'error') {
-        // 文件上传失败
+        message.error('附件上传失败');
       }
     },
   };
@@ -450,9 +517,9 @@ const SupplierInspectionReport = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>供应商名称：</span>
+              <span>注册人名称：</span>
               <Input 
-                placeholder="请输入供应商名称" 
+                placeholder="请输入注册人名称" 
                 style={{ width: 200 }} 
                 value={searchParams.supplierName}
                 onChange={(e) => handleSearchChange('supplierName', e.target.value)}
@@ -495,6 +562,7 @@ const SupplierInspectionReport = () => {
           columns={columns} 
           dataSource={registrationCertificates} 
           loading={loading}
+          tableLayout="fixed"
           pagination={{ 
             total: total,
             pageSize: pageSize,
@@ -513,7 +581,7 @@ const SupplierInspectionReport = () => {
               marginTop: '16px'
             }
           }} 
-          scroll={{ x: 1600 }}
+          scroll={{ x: 1980 }}
         />
       </div>
 
@@ -526,6 +594,7 @@ const SupplierInspectionReport = () => {
           try {
             setSubmitting(true);
             const values = await form.validateFields();
+            const uploadedFile = fileList.length > 0 ? getUploadedFileMeta(fileList[fileList.length - 1]) : null;
             
             // 构建注册证数据
             const certificateData = {
@@ -536,10 +605,10 @@ const SupplierInspectionReport = () => {
               issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,
               expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,
               issuingAuthority: values.agentName || '未填写',
-              registrantName: suppliers.find((supplier) => supplier.id === values.supplierId)?.name || '',
+              registrantName: values.registrantName || '',
               agentName: values.agentName || '',
-              attachmentName: fileList.length > 0 ? fileList[fileList.length - 1].name : '',  // 附件名称
-              licenseFile: ''  // 附件地址
+              attachmentName: uploadedFile?.attachmentName || '',
+              licenseFile: uploadedFile?.attachmentUrl || ''
             };
             
             // 新增注册证
@@ -575,13 +644,32 @@ const SupplierInspectionReport = () => {
             label="供应商名称"
             rules={[{ required: true, message: '请选择供应商名称' }]}
           >
-            <Select placeholder="请选择已有供应商" style={{ width: '100%' }}>
+            <Select
+              placeholder="请选择已有供应商"
+              style={{ width: '100%' }}
+              onChange={(value) => {
+                const selectedSupplier = suppliers.find((supplier) => supplier.id === value);
+                if (selectedSupplier) {
+                  form.setFieldsValue({
+                    registrantName: selectedSupplier.name || '',
+                  });
+                }
+              }}
+            >
               {suppliers.map(supplier => (
                 <Select.Option key={supplier.id} value={supplier.id}>
                   {supplier.name}
                 </Select.Option>
               ))}
             </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="registrantName"
+            label="注册人名称"
+            rules={[{ required: true, message: '请输入注册人名称' }]}
+          >
+            <Input placeholder="请输入注册人名称" />
           </Form.Item>
           
           <Form.Item
@@ -653,6 +741,14 @@ const SupplierInspectionReport = () => {
       >
         <Form form={editForm} layout="vertical">
           <Form.Item
+            name="registrantName"
+            label="注册人名称"
+            rules={[{ required: true, message: '请输入注册人名称' }]}
+          >
+            <Input placeholder="请输入注册人名称" />
+          </Form.Item>
+
+          <Form.Item
             name="productName"
             label="产品名称"
             rules={[{ required: true, message: '请输入产品名称' }]}
@@ -712,7 +808,8 @@ const SupplierInspectionReport = () => {
         footer={[
           <Button key="download" onClick={() => {
             if (previewRecord?.attachmentUrl) {
-              window.open(previewRecord.attachmentUrl, '_blank');
+              const downloadUrl = `${previewRecord.attachmentUrl}?download=1&filename=${encodeURIComponent(previewRecord.attachment || 'attachment')}`;
+              window.open(downloadUrl, '_blank');
             } else {
               message.warning('当前附件暂无可访问地址');
             }

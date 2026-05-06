@@ -185,10 +185,12 @@ const DepartmentManagement = () => {
       title: '部门名称',
       dataIndex: 'deptName',
       key: 'deptName',
+      width: 260,
+      ellipsis: true,
       render: (text, record) => (
         <div>
-          <div style={{ fontWeight: 500, color: '#262626' }}>{text}</div>
-          <div style={{ fontSize: 12, color: '#8c8c8c' }}>{record.remark || '未填写描述'}</div>
+          <div style={{ fontWeight: 500, color: '#262626', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{text}</div>
+          <div style={{ fontSize: 12, color: '#8c8c8c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{record.remark || '未填写描述'}</div>
         </div>
       ),
     },
@@ -264,6 +266,7 @@ const DepartmentManagement = () => {
           dataSource={departmentRows}
           rowKey="id"
           loading={loading}
+          tableLayout="fixed"
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -271,7 +274,7 @@ const DepartmentManagement = () => {
             showTotal: (total) => `共 ${total} 个部门`,
           }}
           size="small"
-          scroll={{ x: 900 }}
+          scroll={{ x: 1260 }}
         />
       </Card>
 

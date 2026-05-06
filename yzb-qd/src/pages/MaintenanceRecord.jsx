@@ -30,6 +30,28 @@ import api from '../utils/api.js';
 const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 
+const normalizeList = (payload) => {
+  if (Array.isArray(payload?.records)) {
+    return payload.records;
+  }
+  if (Array.isArray(payload?.list)) {
+    return payload.list;
+  }
+  return [];
+};
+
+const mapRepairRecord = (record, index = 0) => ({
+  key: record.id || index + 1,
+  id: record.id,
+  deviceName: record.assetName || '未知设备',
+  serialNo: record.assetCode || '无',
+  faultReason: record.repairReason || '-',
+  maintenancePlan: record.repairContent || '-',
+  cost: record.repairFee || 0,
+  maintenanceDate: record.repairDate ? String(record.repairDate).substring(0, 10) : '',
+  attachment: record.attachmentName || '无附件',
+});
+
 const MaintenanceRecord = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
@@ -49,27 +71,25 @@ const MaintenanceRecord = () => {
     loadMaintenanceRecords();
   }, [currentPage, pageSize]);
 
-  const loadMaintenanceRecords = async () => {
+  const loadMaintenanceRecords = async (query = {}, page = currentPage, size = pageSize) => {
     try {
       setLoading(true);
       const response = await api.get('/api/selectRepairList', {
-        pageNum: currentPage,
-        pageSize: pageSize
+        pageNum: page,
+        pageSize: size,
+        assetName: query.deviceName || '',
+        assetCode: query.serialNo || '',
+        repairStart: query.maintenanceDate?.[0] ? query.maintenanceDate[0].format('YYYY-MM-DD') : undefined,
+        repairEnd: query.maintenanceDate?.[1] ? query.maintenanceDate[1].format('YYYY-MM-DD') : undefined,
       });
       if (response.code === 1 && response.data) {
-        const records = response.data.list.map(record => ({
-          key: record.id,
-          id: record.id,
-          deviceName: record.assetName || '未知设备',
-          serialNo: record.serialNumber || '无',
-          faultReason: record.repairReason,
-          maintenancePlan: record.repairPlan,
-          cost: record.repairCost,
-          maintenanceDate: record.repairDate ? record.repairDate.substring(0, 10) : '',
-          attachment: record.attachment || '无附件'
-        }));
+        const records = normalizeList(response.data).map((record, index) => mapRepairRecord(record, index));
         setMaintenanceRecords(records);
-        setTotal(response.data.total);
+        setTotal(response.data.total || records.length);
+      } else {
+        setMaintenanceRecords([]);
+        setTotal(0);
+        message.error(response.message || '加载维修记录失败');
       }
     } catch (error) {
       message.error('加载维修记录失败');
@@ -151,18 +171,18 @@ const MaintenanceRecord = () => {
     }
   ];
 
-  const handleSearch = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      message.success('查询成功');
-    }, 500);
+  const handleSearch = async () => {
+    const values = await form.validateFields();
+    setSearchParams(values);
+    setCurrentPage(1);
+    await loadMaintenanceRecords(values, 1, pageSize);
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
     form.resetFields();
     setSearchParams({});
-    message.success('已重置搜索条件');
+    setCurrentPage(1);
+    await loadMaintenanceRecords({}, 1, pageSize);
   };
 
   const handleViewDetail = (record) => {
@@ -171,20 +191,44 @@ const MaintenanceRecord = () => {
   };
 
   const handleEdit = (record) => {
-    message.info(`编辑维修记录：${record.deviceName}`);
+    setSelectedRecord(record);
+    addForm.setFieldsValue({
+      deviceName: record.deviceName,
+      serialNo: record.serialNo,
+      faultReason: record.faultReason,
+      maintenancePlan: record.maintenancePlan,
+      cost: record.cost,
+      maintenanceDate: record.maintenanceDate ? dayjs(record.maintenanceDate) : null,
+    });
+    setAddModalVisible(true);
   };
 
   const handleDelete = (record) => {
     Modal.confirm({
       title: '确认删除',
       content: `确定要删除维修记录"${record.deviceName}"吗？`,
-      onOk: () => {
-        message.success(`已删除维修记录：${record.deviceName}`);
+      onOk: async () => {
+        try {
+          const response = await api.request('/api/deleteRepair', {
+            method: 'POST',
+            params: { id: record.id },
+          });
+          if (response.code === 1) {
+            message.success(`已删除维修记录：${record.deviceName}`);
+            await loadMaintenanceRecords(searchParams, currentPage, pageSize);
+          } else {
+            message.error(response.message || '删除维修记录失败');
+          }
+        } catch (error) {
+          message.error('删除维修记录失败');
+        }
       }
     });
   };
 
   const handleAddNew = () => {
+    setSelectedRecord(null);
+    addForm.resetFields();
     setAddModalVisible(true);
   };
 
@@ -194,20 +238,24 @@ const MaintenanceRecord = () => {
       const values = await addForm.validateFields();
       
       const repairData = {
+        ...(selectedRecord?.id ? { id: selectedRecord.id } : {}),
+        assetName: values.deviceName,
+        assetCode: values.serialNo,
         repairReason: values.faultReason,
-        repairPlan: values.maintenancePlan,
-        repairCost: values.cost,
-        repairDate: values.maintenanceDate
+        repairContent: values.maintenancePlan,
+        repairFee: values.cost,
+        repairDate: values.maintenanceDate ? values.maintenanceDate.format('YYYY-MM-DD') : null
       };
       
-      const response = await api.post('/yzb/addRepair', repairData);
+      const response = await api.post(selectedRecord ? '/api/updateRepair' : '/api/addRepair', repairData);
       if (response.code === 1) {
-        message.success('已新增维修记录');
+        message.success(selectedRecord ? '已更新维修记录' : '已新增维修记录');
         setAddModalVisible(false);
         addForm.resetFields();
-        loadMaintenanceRecords();
+        setSelectedRecord(null);
+        loadMaintenanceRecords(searchParams, currentPage, pageSize);
       } else {
-        message.error('新增维修记录失败');
+        message.error(selectedRecord ? '更新维修记录失败' : '新增维修记录失败');
       }
     } catch (error) {
       message.error('请检查输入信息！');
@@ -219,6 +267,7 @@ const MaintenanceRecord = () => {
   const handleAddCancel = () => {
     setAddModalVisible(false);
     addForm.resetFields();
+    setSelectedRecord(null);
   };
 
   const handleAddReset = () => {
@@ -359,7 +408,7 @@ const MaintenanceRecord = () => {
       </Modal>
 
       <Modal
-        title="新增维修记录"
+        title={selectedRecord ? '编辑维修记录' : '新增维修记录'}
         open={addModalVisible}
         onCancel={handleAddCancel}
         footer={[
@@ -370,7 +419,7 @@ const MaintenanceRecord = () => {
             取消
           </Button>,
           <Button key="submit" type="primary" onClick={handleAddSubmit} loading={loading}>
-            提交
+            {selectedRecord ? '保存' : '提交'}
           </Button>
         ]}
         width={800}

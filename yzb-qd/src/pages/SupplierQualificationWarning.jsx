@@ -98,6 +98,14 @@ const getRecordList = (pageData) => {
 	return [];
 };
 
+const formatDate = (value) => {
+	if (!value) {
+		return '--';
+	}
+	const parsed = moment(value);
+	return parsed.isValid() ? parsed.format('YYYY-MM-DD') : '--';
+};
+
 const getDisplayValue = (value) => (value || value === 0 ? value : '--');
 
 const SupplierQualificationWarning = () => {
@@ -135,9 +143,12 @@ const SupplierQualificationWarning = () => {
 						id: item.id,
 						supplierId: getDisplayValue(item.supplierId),
 						supplierName: getDisplayValue(item.supplierName),
+						certificateName: getDisplayValue(item.certificateName),
+						certificateNumber: getDisplayValue(item.licenseNumber),
 						certificateType: getDisplayValue(item.licenseType || item.type || currentTabConfig.label),
-						issueDate: getDisplayValue(item.issueDate),
-						expiryDate: getDisplayValue(item.expiryDate),
+						issueDate: formatDate(item.issueDate),
+						expiryDate: formatDate(item.expiryDate),
+						issuingAuthority: getDisplayValue(item.issuingAuthority),
 						status,
 						daysUntilExpiry,
 					};
@@ -234,11 +245,15 @@ const SupplierQualificationWarning = () => {
 
 	const columns = useMemo(() => [
 		{ title: '供应商ID', dataIndex: 'supplierId', key: 'supplierId', width: 120 },
-		{ title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 200 },
-		{ title: '发证日期', dataIndex: 'issueDate', key: 'issueDate', width: 140 },
-		{ title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', width: 140 },
-		{ title: '证件类型', dataIndex: 'certificateType', key: 'certificateType', width: 140 },
-		{ title: '状态', dataIndex: 'status', key: 'status', width: 120, render: renderStatusTag },
+		{ title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 180, ellipsis: true },
+		{ title: '资质名称', dataIndex: 'certificateName', key: 'certificateName', width: 180, ellipsis: true },
+		{ title: '证件编号', dataIndex: 'certificateNumber', key: 'certificateNumber', width: 180, ellipsis: true },
+		{ title: '资质类型', dataIndex: 'certificateType', key: 'certificateType', width: 140, ellipsis: true },
+		{ title: '发证机构', dataIndex: 'issuingAuthority', key: 'issuingAuthority', width: 160, ellipsis: true },
+		{ title: '发证日期', dataIndex: 'issueDate', key: 'issueDate', width: 120 },
+		{ title: '有效期至', dataIndex: 'expiryDate', key: 'expiryDate', width: 120 },
+		{ title: '剩余天数', dataIndex: 'daysUntilExpiry', key: 'daysUntilExpiry', width: 140, render: renderRemainingDays },
+		{ title: '预警状态', dataIndex: 'status', key: 'status', width: 120, render: renderStatusTag },
 		{
 			title: '操作',
 			key: 'action',
@@ -311,6 +326,7 @@ const SupplierQualificationWarning = () => {
 						dataSource={pagedRows}
 						rowKey="key"
 						loading={loading}
+						tableLayout="fixed"
 						locale={{ emptyText: <Empty description="暂无数据" /> }}
 						rowSelection={{
 							selectedRowKeys: selectedWarningKeys,
