@@ -9,12 +9,12 @@ import {
   ShoppingCartOutlined,
   WarningOutlined,
 } from '@ant-design/icons';
-import { Button, Card, Col, Row, Space, Statistic, Table, Tag, Typography } from 'antd';
+import { Button, Card, Col, Row, Space, Statistic, Tag, Typography } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import moment from 'moment';
 import api from '../utils/api.js';
 
-const { Paragraph, Text, Title } = Typography;
+const { Text, Title } = Typography;
 
 const pageStyle = {
   padding: '0 16px 24px',
@@ -50,16 +50,6 @@ const tableCardStyle = {
   border: '1px solid rgba(15, 23, 42, 0.06)',
   boxShadow: '0 14px 30px rgba(15, 23, 42, 0.05)',
   overflow: 'hidden',
-};
-
-const getDisplayDate = (value) => (value ? String(value).slice(0, 10) : '-');
-
-const getTagColorByRemainingDays = (days) => {
-  if (days < 0) return 'red';
-  if (days <= 15) return 'volcano';
-  if (days <= 30) return 'orange';
-  if (days <= 60) return 'gold';
-  return 'green';
 };
 
 const Home = () => {
@@ -220,52 +210,6 @@ const Home = () => {
     loadHomeData();
   }, []);
 
-  const expiringColumns = useMemo(() => [
-    { title: '商品名称', dataIndex: 'name', key: 'name', width: 180 },
-    { title: '规格型号', dataIndex: 'specification', key: 'specification', width: 140 },
-    { title: '仓库', dataIndex: 'warehouse', key: 'warehouse', width: 120 },
-    { title: '有效期', dataIndex: 'expirationDate', key: 'expirationDate', width: 120, render: getDisplayDate },
-    {
-      title: '状态',
-      dataIndex: 'daysLeft',
-      key: 'daysLeft',
-      width: 120,
-      render: (daysLeft) => <Tag color={getTagColorByRemainingDays(daysLeft)}>剩余 {daysLeft} 天</Tag>,
-    },
-  ], []);
-
-  const expiredColumns = useMemo(() => [
-    { title: '商品名称', dataIndex: 'name', key: 'name', width: 180 },
-    { title: '规格型号', dataIndex: 'specification', key: 'specification', width: 140 },
-    { title: '仓库', dataIndex: 'warehouse', key: 'warehouse', width: 120 },
-    { title: '失效日期', dataIndex: 'expirationDate', key: 'expirationDate', width: 120, render: getDisplayDate },
-    {
-      title: '状态',
-      dataIndex: 'daysOverdue',
-      key: 'daysOverdue',
-      width: 120,
-      render: (daysOverdue) => <Tag color="red">过期 {daysOverdue} 天</Tag>,
-    },
-  ], []);
-
-  const qualificationColumns = useMemo(() => [
-    { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 170 },
-    { title: '证件类型', dataIndex: 'certificateType', key: 'certificateType', width: 120 },
-    { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', width: 120, render: getDisplayDate },
-    {
-      title: '预警状态',
-      dataIndex: 'daysUntilExpiry',
-      key: 'daysUntilExpiry',
-      width: 140,
-      render: (daysUntilExpiry) => {
-        if (daysUntilExpiry < 0) {
-          return <Tag color="red">过期 {Math.abs(daysUntilExpiry)} 天</Tag>;
-        }
-        return <Tag color={getTagColorByRemainingDays(daysUntilExpiry)}>剩余 {daysUntilExpiry} 天</Tag>;
-      },
-    },
-  ], []);
-
   const userName = (() => {
     try {
       const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
@@ -277,9 +221,6 @@ const Home = () => {
 
   const todayText = moment().format('YYYY年MM月DD日');
   const totalAlerts = dashboardCounts.expiring + dashboardCounts.expired + dashboardCounts.qualification;
-  const tableLocale = {
-    emptyText: loading ? '正在汇总首页数据...' : '当前暂无需要展示的数据',
-  };
 
   const statCards = useMemo(() => [
     {
@@ -391,8 +332,11 @@ const Home = () => {
         key: `expired-${expiredItems[0].key}`,
         label: '优先处理',
         color: 'red',
+        surface: 'linear-gradient(135deg, rgba(254, 226, 226, 0.92) 0%, rgba(255, 255, 255, 0.98) 100%)',
         title: expiredItems[0].name,
         description: `${expiredItems[0].warehouse} 已过期 ${expiredItems[0].daysOverdue} 天`,
+        actionText: '去处理效期',
+        path: '/inventory-expiry',
       });
     }
 
@@ -401,8 +345,11 @@ const Home = () => {
         key: `qualification-${qualificationWarningData[0].key}`,
         label: '资质提醒',
         color: 'gold',
+        surface: 'linear-gradient(135deg, rgba(254, 243, 199, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%)',
         title: qualificationWarningData[0].supplierName,
         description: `${qualificationWarningData[0].certificateType} ${qualificationWarningData[0].daysUntilExpiry < 0 ? `已过期 ${Math.abs(qualificationWarningData[0].daysUntilExpiry)} 天` : `剩余 ${qualificationWarningData[0].daysUntilExpiry} 天`}`,
+        actionText: '查看资质预警',
+        path: '/supplier-qualification-warning',
       });
     }
 
@@ -411,8 +358,11 @@ const Home = () => {
         key: `expiring-${expiringItems[0].key}`,
         label: '库存提醒',
         color: 'blue',
+        surface: 'linear-gradient(135deg, rgba(219, 234, 254, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%)',
         title: expiringItems[0].name,
         description: `${expiringItems[0].warehouse} 剩余 ${expiringItems[0].daysLeft} 天到期`,
+        actionText: '查看效期明细',
+        path: '/inventory-expiry',
       });
     }
 
@@ -421,13 +371,43 @@ const Home = () => {
         key: 'safe',
         label: '运行状态',
         color: 'green',
+        surface: 'linear-gradient(135deg, rgba(220, 252, 231, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%)',
         title: '当前未发现紧急异常',
         description: '可以从快捷入口继续查看库存、采购和资质数据。',
+        actionText: '查看库存台账',
+        path: '/inventory-detail',
       });
     }
 
     return feed;
   }, [expiredItems, qualificationWarningData, expiringItems]);
+
+  const reminderPanels = useMemo(() => [
+    {
+      key: 'expiring',
+      title: '效期巡检',
+      value: `${dashboardCounts.expiring} 条`,
+      note: dashboardCounts.expiring > 0 ? '建议优先查看近效期库存' : '当前近效期压力较低',
+      color: '#d97706',
+      path: '/inventory-expiry',
+    },
+    {
+      key: 'qualification',
+      title: '资质复核',
+      value: `${dashboardCounts.qualification} 条`,
+      note: dashboardCounts.qualification > 0 ? '供应商证照需及时复核' : '当前证照状态稳定',
+      color: '#2563eb',
+      path: '/supplier-qualification-warning',
+    },
+    {
+      key: 'log',
+      title: '审计巡查',
+      value: '日志入口',
+      note: '查看系统最新关键操作轨迹',
+      color: '#be123c',
+      path: '/operation-log',
+    },
+  ], [dashboardCounts]);
 
   const tableTitleNode = (title, description, color) => (
     <Space direction="vertical" size={2}>
@@ -450,9 +430,6 @@ const Home = () => {
                   <Title level={1} style={{ margin: 0, color: '#f8fafc', fontSize: 34, lineHeight: 1.2 }}>
                     {userName}，欢迎回到医智云管理驾驶舱
                   </Title>
-                  <Paragraph style={{ margin: '12px 0 0', color: 'rgba(226, 243, 255, 0.88)', fontSize: 16, maxWidth: 760 }}>
-                    首页已汇总库存效期、失效品与供应商资质风险，方便你在进入业务模块前先完成当日巡检与重点处理。
-                  </Paragraph>
                 </div>
                 <Space wrap size={[12, 12]}>
                   <Button
@@ -608,8 +585,8 @@ const Home = () => {
                               </Tag>
                             </div>
                             <Text strong style={{ display: 'block', color: '#0f172a', fontSize: 15 }}>{item.title}</Text>
-                            <Text style={{ color: '#64748b', fontSize: 13 }}>{item.description}</Text>
-                            <Text style={{ display: 'block', marginTop: 8, color: item.color, fontWeight: 600 }}>{item.badge}</Text>
+                              <Text style={{ display: 'block', marginTop: 4, color: '#64748b', fontSize: 13 }}>{item.description}</Text>
+                              <Text style={{ display: 'block', marginTop: 8, color: item.color, fontWeight: 600 }}>{item.badge}</Text>
                           </div>
                         </Space>
                       </Space>
@@ -624,96 +601,68 @@ const Home = () => {
           </Col>
 
           <Col xs={24} xl={8}>
-            <Card
-              bordered={false}
-              style={tableCardStyle}
-              title={tableTitleNode('关键提醒', '首页优先展示今天最值得先处理的事项。', '#0f172a')}
-            >
-              <Space direction="vertical" size={12} style={{ width: '100%' }}>
-                {focusFeed.map((item) => (
-                  <div
-                    key={item.key}
-                    style={{
-                      padding: 16,
-                      borderRadius: 18,
-                      border: '1px solid rgba(15, 23, 42, 0.08)',
-                      background: '#ffffff',
-                    }}
-                  >
-                    <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                      <Tag color={item.color} style={{ width: 'fit-content', borderRadius: 999 }}>{item.label}</Tag>
-                      <Text strong style={{ color: '#0f172a', fontSize: 15 }}>{item.title}</Text>
-                      <Text style={{ color: '#64748b' }}>{item.description}</Text>
-                    </Space>
-                  </div>
-                ))}
-              </Space>
-            </Card>
-          </Col>
-        </Row>
+            <Space direction="vertical" size={16} style={{ width: '100%' }}>
+              <Card
+                bordered={false}
+                style={tableCardStyle}
+                title={tableTitleNode('关键提醒', '首页优先展示今天最值得先处理的事项。', '#0f172a')}
+              >
+                <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                  {focusFeed.map((item) => (
+                    <div
+                      key={item.key}
+                      style={{
+                        padding: 16,
+                        borderRadius: 18,
+                        border: '1px solid rgba(15, 23, 42, 0.08)',
+                        background: item.surface,
+                      }}
+                    >
+                      <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                          <Tag color={item.color} style={{ width: 'fit-content', borderRadius: 999, marginInlineEnd: 0 }}>{item.label}</Tag>
+                          <Button type="link" onClick={() => navigate(item.path)} style={{ padding: 0, color: '#0f172a', fontWeight: 600 }}>
+                            {item.actionText} <ArrowRightOutlined />
+                          </Button>
+                        </div>
+                        <Text strong style={{ color: '#0f172a', fontSize: 15 }}>{item.title}</Text>
+                        <Text style={{ color: '#475569', lineHeight: 1.7 }}>{item.description}</Text>
+                      </Space>
+                    </div>
+                  ))}
+                </Space>
+              </Card>
 
-        <Row gutter={[16, 16]}>
-          <Col xs={24} xl={8}>
-            <Card
-              bordered={false}
-              style={tableCardStyle}
-              title={tableTitleNode('近效期商品', '优先查看 90 天内到期的库存。', '#0f172a')}
-              extra={<Button type="link" onClick={() => navigate('/inventory-expiry')}>查看全部</Button>}
-              bodyStyle={{ padding: 0 }}
-            >
-              <Table
-                size="small"
-                rowKey="key"
-                loading={loading}
-                columns={expiringColumns}
-                dataSource={expiringItems}
-                locale={tableLocale}
-                pagination={false}
-                scroll={{ x: 680, y: 360 }}
-              />
-            </Card>
-          </Col>
-
-          <Col xs={24} xl={8}>
-            <Card
-              bordered={false}
-              style={tableCardStyle}
-              title={tableTitleNode('已过期商品', '建议尽快处理失效库存，减少积压。', '#7f1d1d')}
-              extra={<Button type="link" danger onClick={() => navigate('/inventory-expiry')}>查看全部</Button>}
-              bodyStyle={{ padding: 0 }}
-            >
-              <Table
-                size="small"
-                rowKey="key"
-                loading={loading}
-                columns={expiredColumns}
-                dataSource={expiredItems}
-                locale={tableLocale}
-                pagination={false}
-                scroll={{ x: 680, y: 360 }}
-              />
-            </Card>
-          </Col>
-
-          <Col xs={24} xl={8}>
-            <Card
-              bordered={false}
-              style={tableCardStyle}
-              title={tableTitleNode('资质预警', '关注供应商证照的失效时间和风险。', '#1d4ed8')}
-              extra={<Button type="link" onClick={() => navigate('/supplier-qualification-warning')}>查看全部</Button>}
-              bodyStyle={{ padding: 0 }}
-            >
-              <Table
-                size="small"
-                rowKey="key"
-                loading={loading}
-                columns={qualificationColumns}
-                dataSource={qualificationWarningData}
-                locale={tableLocale}
-                pagination={false}
-                scroll={{ x: 620, y: 360 }}
-              />
-            </Card>
+              <Card
+                bordered={false}
+                style={tableCardStyle}
+                title={tableTitleNode('今日关注', '把首页保留为概览，细节进入业务模块查看。', '#0f172a')}
+              >
+                <Row gutter={[12, 12]}>
+                  {reminderPanels.map((item) => (
+                    <Col xs={24} sm={8} xl={24} key={item.key}>
+                      <div
+                        style={{
+                          padding: 16,
+                          borderRadius: 18,
+                          border: '1px solid rgba(15, 23, 42, 0.08)',
+                          background: '#ffffff',
+                        }}
+                      >
+                        <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                          <Text style={{ color: item.color, fontWeight: 700 }}>{item.title}</Text>
+                          <Text strong style={{ fontSize: 20, color: '#0f172a' }}>{item.value}</Text>
+                          <Text style={{ color: '#64748b', minHeight: 40 }}>{item.note}</Text>
+                          <Button type="link" onClick={() => navigate(item.path)} style={{ padding: 0, color: item.color, fontWeight: 600 }}>
+                            进入模块 <ArrowRightOutlined />
+                          </Button>
+                        </Space>
+                      </div>
+                    </Col>
+                  ))}
+                </Row>
+              </Card>
+            </Space>
           </Col>
         </Row>
       </Space>
