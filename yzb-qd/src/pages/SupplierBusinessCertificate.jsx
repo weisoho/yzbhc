@@ -5,6 +5,14 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutli
 import dayjs from 'dayjs';
 import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api.js';
 
+const getUploadedFileMeta = (file) => {
+  const payload = file?.response?.data;
+  return {
+    attachmentName: payload?.originalName || file?.name || '',
+    attachmentUrl: payload?.url || file?.url || '',
+  };
+};
+
 const sanitizeCapitalInput = (value) => {
   const sanitized = (value || '').replace(/[^\d.]/g, '');
   const [integerPart = '', ...decimalParts] = sanitized.split('.');
@@ -32,6 +40,8 @@ const SupplierBusinessCertificate = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [suppliers, setSuppliers] = useState([]);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewRecord, setPreviewRecord] = useState(null);
 
   const formatDate = (value) => {
     if (!value) {
@@ -162,6 +172,7 @@ const SupplierBusinessCertificate = () => {
     try {
       setSubmitting(true);
       const values = await editForm.validateFields();
+      const uploadedFile = editFileList.length > 0 ? getUploadedFileMeta(editFileList[editFileList.length - 1]) : null;
       
       // 从选择的供应商名称查找供应商ID
       const selectedSupplier = suppliers.find(s => s.id === values.supplierId);
@@ -183,8 +194,8 @@ const SupplierBusinessCertificate = () => {
         registeredCapital: values.registeredCapital,
         address: values.address,
         supplierId: selectedSupplier.id,
-        attachmentName: editFileList.length > 0 ? editFileList[editFileList.length - 1].name : editingRecord.attachment,
-        licenseFile: editingRecord.attachmentUrl || ''
+        attachmentName: uploadedFile?.attachmentName || editingRecord.attachment || '',
+        licenseFile: uploadedFile?.attachmentUrl || editingRecord.attachmentUrl || ''
       };
       
       // 编辑营业执照
@@ -338,7 +349,7 @@ const SupplierBusinessCertificate = () => {
       key: 'expiryDate',
       width: 120,
       align: 'center',
-      render: (value) => value || '-',
+      render: (value) => formatDate(value),
       onHeaderCell: () => ({
         style: {
           whiteSpace: 'nowrap'
@@ -412,9 +423,9 @@ const SupplierBusinessCertificate = () => {
       title: '附件', 
       dataIndex: 'attachment', 
       key: 'attachment',
-      width: 150,
+      width: 120,
       align: 'center',
-      ellipsis: false,
+      ellipsis: true,
       onHeaderCell: () => ({
         style: {
           whiteSpace: 'nowrap'
@@ -423,9 +434,23 @@ const SupplierBusinessCertificate = () => {
       onCell: () => ({
         style: {
           whiteSpace: 'nowrap',
-          overflow: 'visible'
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
         }
-      })
+      }),
+      render: (_, record) => (
+        <Button
+          type="link"
+          size="small"
+          disabled={!record.attachment && !record.attachmentUrl}
+          onClick={() => {
+            setPreviewRecord(record);
+            setPreviewVisible(true);
+          }}
+        >
+          {record.attachment || record.attachmentUrl ? '查看附件' : '-'}
+        </Button>
+      )
     },
     { 
       title: '操作', 
@@ -463,9 +488,9 @@ const SupplierBusinessCertificate = () => {
     onChange(info) {
       setFileList(info.fileList);
       if (info.file.status === 'done') {
-        // 文件上传成功
+        message.success('附件上传成功');
       } else if (info.file.status === 'error') {
-        // 文件上传失败
+        message.error('附件上传失败');
       }
     },
   };
@@ -480,9 +505,9 @@ const SupplierBusinessCertificate = () => {
     onChange(info) {
       setEditFileList(info.fileList);
       if (info.file.status === 'done') {
-        // 文件上传成功
+        message.success('附件上传成功');
       } else if (info.file.status === 'error') {
-        // 文件上传失败
+        message.error('附件上传失败');
       }
     },
   };
@@ -568,6 +593,7 @@ const SupplierBusinessCertificate = () => {
           try {
             setSubmitting(true);
             const values = await form.validateFields();
+            const uploadedFile = fileList.length > 0 ? getUploadedFileMeta(fileList[fileList.length - 1]) : null;
             
             const selectedSupplier = suppliers.find(s => s.id === values.supplierId);
             if (!selectedSupplier) {
@@ -587,8 +613,8 @@ const SupplierBusinessCertificate = () => {
               legalRepresentative: values.legalRepresentative,
               registeredCapital: values.registeredCapital,
               address: values.address,
-              attachmentName: fileList.length > 0 ? fileList[fileList.length - 1].name : '',
-              licenseFile: ''
+              attachmentName: uploadedFile?.attachmentName || '',
+              licenseFile: uploadedFile?.attachmentUrl || ''
             };
             
             // 新增营业执照
@@ -835,6 +861,55 @@ const SupplierBusinessCertificate = () => {
             </Upload>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="附件预览"
+        open={previewVisible}
+        onCancel={() => {
+          setPreviewVisible(false);
+          setPreviewRecord(null);
+        }}
+        footer={[
+          <Button key="download" onClick={() => {
+            if (previewRecord?.attachmentUrl) {
+              const downloadUrl = `${previewRecord.attachmentUrl}?download=1&filename=${encodeURIComponent(previewRecord.attachment || 'attachment')}`;
+              window.open(downloadUrl, '_blank');
+            } else {
+              message.warning('当前附件暂无可访问地址');
+            }
+          }}>
+            下载附件
+          </Button>,
+          <Button key="open" onClick={() => {
+            if (previewRecord?.attachmentUrl) {
+              window.open(previewRecord.attachmentUrl, '_blank');
+            } else {
+              message.warning('当前附件暂无可访问地址');
+            }
+          }}>
+            查看附件
+          </Button>,
+          <Button key="close" type="primary" onClick={() => {
+            setPreviewVisible(false);
+            setPreviewRecord(null);
+          }}>
+            关闭
+          </Button>
+        ]}
+        width={960}
+      >
+        {previewRecord?.attachmentUrl ? (
+          <iframe
+            title="business-certificate-attachment-preview"
+            src={previewRecord.attachmentUrl}
+            style={{ width: '100%', height: 640, border: 'none' }}
+          />
+        ) : (
+          <div style={{ padding: 32, textAlign: 'center', color: '#8c8c8c' }}>
+            当前附件暂无可预览地址，请重新上传。
+          </div>
+        )}
       </Modal>
     </div>
   );
