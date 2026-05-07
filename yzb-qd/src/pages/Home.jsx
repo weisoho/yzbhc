@@ -16,6 +16,16 @@ import api from '../utils/api.js';
 
 const { Text, Title } = Typography;
 
+const mapQualificationTab = (type) => {
+  if (type === 'BUSINESS_LICENSE') {
+    return 'businessLicense';
+  }
+  if (type === 'BUSINESS_CERTIFICATE') {
+    return 'businessCertificate';
+  }
+  return 'registration';
+};
+
 const pageStyle = {
   padding: '0 16px 24px',
   background: 'linear-gradient(180deg, #f4f7fb 0%, #eef3f7 35%, #f7f9fc 100%)',
@@ -181,7 +191,9 @@ const heroPanelStyle = {
               const { status, daysUntilExpiry } = getQualificationWarningStatus(item.expiryDate);
               return {
                 key: String(item.id),
+                supplierId: item.supplierId,
                 supplierName: item.supplierName || '-',
+                type: item.type || 'REGISTRATION_CERTIFICATE',
                 certificateType: item.licenseType || item.type || '-',
                 certificateNumber: item.licenseNumber || '-',
                 expiryDate: item.expiryDate || '-',
@@ -238,6 +250,7 @@ const heroPanelStyle = {
         title: '库存台账',
         value: dashboardCounts.inventory,
         suffix: '项',
+        path: '/inventory-detail',
         icon: <DatabaseOutlined style={{ fontSize: 20, color: '#0f766e' }} />,
         valueStyle: { color: '#0f172a' },
         accent: 'linear-gradient(135deg, rgba(15,118,110,0.16) 0%, rgba(45,212,191,0.08) 100%)',
@@ -246,6 +259,7 @@ const heroPanelStyle = {
         title: '近效期商品',
         value: dashboardCounts.expiring,
         suffix: '条',
+        path: '/inventory-expiry',
         icon: <ClockCircleOutlined style={{ fontSize: 20, color: '#d97706' }} />,
         valueStyle: { color: '#b45309' },
         accent: 'linear-gradient(135deg, rgba(245,158,11,0.16) 0%, rgba(251,191,36,0.08) 100%)',
@@ -254,6 +268,7 @@ const heroPanelStyle = {
         title: '已过期商品',
         value: dashboardCounts.expired,
         suffix: '条',
+        path: '/inventory-expiry',
         icon: <WarningOutlined style={{ fontSize: 20, color: '#dc2626' }} />,
         valueStyle: { color: '#b91c1c' },
         accent: 'linear-gradient(135deg, rgba(239,68,68,0.16) 0%, rgba(248,113,113,0.08) 100%)',
@@ -262,6 +277,7 @@ const heroPanelStyle = {
         title: '资质预警',
         value: dashboardCounts.qualification,
         suffix: '条',
+        path: '/supplier-qualification-warning',
         icon: <FileProtectOutlined style={{ fontSize: 20, color: '#2563eb' }} />,
         valueStyle: { color: '#1d4ed8' },
         accent: 'linear-gradient(135deg, rgba(37,99,235,0.16) 0%, rgba(96,165,250,0.08) 100%)',
@@ -332,23 +348,39 @@ const heroPanelStyle = {
           meta: `${expiredItems[0].warehouse} · 过期 ${expiredItems[0].daysOverdue} 天`,
           actionText: '处理效期',
           path: '/inventory-expiry',
+          navigationState: {
+            source: 'home-pending',
+            initialFilters: {
+              materialName: expiredItems[0].name,
+              remainingDays: 'expired',
+            },
+          },
         });
       }
 
-      if (qualificationWarningData[0]) {
+      qualificationWarningData.slice(0, 3).forEach((item) => {
         feed.push({
-          key: `qualification-${qualificationWarningData[0].key}`,
+          key: `qualification-${item.key}`,
           label: '资质提醒',
           color: 'gold',
           surface: 'linear-gradient(135deg, rgba(254, 243, 199, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%)',
-          title: qualificationWarningData[0].supplierName,
-          meta: qualificationWarningData[0].daysUntilExpiry < 0
-            ? `${qualificationWarningData[0].certificateType} · 已过期 ${Math.abs(qualificationWarningData[0].daysUntilExpiry)} 天`
-            : `${qualificationWarningData[0].certificateType} · 剩余 ${qualificationWarningData[0].daysUntilExpiry} 天`,
+          title: item.supplierName,
+          meta: item.daysUntilExpiry < 0
+            ? `${item.certificateType} · 已过期 ${Math.abs(item.daysUntilExpiry)} 天`
+            : `${item.certificateType} · 剩余 ${item.daysUntilExpiry} 天`,
           actionText: '查看预警',
           path: '/supplier-qualification-warning',
+          navigationState: {
+            source: 'home-pending',
+            initialTab: mapQualificationTab(item.type),
+            initialFilters: {
+              supplierId: item.supplierId ? String(item.supplierId) : '',
+              supplierName: item.supplierName || '',
+              status: item.status || '',
+            },
+          },
         });
-      }
+      });
 
       if (expiringItems[0]) {
         feed.push({
@@ -360,6 +392,13 @@ const heroPanelStyle = {
           meta: `${expiringItems[0].warehouse} · 剩余 ${expiringItems[0].daysLeft} 天`,
           actionText: '查看明细',
           path: '/inventory-expiry',
+          navigationState: {
+            source: 'home-pending',
+            initialFilters: {
+              materialName: expiringItems[0].name,
+              remainingDays: '90',
+            },
+          },
         });
       }
 
@@ -478,13 +517,20 @@ const heroPanelStyle = {
           <Row gutter={[16, 16]}>
             {statCards.map((item) => (
               <Col xs={24} sm={12} xl={6} key={item.title}>
-                <Card bordered={false} style={{ ...statCardStyle, background: item.accent }}>
+                <Card
+                  bordered={false}
+                  hoverable
+                  onClick={() => navigate(item.path)}
+                  style={{ ...statCardStyle, background: item.accent, cursor: 'pointer' }}
+                  bodyStyle={{ padding: 24 }}
+                >
                   <Space direction="vertical" size={18} style={{ width: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Text style={{ color: '#475569', fontWeight: 600 }}>{item.title}</Text>
                       {item.icon}
                     </div>
                     <Statistic value={item.value} suffix={item.suffix} valueStyle={item.valueStyle} loading={loading} />
+                    <Text style={{ color: '#334155', fontWeight: 600 }}>点击查看 <ArrowRightOutlined /></Text>
                   </Space>
                 </Card>
               </Col>
@@ -560,7 +606,7 @@ const heroPanelStyle = {
                         <Space direction="vertical" size={10} style={{ width: '100%' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
                             <Tag color={item.color} style={{ width: 'fit-content', borderRadius: 999, marginInlineEnd: 0 }}>{item.label}</Tag>
-                            <Button type="link" onClick={() => navigate(item.path)} style={{ padding: 0, color: '#0f172a', fontWeight: 600 }}>
+                            <Button type="link" onClick={() => navigate(item.path, item.navigationState ? { state: item.navigationState } : undefined)} style={{ padding: 0, color: '#0f172a', fontWeight: 600 }}>
                               {item.actionText} <ArrowRightOutlined />
                             </Button>
                           </div>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button, Card, Empty, Input, Segmented, Select, Space, Table, Tag, Typography, message } from 'antd';
 import { DownloadOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import moment from 'moment';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api.js';
 
 const { Title, Text } = Typography;
@@ -108,11 +108,44 @@ const formatDate = (value) => {
 
 const getDisplayValue = (value) => (value || value === 0 ? value : '--');
 
+const buildWarningRows = (records, fallbackLabel, submittedFilters) => records
+	.map((item) => {
+		const { status, daysUntilExpiry } = getWarningStatus(item.expiryDate);
+		return {
+			key: String(item.id),
+			id: item.id,
+			supplierId: getDisplayValue(item.supplierId),
+			supplierName: getDisplayValue(item.supplierName),
+			certificateName: getDisplayValue(item.certificateName),
+			certificateNumber: getDisplayValue(item.licenseNumber),
+			certificateType: getDisplayValue(item.licenseType || item.type || fallbackLabel),
+			issueDate: formatDate(item.issueDate),
+			expiryDate: formatDate(item.expiryDate),
+			issuingAuthority: getDisplayValue(item.issuingAuthority),
+			status,
+			daysUntilExpiry,
+		};
+	})
+	.filter((item) => {
+		if (submittedFilters.supplierId && !String(item.supplierId).includes(submittedFilters.supplierId)) {
+			return false;
+		}
+		if (submittedFilters.supplierName && !String(item.supplierName).includes(submittedFilters.supplierName)) {
+			return false;
+		}
+		if (submittedFilters.status && item.status !== submittedFilters.status) {
+			return false;
+		}
+		return true;
+	})
+	.sort((left, right) => (left.daysUntilExpiry ?? 0) - (right.daysUntilExpiry ?? 0));
+
 const SupplierQualificationWarning = () => {
+	const location = useLocation();
 	const navigate = useNavigate();
 	const [mainTab, setMainTab] = useState('registration');
 	const [loading, setLoading] = useState(false);
-	const [rows, setRows] = useState([]);
+	const [warningRowsByTab, setWarningRowsByTab] = useState({});
 	const [selectedWarningKeys, setSelectedWarningKeys] = useState([]);
 	const [filters, setFilters] = useState(DEFAULT_FILTERS);
 	const [submittedFilters, setSubmittedFilters] = useState(DEFAULT_FILTERS);
@@ -120,57 +153,36 @@ const SupplierQualificationWarning = () => {
 	const [pageSize, setPageSize] = useState(10);
 
 	const currentTabConfig = TAB_DEFINITIONS[mainTab];
+	const rows = warningRowsByTab[mainTab] || [];
+	const tabCounts = useMemo(() => Object.keys(TAB_DEFINITIONS).reduce((accumulator, key) => {
+		accumulator[key] = warningRowsByTab[key]?.length || 0;
+		return accumulator;
+	}, {}), [warningRowsByTab]);
 
 	const loadData = async () => {
 		setLoading(true);
 		try {
-			const response = await api.get('/api/scm/suppliers/qualifications/warnings', {
-				pageNum: 1,
-				pageSize: 500,
-				type: currentTabConfig.type,
-				warningStatus: mapWarningStatus(submittedFilters.status),
-			});
+			const responses = await Promise.all(
+				Object.entries(TAB_DEFINITIONS).map(async ([tabKey, config]) => {
+					const response = await api.get('/api/scm/suppliers/qualifications/warnings', {
+						pageNum: 1,
+						pageSize: 500,
+						type: config.type,
+						warningStatus: mapWarningStatus(submittedFilters.status),
+					});
 
-			if (response.code !== 1 || !response.data) {
-				throw new Error(getApiResponseMessage(response, '加载资质预警失败'));
-			}
+					if (response.code !== 1 || !response.data) {
+						throw new Error(getApiResponseMessage(response, `${config.label}预警加载失败`));
+					}
 
-			const mappedRows = getRecordList(response.data)
-				.map((item) => {
-					const { status, daysUntilExpiry } = getWarningStatus(item.expiryDate);
-					return {
-						key: String(item.id),
-						id: item.id,
-						supplierId: getDisplayValue(item.supplierId),
-						supplierName: getDisplayValue(item.supplierName),
-						certificateName: getDisplayValue(item.certificateName),
-						certificateNumber: getDisplayValue(item.licenseNumber),
-						certificateType: getDisplayValue(item.licenseType || item.type || currentTabConfig.label),
-						issueDate: formatDate(item.issueDate),
-						expiryDate: formatDate(item.expiryDate),
-						issuingAuthority: getDisplayValue(item.issuingAuthority),
-						status,
-						daysUntilExpiry,
-					};
+					return [tabKey, buildWarningRows(getRecordList(response.data), config.label, submittedFilters)];
 				})
-				.filter((item) => {
-					if (submittedFilters.supplierId && !String(item.supplierId).includes(submittedFilters.supplierId)) {
-						return false;
-					}
-					if (submittedFilters.supplierName && !String(item.supplierName).includes(submittedFilters.supplierName)) {
-						return false;
-					}
-					if (submittedFilters.status && item.status !== submittedFilters.status) {
-						return false;
-					}
-					return true;
-				})
-				.sort((left, right) => (left.daysUntilExpiry ?? 0) - (right.daysUntilExpiry ?? 0));
+			);
 
-			setRows(mappedRows);
+			setWarningRowsByTab(Object.fromEntries(responses));
 			setSelectedWarningKeys([]);
 		} catch (error) {
-			setRows([]);
+			setWarningRowsByTab({});
 			message.error(getApiErrorMessage(error, '加载资质预警数据失败'));
 		} finally {
 			setLoading(false);
@@ -183,7 +195,26 @@ const SupplierQualificationWarning = () => {
 
 	useEffect(() => {
 		loadData();
-	}, [mainTab, submittedFilters]);
+	}, [submittedFilters]);
+
+	useEffect(() => {
+		if (location.state?.source !== 'home-pending') {
+			return;
+		}
+
+		const nextTab = location.state.initialTab;
+		const nextFilters = {
+			...DEFAULT_FILTERS,
+			...(location.state.initialFilters || {}),
+		};
+
+		if (nextTab && TAB_DEFINITIONS[nextTab]) {
+			setMainTab(nextTab);
+		}
+		setFilters(nextFilters);
+		setSubmittedFilters(nextFilters);
+		setCurrentPage(1);
+	}, [location.state]);
 
 	const handleSearch = () => {
 		setSubmittedFilters({ ...filters });
@@ -286,7 +317,7 @@ const SupplierQualificationWarning = () => {
 							value={mainTab}
 							onChange={(value) => setMainTab(value)}
 							options={Object.entries(TAB_DEFINITIONS).map(([value, config]) => ({
-								label: `${config.label} (${value === mainTab ? rows.length : 0})`,
+								label: `${config.label} (${tabCounts[value] || 0})`,
 								value,
 							}))}
 						/>
