@@ -50,6 +50,10 @@ public class RoleController {
     @GetMapping("/user/{userId}")
     @RequiresPermission("system:role:query")
     public AjaxResult<List<SysRole>> getRolesByUserId(@PathVariable Integer userId) {
+        Integer operatorId = LoginCacheUtil.getCurrentUserId();
+        if (roleService.hasRole(userId, "SUPER_ADMIN") && !roleService.hasRole(operatorId, "SUPER_ADMIN")) {
+            return AjaxResult.res(0, "非超级管理员不允许查看超级管理员账号角色", null);
+        }
         List<SysRole> roles = roleService.getRolesByUserId(userId);
         return AjaxResult.successInstance(roles);
     }

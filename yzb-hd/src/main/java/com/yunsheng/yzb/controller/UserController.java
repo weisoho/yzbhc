@@ -45,7 +45,10 @@ public class UserController {
     public AjaxResult<List<UserManagementVO>> getUserList() {
         YsUserExample example = new YsUserExample();
         List<YsUser> userList = ysUserMapper.selectByExample(example);
+        Integer operatorId = LoginCacheUtil.getCurrentUserId();
+        boolean operatorSuperAdmin = roleService.hasRole(operatorId, "SUPER_ADMIN");
         return AjaxResult.successInstance(userList.stream()
+            .filter(user -> operatorSuperAdmin || !isSuperAdminUser(user.getId()))
                 .map(this::buildUserManagementVO)
                 .collect(Collectors.toList()));
     }
@@ -58,6 +61,10 @@ public class UserController {
     public AjaxResult<UserManagementVO> getUserById(@PathVariable Integer id) {
         YsUser user = ysUserMapper.selectByPrimaryKey(id);
         if (user != null) {
+            String queryValidationMessage = validateUserQueryPermission(id);
+            if (queryValidationMessage != null) {
+                return AjaxResult.res(0, queryValidationMessage, null);
+            }
             return AjaxResult.successInstance(buildUserManagementVO(user));
         }
         return AjaxResult.res(0, "用户不存在", null);
@@ -112,6 +119,11 @@ public class UserController {
             return AjaxResult.res(0, "用户不存在", null);
         }
 
+        String operationValidationMessage = validateUserOperationPermission(id, false);
+        if (operationValidationMessage != null) {
+            return AjaxResult.res(0, operationValidationMessage, null);
+        }
+
         Integer targetDepId = user.getDepId() != null ? user.getDepId() : existingUser.getDepId();
         String departmentValidationMessage = validateUserDepartmentScope(targetDepId);
         if (departmentValidationMessage != null) {
@@ -143,6 +155,17 @@ public class UserController {
     @DeleteMapping("/{id}")
     @RequiresPermission("system:user:delete")
     public AjaxResult<String> deleteUser(@PathVariable Integer id) {
+        YsUser existingUser = ysUserMapper.selectByPrimaryKey(id);
+        if (existingUser == null) {
+            return AjaxResult.res(0, "用户不存在", null);
+        }
+        String operationValidationMessage = validateUserOperationPermission(id, true);
+        if (operationValidationMessage != null) {
+            return AjaxResult.res(0, operationValidationMessage, null);
+        }
+        if (isSuperAdminUser(id)) {
+            return AjaxResult.res(0, "超级管理员用户不允许删除", null);
+        }
         int result = ysUserMapper.deleteByPrimaryKey(id);
         if (result > 0) {
             return AjaxResult.successInstance("删除成功");
@@ -156,11 +179,29 @@ public class UserController {
     @PutMapping("/{id}/status")
     @RequiresPermission("system:user:edit")
     public AjaxResult<String> toggleUserStatus(@PathVariable Integer id,
-                                               @RequestBody(required = false) Integer status,
+                                               @RequestBody(required = false) Object statusPayload,
                                                @RequestParam(required = false) Integer value) {
-        Integer targetStatus = status != null ? status : value;
+        Integer targetStatus = resolveStatusValue(statusPayload, value);
         if (!Objects.equals(targetStatus, 0) && !Objects.equals(targetStatus, 1)) {
             return AjaxResult.res(0, "状态值无效", null);
+        }
+
+        YsUser existingUser = ysUserMapper.selectByPrimaryKey(id);
+        if (existingUser == null) {
+            return AjaxResult.res(0, "用户不存在", null);
+        }
+
+        String operationValidationMessage = validateUserOperationPermission(id, false);
+        if (operationValidationMessage != null) {
+            return AjaxResult.res(0, operationValidationMessage, null);
+        }
+
+        Integer operatorId = LoginCacheUtil.getCurrentUserId();
+        if (Objects.equals(targetStatus, 0) && Objects.equals(operatorId, id)) {
+            return AjaxResult.res(0, "当前登录用户不允许禁用自己", null);
+        }
+        if (Objects.equals(targetStatus, 0) && isSuperAdminUser(id)) {
+            return AjaxResult.res(0, "超级管理员用户不允许禁用", null);
         }
 
         YsUser user = new YsUser();
@@ -181,6 +222,16 @@ public class UserController {
     @PutMapping("/{id}/password")
     @RequiresPermission("system:user:edit")
     public AjaxResult<String> updatePassword(@PathVariable Integer id, @RequestBody String newPassword) {
+        YsUser existingUser = ysUserMapper.selectByPrimaryKey(id);
+        if (existingUser == null) {
+            return AjaxResult.res(0, "用户不存在", null);
+        }
+
+        String operationValidationMessage = validateUserOperationPermission(id, false);
+        if (operationValidationMessage != null) {
+            return AjaxResult.res(0, operationValidationMessage, null);
+        }
+
         String normalizedPassword = normalizePassword(newPassword);
         if (normalizedPassword == null || normalizedPassword.trim().isEmpty()) {
             return AjaxResult.res(0, "新密码不能为空", null);
@@ -203,6 +254,16 @@ public class UserController {
     @PutMapping("/{id}/password/reset")
     @RequiresPermission("system:user:edit")
     public AjaxResult<String> resetPassword(@PathVariable Integer id) {
+        YsUser existingUser = ysUserMapper.selectByPrimaryKey(id);
+        if (existingUser == null) {
+            return AjaxResult.res(0, "用户不存在", null);
+        }
+
+        String operationValidationMessage = validateUserOperationPermission(id, false);
+        if (operationValidationMessage != null) {
+            return AjaxResult.res(0, operationValidationMessage, null);
+        }
+
         YsUser user = new YsUser();
         user.setId(id);
         user.setPassword("000000"); // 默认密码
@@ -315,5 +376,77 @@ public class UserController {
             password = password.substring(1, password.length() - 1);
         }
         return password;
+    }
+
+    private Integer resolveStatusValue(Object statusPayload, Integer fallbackValue) {
+        if (statusPayload instanceof Boolean) {
+            return (Boolean) statusPayload ? 1 : 0;
+        }
+        if (statusPayload instanceof Number) {
+            return ((Number) statusPayload).intValue();
+        }
+        if (statusPayload instanceof String) {
+            String text = ((String) statusPayload).trim();
+            if (!text.isEmpty()) {
+                if ("true".equalsIgnoreCase(text)) {
+                    return 1;
+                }
+                if ("false".equalsIgnoreCase(text)) {
+                    return 0;
+                }
+                try {
+                    return Integer.valueOf(text);
+                } catch (NumberFormatException ignored) {
+                    return fallbackValue;
+                }
+            }
+        }
+        if (statusPayload instanceof Map<?, ?>) {
+            Object status = ((Map<?, ?>) statusPayload).get("status");
+            Integer resolved = resolveStatusValue(status, null);
+            if (resolved != null) {
+                return resolved;
+            }
+            Object value = ((Map<?, ?>) statusPayload).get("value");
+            resolved = resolveStatusValue(value, null);
+            if (resolved != null) {
+                return resolved;
+            }
+            Object checked = ((Map<?, ?>) statusPayload).get("checked");
+            resolved = resolveStatusValue(checked, null);
+            if (resolved != null) {
+                return resolved;
+            }
+        }
+        return fallbackValue;
+    }
+
+    private boolean isSuperAdminUser(Integer userId) {
+        return roleService.hasRole(userId, "SUPER_ADMIN");
+    }
+
+    private String validateUserOperationPermission(Integer targetUserId, boolean disallowSelfDelete) {
+        Integer operatorId = LoginCacheUtil.getCurrentUserId();
+        if (operatorId == null) {
+            return "当前登录信息已失效，请重新登录";
+        }
+        if (disallowSelfDelete && Objects.equals(operatorId, targetUserId)) {
+            return "当前登录用户不允许删除自己";
+        }
+        if (isSuperAdminUser(targetUserId) && !roleService.hasRole(operatorId, "SUPER_ADMIN")) {
+            return "非超级管理员不允许操作超级管理员账号";
+        }
+        return null;
+    }
+
+    private String validateUserQueryPermission(Integer targetUserId) {
+        Integer operatorId = LoginCacheUtil.getCurrentUserId();
+        if (operatorId == null) {
+            return "当前登录信息已失效，请重新登录";
+        }
+        if (isSuperAdminUser(targetUserId) && !roleService.hasRole(operatorId, "SUPER_ADMIN")) {
+            return "非超级管理员不允许查看超级管理员账号信息";
+        }
+        return null;
     }
 }

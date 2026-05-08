@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 @Service
 public class RoleServiceImpl implements RoleService {
 
-    private static final Set<String> PROTECTED_ROLE_CODES = Set.of("SUPER_ADMIN", "ADMIN");
+    private static final Set<String> RESERVED_ROLE_CODES = Set.of("SUPER_ADMIN", "ADMIN");
 
     @Autowired
     private SysRoleMapper roleMapper;
@@ -118,6 +118,8 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int assignRolesToUser(Integer userId, List<Long> roleIds, Integer operatorId) {
+        ensureUserRoleAssignmentAllowed(userId, roleIds, operatorId);
+
         // 先删除原有角色
         userRoleMapper.deleteByUserId(userId);
         
@@ -203,8 +205,64 @@ public class RoleServiceImpl implements RoleService {
             return;
         }
         SysRole role = roleMapper.selectById(roleId);
-        if (role != null && PROTECTED_ROLE_CODES.contains(String.valueOf(role.getRoleCode()).toUpperCase())) {
+        if (isReservedRole(role)) {
             throw new RuntimeException("系统保留角色不允许修改");
         }
+    }
+
+    private void ensureUserRoleAssignmentAllowed(Integer userId, List<Long> roleIds, Integer operatorId) {
+        List<SysRole> currentRoles = roleMapper.selectByUserId(userId);
+        if (isSuperAdminUser(currentRoles) && !hasSuperAdminRole(operatorId)) {
+            throw new RuntimeException("非超级管理员不允许操作超级管理员账号");
+        }
+
+        ensureSelfProtectedRolesRetained(userId, roleIds, operatorId, currentRoles);
+
+        boolean protectedUser = currentRoles.stream().anyMatch(this::isSuperAdminRole);
+        if (!protectedUser) {
+            return;
+        }
+
+        boolean retainedProtectedRole = roleIds != null && roleIds.stream()
+                .map(roleMapper::selectById)
+                .anyMatch(this::isSuperAdminRole);
+        if (!retainedProtectedRole) {
+            throw new RuntimeException("超级管理员用户必须保留超级管理员角色");
+        }
+    }
+
+    private void ensureSelfProtectedRolesRetained(Integer userId,
+                                                  List<Long> roleIds,
+                                                  Integer operatorId,
+                                                  List<SysRole> currentRoles) {
+        if (userId == null || !userId.equals(operatorId)) {
+            return;
+        }
+
+        Set<Long> assignedRoleIds = roleIds == null ? Collections.emptySet() : new LinkedHashSet<>(roleIds);
+        List<SysRole> currentProtectedRoles = currentRoles.stream()
+                .filter(this::isSuperAdminRole)
+                .collect(Collectors.toList());
+        for (SysRole protectedRole : currentProtectedRoles) {
+            if (!assignedRoleIds.contains(protectedRole.getId())) {
+                throw new RuntimeException("当前登录用户不允许撤销自己的超级管理员角色");
+            }
+        }
+    }
+
+    private boolean hasSuperAdminRole(Integer userId) {
+        return isSuperAdminUser(roleMapper.selectByUserId(userId));
+    }
+
+    private boolean isSuperAdminUser(List<SysRole> roles) {
+        return roles != null && roles.stream().anyMatch(this::isSuperAdminRole);
+    }
+
+    private boolean isReservedRole(SysRole role) {
+        return role != null && RESERVED_ROLE_CODES.contains(String.valueOf(role.getRoleCode()).toUpperCase());
+    }
+
+    private boolean isSuperAdminRole(SysRole role) {
+        return role != null && "SUPER_ADMIN".equalsIgnoreCase(String.valueOf(role.getRoleCode()));
     }
 }
