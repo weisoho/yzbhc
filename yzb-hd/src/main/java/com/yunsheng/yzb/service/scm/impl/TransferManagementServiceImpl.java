@@ -1,7 +1,9 @@
 package com.yunsheng.yzb.service.scm.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.yunsheng.yzb.common.ScmCodeGenerator;
 import com.yunsheng.yzb.mapper.WarehouseMapper;
+import com.yunsheng.yzb.mapper.SysDepartmentMapper;
 import com.yunsheng.yzb.mapper.scm.InventoryMapper;
 import com.yunsheng.yzb.mapper.scm.InventoryTransactionMapper;
 import com.yunsheng.yzb.mapper.scm.MaterialMapper;
@@ -10,16 +12,19 @@ import com.yunsheng.yzb.mapper.scm.TransferOrderMapper;
 import com.yunsheng.yzb.mapper.scm.TransferOrderExtMapper;
 import com.yunsheng.yzb.common.ScmBusinessException;
 import com.yunsheng.yzb.common.ScmInventorySupport;
+import com.yunsheng.yzb.model.SysDepartment;
 import com.yunsheng.yzb.model.Warehouse;
 import com.yunsheng.yzb.model.scm.InventoryEntity;
 import com.yunsheng.yzb.model.scm.InventoryTransactionEntity;
 import com.yunsheng.yzb.model.scm.MaterialEntity;
 import com.yunsheng.yzb.model.scm.ScmTransferOrder;
 import com.yunsheng.yzb.model.scm.ScmTransferOrderItem;
+import com.yunsheng.yzb.service.scm.OperationLogService;
 import com.yunsheng.yzb.service.scm.TransferManagementService;
 import com.yunsheng.yzb.vo.TransferAcceptanceItemVO;
 import com.yunsheng.yzb.vo.TransferAcceptanceVO;
 import com.yunsheng.yzb.vo.TransferAcceptanceSave;
+import com.yunsheng.yzb.vo.TransferOrderCreateSave;
 import com.yunsheng.yzb.vo.TransferOrderVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,8 +38,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 调拨管理服务实现。
@@ -47,6 +56,9 @@ public class TransferManagementServiceImpl implements TransferManagementService 
 
     @Resource
     private WarehouseMapper warehouseMapper;
+
+    @Resource
+    private SysDepartmentMapper departmentMapper;
 
     @Resource
     private TransferOrderMapper transferOrderMapper;
@@ -62,6 +74,9 @@ public class TransferManagementServiceImpl implements TransferManagementService 
 
     @Resource
     private MaterialMapper materialMapper;
+
+    @Resource
+    private OperationLogService operationLogService;
 
     @Override
     public Map<String, Object> getTransferOrders(String transferNumber, String fromWarehouse, String toWarehouse, int pageNum, int pageSize) {
@@ -89,20 +104,137 @@ public class TransferManagementServiceImpl implements TransferManagementService 
     }
 
     @Override
-    public List<Map<String, String>> getWarehouseList() {
-        // 查询所有仓库
-        List<Warehouse> warehouses = warehouseMapper.selectByExample(null);
-
-        // 转换为前端需要的格式
-        List<Map<String, String>> warehouseList = new ArrayList<>();
-        for (Warehouse warehouse : warehouses) {
-            Map<String, String> warehouseMap = new HashMap<>();
-            warehouseMap.put("value", warehouse.getWareName());
-            warehouseMap.put("label", warehouse.getWareName());
-            warehouseList.add(warehouseMap);
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> createTransferOrder(TransferOrderCreateSave request) {
+        if (!StringUtils.hasText(request.getFromWarehouse())) {
+            throw new ScmBusinessException("调出仓库不能为空");
+        }
+        if (!StringUtils.hasText(request.getToWarehouse())) {
+            throw new ScmBusinessException("调入仓库不能为空");
+        }
+        if (Objects.equals(request.getFromWarehouse(), request.getToWarehouse())) {
+            throw new ScmBusinessException("调入仓库不能与调出仓库相同");
+        }
+        if (!StringUtils.hasText(request.getOperatorName())) {
+            throw new ScmBusinessException("调拨人不能为空");
+        }
+        if (!StringUtils.hasText(request.getTransferDate())) {
+            throw new ScmBusinessException("调拨日期不能为空");
+        }
+        if (request.getItems() == null || request.getItems().isEmpty()) {
+            throw new ScmBusinessException("请选择至少一条调拨明细");
         }
 
-        return warehouseList;
+        ScmTransferOrder order = new ScmTransferOrder();
+        order.setTransferNumber(ScmCodeGenerator.nextCode(transferOrderMapper, "TR", "transfer_number"));
+        order.setFromDepartmentName(request.getFromWarehouse());
+        order.setToDepartmentName(request.getToWarehouse());
+        order.setStatus("pending");
+        order.setOperatorName(request.getOperatorName());
+        order.setTransferDate(java.sql.Date.valueOf(request.getTransferDate()));
+        order.setCreateTime(new Date());
+        transferOrderMapper.insert(order);
+
+        for (TransferOrderCreateSave.Item requestItem : request.getItems()) {
+            InventoryEntity inventory = inventoryMapper.selectById(requestItem.getInventoryId());
+            if (inventory == null) {
+                throw new ScmBusinessException("存在无效的库存记录");
+            }
+            if (!request.getFromWarehouse().equals(inventory.getWarehouse())) {
+                throw new ScmBusinessException("所选库存与调出仓库不一致");
+            }
+            int currentStock = inventory.getCurrentStock() == null ? 0 : inventory.getCurrentStock();
+            if (requestItem.getQuantity() == null || requestItem.getQuantity() <= 0) {
+                throw new ScmBusinessException("调拨数量必须大于0");
+            }
+            if (requestItem.getQuantity() > currentStock) {
+                throw new ScmBusinessException("库存不足，无法发起调拨");
+            }
+
+            ScmTransferOrderItem item = new ScmTransferOrderItem();
+            item.setTransferOrderId(order.getId());
+            item.setMaterialId(inventory.getMaterialId());
+            item.setMaterialCode(inventory.getMaterialCode());
+            item.setMaterialName(inventory.getMaterialName());
+            item.setSpecification(inventory.getSpecification());
+            item.setModel(inventory.getModel());
+            item.setUnit(inventory.getUnit());
+            item.setManufacturer(inventory.getManufacturer());
+            item.setSupplier(inventory.getSupplier());
+            item.setRegistrationNumber(inventory.getRegistrationNumber());
+            item.setBatchNumber(inventory.getBatchNumber());
+            item.setProductionDate(toDate(inventory.getProductionDate()));
+            item.setExpiryDate(toDate(inventory.getExpiryDate()));
+            item.setTransferQuantity(requestItem.getQuantity());
+            item.setAcceptanceStatus("pending");
+            item.setAcceptedQuantity(0);
+            transferOrderItemMapper.insert(item);
+
+            inventory.setCurrentStock(currentStock - requestItem.getQuantity());
+            inventory.setUpdateTime(LocalDateTime.now());
+            ScmInventorySupport.refreshStatus(inventory);
+            inventoryMapper.updateById(inventory);
+
+            InventoryTransactionEntity transaction = new InventoryTransactionEntity();
+            transaction.setInventoryId(inventory.getId());
+            transaction.setMaterialId(inventory.getMaterialId());
+            transaction.setMaterialCode(inventory.getMaterialCode());
+            transaction.setMaterialName(inventory.getMaterialName());
+            transaction.setBatchNumber(inventory.getBatchNumber());
+            transaction.setOperationType("调拨出库");
+            transaction.setQuantity(-requestItem.getQuantity());
+            transaction.setBalanceQuantity(inventory.getCurrentStock());
+            transaction.setReferenceNo(order.getTransferNumber());
+            transaction.setOperatorName(request.getOperatorName());
+            transaction.setRemark(StringUtils.hasText(request.getRemark()) ? request.getRemark() : "调拨出库");
+            transaction.setOperationTime(LocalDateTime.now());
+            inventoryTransactionMapper.insert(transaction);
+        }
+
+        operationLogService.save(request.getOperatorName(), "调拨", "创建调拨单: " + order.getTransferNumber(),
+                "success", "调拨管理", order.getTransferNumber());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", order.getId());
+        result.put("transferNumber", order.getTransferNumber());
+        return result;
+    }
+
+    @Override
+    public List<Map<String, String>> getWarehouseList() {
+        Set<String> warehouseNames = new LinkedHashSet<>();
+
+        warehouseMapper.selectByExample(null).stream()
+                .map(Warehouse::getWareName)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .forEach(warehouseNames::add);
+
+        inventoryMapper.selectList(new LambdaQueryWrapper<InventoryEntity>()
+                        .select(InventoryEntity::getWarehouse)
+                        .isNotNull(InventoryEntity::getWarehouse)
+                        .gt(InventoryEntity::getCurrentStock, 0))
+                .stream()
+                .map(InventoryEntity::getWarehouse)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .forEach(warehouseNames::add);
+
+        departmentMapper.selectAll().stream()
+                .filter(item -> item != null && !Objects.equals(item.getIsDeleted(), 1) && !"CAMPUS".equalsIgnoreCase(item.getOrgType()))
+                .map(SysDepartment::getDeptName)
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .forEach(warehouseNames::add);
+
+        return warehouseNames.stream()
+                .map(name -> {
+                    Map<String, String> warehouseMap = new HashMap<>();
+                    warehouseMap.put("value", name);
+                    warehouseMap.put("label", name);
+                    return warehouseMap;
+                })
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -225,7 +357,31 @@ public class TransferManagementServiceImpl implements TransferManagementService 
         Map<String, Object> result = new HashMap<>();
         result.put("transferNumber", transferNumber);
         result.put("items", getTransferAcceptanceDetail(transferNumber));
+        refreshOrderStatus(order);
         return result;
+    }
+
+    private void refreshOrderStatus(ScmTransferOrder order) {
+        List<ScmTransferOrderItem> orderItems = transferOrderItemMapper.selectList(new LambdaQueryWrapper<ScmTransferOrderItem>()
+                .eq(ScmTransferOrderItem::getTransferOrderId, order.getId()));
+        if (orderItems.isEmpty()) {
+            return;
+        }
+
+        boolean allAccepted = orderItems.stream().allMatch(item -> "accepted".equals(item.getAcceptanceStatus()));
+        boolean allRejected = orderItems.stream().allMatch(item -> "rejected".equals(item.getAcceptanceStatus()));
+        boolean hasAccepted = orderItems.stream().anyMatch(item -> "accepted".equals(item.getAcceptanceStatus()) || "partially_accepted".equals(item.getAcceptanceStatus()));
+
+        if (allAccepted) {
+            order.setStatus("completed");
+        } else if (allRejected) {
+            order.setStatus("rejected");
+        } else if (hasAccepted) {
+            order.setStatus("partially_accepted");
+        } else {
+            order.setStatus("pending");
+        }
+        transferOrderMapper.updateById(order);
     }
 
     private void syncTransferInInventory(String toWarehouse,
@@ -321,5 +477,12 @@ public class TransferManagementServiceImpl implements TransferManagementService 
             return null;
         }
         return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+    }
+
+    private Date toDate(LocalDate date) {
+        if (date == null) {
+            return null;
+        }
+        return java.sql.Date.valueOf(date);
     }
 }

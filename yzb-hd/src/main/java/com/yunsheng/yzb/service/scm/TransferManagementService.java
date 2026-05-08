@@ -3,6 +3,7 @@ package com.yunsheng.yzb.service.scm;
 import com.yunsheng.yzb.vo.TransferOrderVO;
 import com.yunsheng.yzb.vo.TransferAcceptanceItemVO;
 import com.yunsheng.yzb.vo.TransferAcceptanceSave;
+import com.yunsheng.yzb.vo.TransferOrderCreateSave;
 
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,11 @@ public interface TransferManagementService {
      * @return 调拨单列表和总数
      */
     Map<String, Object> getTransferOrders(String transferNumber, String fromWarehouse, String toWarehouse, int pageNum, int pageSize);
+
+    /**
+     * 创建调拨单。
+     */
+    Map<String, Object> createTransferOrder(TransferOrderCreateSave request);
 
     /**
      * 查询所有仓库列表。

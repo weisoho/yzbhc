@@ -43,6 +43,7 @@ const UserAccountManagement = () => {
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [warehouseOptions, setWarehouseOptions] = useState([]);
   const [filters, setFilters] = useState({ keyword: '', depId: undefined, roleId: undefined });
   const [modalMode, setModalMode] = useState('create');
   const [modalOpen, setModalOpen] = useState(false);
@@ -51,7 +52,8 @@ const UserAccountManagement = () => {
   const [form] = Form.useForm();
   const [passwordForm] = Form.useForm();
   const selectedCampusId = Form.useWatch('campusId', form);
-  const { currentCampusNode } = useCampusContext();
+  const selectedWarehouseScope = Form.useWatch('warehouseScope', form);
+  const { currentCampusNode, currentDepartment } = useCampusContext();
 
   const normalizedDepartments = useMemo(() => normalizeDepartmentTree(departments), [departments]);
   const campusOptions = useMemo(() => getCampusNodes(normalizedDepartments), [normalizedDepartments]);
@@ -85,6 +87,35 @@ const UserAccountManagement = () => {
   }, [currentLoginUser, roles]);
 
   const isSuperAdmin = currentUserRoleCodes.includes('SUPER_ADMIN');
+  const currentDepartmentLabel = currentDepartment?.deptName || currentDepartment?.name || loggedInUserInfo.user_dep || '';
+
+  const warehouseScopeSelectOptions = useMemo(() => {
+    const options = [];
+    const optionValues = new Set();
+
+    const appendOption = (label, value) => {
+      if (!value || optionValues.has(value)) {
+        return;
+      }
+      optionValues.add(value);
+      options.push({ label, value });
+    };
+
+    appendOption('当前院区全部库存', '当前院区全部库存');
+    if (currentDepartmentLabel) {
+      appendOption(`当前部门库存（${currentDepartmentLabel}）`, currentDepartmentLabel);
+    }
+
+    warehouseOptions.forEach((item) => {
+      appendOption(`指定仓库/科室：${item}`, item);
+    });
+
+    if (selectedWarehouseScope) {
+      appendOption(`历史值：${selectedWarehouseScope}`, selectedWarehouseScope);
+    }
+
+    return options;
+  }, [currentDepartmentLabel, selectedWarehouseScope, warehouseOptions]);
 
   const modalDepartmentOptions = useMemo(() => {
     if (!campusOptions.length) {
@@ -152,10 +183,18 @@ const UserAccountManagement = () => {
     setDepartments(response.data);
   };
 
+  const loadWarehouseOptions = async () => {
+    const response = await api.get('/api/scm/transfer/warehouses');
+    if (response.code !== 1 || !Array.isArray(response.data)) {
+      throw new Error(response.message || '加载仓库范围失败');
+    }
+    setWarehouseOptions(response.data.map((item) => item?.value || item?.label).filter(Boolean));
+  };
+
   const loadPageData = async () => {
     try {
       setLoading(true);
-      await Promise.all([loadUsers(), loadRoles(), loadDepartments()]);
+      await Promise.all([loadUsers(), loadRoles(), loadDepartments(), loadWarehouseOptions()]);
     } catch (error) {
       message.error(error.message || '加载系统管理数据失败');
     } finally {
@@ -192,7 +231,7 @@ const UserAccountManagement = () => {
       campusId: currentCampusNode?.id,
       depId: undefined,
       accountType: '普通账号',
-      warehouseScope: '当前院区',
+      warehouseScope: currentDepartmentLabel || '当前院区全部库存',
     });
     setModalOpen(true);
   };
@@ -447,10 +486,11 @@ const UserAccountManagement = () => {
       render: () => '******',
     },
     {
-      title: '仓库范围',
+      title: '库存可见范围',
       dataIndex: 'warehouseScope',
       key: 'warehouseScope',
       width: 140,
+      render: (value) => value || '当前部门库存',
     },
     {
       title: '状态',
@@ -609,8 +649,17 @@ const UserAccountManagement = () => {
           <Form.Item name="accountType" label="账号属性">
             <Input placeholder="如：管理员、科室管理员、操作员" />
           </Form.Item>
-          <Form.Item name="warehouseScope" label="仓库范围">
-            <Input placeholder="如：全部仓库、仓库1" />
+          <Form.Item
+            name="warehouseScope"
+            label="库存可见范围"
+            extra="系统当前库存归属主要按科室/仓库名称记录，这里改为从实际范围中选择，不再手工填写。"
+          >
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder="请选择库存可见范围"
+              options={warehouseScopeSelectOptions}
+            />
           </Form.Item>
           <Form.Item name="phone" label="联系电话">
             <Input placeholder="请输入联系电话" />

@@ -3,6 +3,7 @@ package com.yunsheng.yzb.controller;
 import com.yunsheng.yzb.service.scm.TransferManagementService;
 import com.yunsheng.yzb.utils.AjaxResult;
 import com.yunsheng.yzb.vo.TransferAcceptanceSave;
+import com.yunsheng.yzb.vo.TransferOrderCreateSave;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
+import javax.validation.Valid;
 import java.util.Map;
 
 @RestController
@@ -35,6 +37,11 @@ public class TransferController {
         );
 
         return AjaxResult.success(data);
+    }
+
+    @PostMapping("/orders")
+    public AjaxResult createTransferOrder(@Valid @RequestBody TransferOrderCreateSave request) {
+        return AjaxResult.success(transferManagementService.createTransferOrder(request));
     }
 
     @GetMapping("/warehouses")

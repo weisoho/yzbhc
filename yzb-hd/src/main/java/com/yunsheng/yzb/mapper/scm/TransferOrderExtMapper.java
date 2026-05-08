@@ -18,7 +18,7 @@ public interface TransferOrderExtMapper {
     /**
      * 查询调拨单列表，包含明细信息
      */
-    @Select("SELECT toi.id, t.transfer_number as transferNumber, toi.material_name as materialName, toi.specification, t.from_department_name as fromWarehouse, t.to_department_name as toWarehouse, toi.transfer_quantity as quantity, toi.unit, t.transfer_date as transferDate, t.operator_name as transferor, t.status FROM scm_transfer_order t JOIN scm_transfer_order_item toi ON t.id = toi.transfer_order_id WHERE 1=1 AND (t.transfer_number LIKE CONCAT('%', #{transferNumber}, '%') OR #{transferNumber} IS NULL) AND (t.from_department_name = #{fromWarehouse} OR #{fromWarehouse} = 'all' OR #{fromWarehouse} IS NULL) AND (t.to_department_name = #{toWarehouse} OR #{toWarehouse} = 'all' OR #{toWarehouse} IS NULL) LIMIT #{offset}, #{limit}")
+    @Select("SELECT toi.id, t.transfer_number as transferNumber, toi.supplier as supplierName, toi.material_code as materialCode, toi.material_name as materialName, m.material_type as materialType, toi.specification, toi.model, toi.registration_number as registrationNumber, toi.manufacturer, toi.batch_number as batchNumber, toi.production_date as productionDate, toi.expiry_date as expiryDate, t.from_department_name as fromWarehouse, t.to_department_name as toWarehouse, t.from_department_name as departmentName, m.purchase_price as purchaseAmount, toi.transfer_quantity as quantity, toi.unit, t.transfer_date as transferDate, t.operator_name as transferor, t.status FROM scm_transfer_order t JOIN scm_transfer_order_item toi ON t.id = toi.transfer_order_id LEFT JOIN scm_material m ON m.id = toi.material_id WHERE 1=1 AND (t.transfer_number LIKE CONCAT('%', #{transferNumber}, '%') OR #{transferNumber} IS NULL OR #{transferNumber} = '') AND (t.from_department_name = #{fromWarehouse} OR #{fromWarehouse} = 'all' OR #{fromWarehouse} IS NULL OR #{fromWarehouse} = '') AND (t.to_department_name = #{toWarehouse} OR #{toWarehouse} = 'all' OR #{toWarehouse} IS NULL OR #{toWarehouse} = '') ORDER BY t.transfer_date DESC, t.id DESC, toi.id ASC LIMIT #{offset}, #{limit}")
     List<TransferOrderVO> selectTransferOrderList(
             @Param("transferNumber") String transferNumber,
             @Param("fromWarehouse") String fromWarehouse,
@@ -30,7 +30,7 @@ public interface TransferOrderExtMapper {
     /**
      * 查询调拨单总数
      */
-    @Select("SELECT COUNT(*) FROM scm_transfer_order t JOIN scm_transfer_order_item toi ON t.id = toi.transfer_order_id WHERE 1=1 AND (t.transfer_number LIKE CONCAT('%', #{transferNumber}, '%') OR #{transferNumber} IS NULL) AND (t.from_department_name = #{fromWarehouse} OR #{fromWarehouse} = 'all' OR #{fromWarehouse} IS NULL) AND (t.to_department_name = #{toWarehouse} OR #{toWarehouse} = 'all' OR #{toWarehouse} IS NULL)")
+    @Select("SELECT COUNT(*) FROM scm_transfer_order t JOIN scm_transfer_order_item toi ON t.id = toi.transfer_order_id WHERE 1=1 AND (t.transfer_number LIKE CONCAT('%', #{transferNumber}, '%') OR #{transferNumber} IS NULL OR #{transferNumber} = '') AND (t.from_department_name = #{fromWarehouse} OR #{fromWarehouse} = 'all' OR #{fromWarehouse} IS NULL OR #{fromWarehouse} = '') AND (t.to_department_name = #{toWarehouse} OR #{toWarehouse} = 'all' OR #{toWarehouse} IS NULL OR #{toWarehouse} = '')")
     int selectTransferOrderCount(
             @Param("transferNumber") String transferNumber,
             @Param("fromWarehouse") String fromWarehouse,

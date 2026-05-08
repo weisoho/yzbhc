@@ -402,6 +402,7 @@ public class StockInManagementServiceImpl implements StockInManagementService {
         ScmView.PendingStockInItem detail = new ScmView.PendingStockInItem();
         detail.setId(item.getId());
         detail.setReceiveId(item.getReceiveId());
+        detail.setReceiveNumber(receipt.getReceiveNumber());
         detail.setReceiveItemId(item.getId());
         detail.setOrderNumber(receipt.getOrderNumber());
         detail.setProductCode(item.getProductCode());

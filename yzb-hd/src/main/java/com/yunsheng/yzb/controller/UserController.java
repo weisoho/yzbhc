@@ -155,10 +155,17 @@ public class UserController {
      */
     @PutMapping("/{id}/status")
     @RequiresPermission("system:user:edit")
-    public AjaxResult<String> toggleUserStatus(@PathVariable Integer id, @RequestBody Integer status) {
+    public AjaxResult<String> toggleUserStatus(@PathVariable Integer id,
+                                               @RequestBody(required = false) Integer status,
+                                               @RequestParam(required = false) Integer value) {
+        Integer targetStatus = status != null ? status : value;
+        if (!Objects.equals(targetStatus, 0) && !Objects.equals(targetStatus, 1)) {
+            return AjaxResult.res(0, "状态值无效", null);
+        }
+
         YsUser user = new YsUser();
         user.setId(id);
-        user.setStatus(status);
+        user.setStatus(targetStatus);
         user.setUpdateTime(new Date());
 
         int result = ysUserMapper.updateByPrimaryKeySelective(user);

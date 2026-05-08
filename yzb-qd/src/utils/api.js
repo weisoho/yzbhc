@@ -137,8 +137,12 @@ class API {
     };
 
     // 添加请求体
-    if (data) {
-      config.body = JSON.stringify(data);
+    if (data !== undefined) {
+      if (typeof FormData !== 'undefined' && data instanceof FormData) {
+        config.body = data;
+      } else {
+        config.body = JSON.stringify(data);
+      }
     }
 
     // 创建请求超时控制

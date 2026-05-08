@@ -45,7 +45,7 @@ const StockInAccept = () => {
       key: String(item.receiveItemId || item.id || previous.key),
       receiveId: item.receiveId || item.receiptId,
       receiveItemId: item.receiveItemId || item.id,
-      receiveNumber: receipt.receiveNumber || previous.receiveNumber || `RC-${item.receiveId}`,
+      receiveNumber: item.receiveNumber || receipt.receiveNumber || previous.receiveNumber || '',
       materialId: meta.id || previous.materialId,
       materialType: meta.materialType || previous.materialType || '',
       minPackage: meta.minPackage || previous.minPackage || '1',
@@ -268,7 +268,7 @@ const StockInAccept = () => {
       dataIndex: 'receiveNumber',
       key: 'receiveNumber',
       width: 150,
-      render: (value) => <Tag color="blue">{value}</Tag>,
+      render: (value) => <Tag color="blue">{value || '--'}</Tag>,
     },
     {
       title: '采购单号',

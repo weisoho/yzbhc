@@ -258,6 +258,8 @@ public final class ScmView {
         private Long id;
         /** 收货单主键。 */
         private Long receiveId;
+        /** 收货单号。 */
+        private String receiveNumber;
         /** 收货单明细主键。 */
         private Long receiveItemId;
         /** 采购单号。 */
