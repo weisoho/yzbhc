@@ -454,6 +454,8 @@ public final class ScmRequest {
         private String productName;
         /** 生产厂家。 */
         private String manufacturer;
+        /** 入库类型。 */
+        private String stockInType;
         /** 入库状态。 */
         private String status;
     }
@@ -466,6 +468,9 @@ public final class ScmRequest {
         /** 入库类型。 */
         @NotBlank(message = "入库类型不能为空")
         private String stockInType;
+
+        /** 入库科室。 */
+        private String departmentName;
 
         /** 入库人。 */
         @NotBlank(message = "入库人不能为空")

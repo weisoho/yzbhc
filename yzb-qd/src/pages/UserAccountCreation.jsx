@@ -17,6 +17,8 @@ const STATUS_OPTIONS = [
   { label: '禁用', value: 0 },
 ];
 
+const isProtectedRole = (role) => ['SUPER_ADMIN', 'ADMIN'].includes(String(role?.roleCode || '').toUpperCase());
+
 const UserRoleTemplate = () => {
   const [loading, setLoading] = useState(false);
   const [roles, setRoles] = useState([]);
@@ -82,6 +84,10 @@ const UserRoleTemplate = () => {
   };
 
   const openEditModal = async (role) => {
+    if (isProtectedRole(role)) {
+      message.info('超级管理员模板为系统保留模板，不支持修改');
+      return;
+    }
     try {
       setLoading(true);
       setEditingRole(role);
@@ -154,6 +160,10 @@ const UserRoleTemplate = () => {
   };
 
   const handleDeleteRole = async (role) => {
+    if (isProtectedRole(role)) {
+      message.info('超级管理员模板为系统保留模板，不支持删除');
+      return;
+    }
     try {
       setLoading(true);
       const response = await api.delete(`/api/role/${role.id}`);
@@ -208,15 +218,21 @@ const UserRoleTemplate = () => {
       width: 180,
       render: (_, record) => (
         <Space size="middle">
-          <a onClick={() => openEditModal(record)}><EditOutlined />编辑</a>
-          <Popconfirm
-            title="确定删除该角色模板吗？"
-            okText="确定"
-            cancelText="取消"
-            onConfirm={() => handleDeleteRole(record)}
-          >
-            <a style={{ color: 'red' }}><DeleteOutlined />删除</a>
-          </Popconfirm>
+          {isProtectedRole(record) ? (
+            <Tag color="gold">系统保留</Tag>
+          ) : (
+            <>
+              <a onClick={() => openEditModal(record)}><EditOutlined />编辑</a>
+              <Popconfirm
+                title="确定删除该角色模板吗？"
+                okText="确定"
+                cancelText="取消"
+                onConfirm={() => handleDeleteRole(record)}
+              >
+                <a style={{ color: 'red' }}><DeleteOutlined />删除</a>
+              </Popconfirm>
+            </>
+          )}
         </Space>
       ),
     },

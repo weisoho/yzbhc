@@ -29,6 +29,8 @@ import java.util.stream.Collectors;
 @Service
 public class RoleServiceImpl implements RoleService {
 
+    private static final Set<String> PROTECTED_ROLE_CODES = Set.of("SUPER_ADMIN", "ADMIN");
+
     @Autowired
     private SysRoleMapper roleMapper;
 
@@ -73,12 +75,14 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int updateRole(SysRole role) {
+        ensureRoleEditable(role.getId());
         return roleMapper.updateById(role);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int deleteRole(Long id) {
+        ensureRoleEditable(id);
         // 删除角色
         int result = roleMapper.deleteById(id);
         // 删除角色权限关联
@@ -91,6 +95,7 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int assignPermissions(Long roleId, List<Long> permissionIds, Integer operatorId) {
+        ensureRoleEditable(roleId);
         // 先删除原有权限
         rolePermissionMapper.deleteByRoleId(roleId);
         
@@ -146,6 +151,7 @@ public class RoleServiceImpl implements RoleService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int assignDepartments(Long roleId, List<Long> deptIds) {
+        ensureRoleEditable(roleId);
         roleDeptMapper.deleteByRoleId(roleId);
         if (deptIds == null || deptIds.isEmpty()) {
             return 0;
@@ -190,5 +196,15 @@ public class RoleServiceImpl implements RoleService {
                 .map(SysRole::getRoleCode)
                 .collect(Collectors.toSet());
         return Arrays.stream(roleCodes).anyMatch(userRoles::contains);
+    }
+
+    private void ensureRoleEditable(Long roleId) {
+        if (roleId == null) {
+            return;
+        }
+        SysRole role = roleMapper.selectById(roleId);
+        if (role != null && PROTECTED_ROLE_CODES.contains(String.valueOf(role.getRoleCode()).toUpperCase())) {
+            throw new RuntimeException("系统保留角色不允许修改");
+        }
     }
 }

@@ -64,7 +64,7 @@ public class InventoryManagementServiceImpl implements InventoryManagementServic
         if (entity == null) {
             throw new ScmBusinessException("库存记录不存在");
         }
-        return toInventoryDetail(entity);
+        return toInventoryDetail(entity, true);
     }
 
     @Override
@@ -112,8 +112,35 @@ public class InventoryManagementServiceImpl implements InventoryManagementServic
     }
 
     private ScmView.InventoryDetail toInventoryDetail(InventoryEntity entity) {
+        return toInventoryDetail(entity, false);
+    }
+
+    private ScmView.InventoryDetail toInventoryDetail(InventoryEntity entity, boolean includeBatches) {
         ScmView.InventoryDetail detail = new ScmView.InventoryDetail();
         BeanUtils.copyProperties(entity, detail);
+        if (includeBatches) {
+            detail.setBatches(inventoryMapper.selectList(new LambdaQueryWrapper<InventoryEntity>()
+                            .eq(InventoryEntity::getMaterialCode, entity.getMaterialCode())
+                            .eq(InventoryEntity::getWarehouse, entity.getWarehouse())
+                            .gt(InventoryEntity::getCurrentStock, 0)
+                            .orderByAsc(InventoryEntity::getExpiryDate)
+                            .orderByDesc(InventoryEntity::getUpdateTime))
+                    .stream()
+                    .map(this::toInventoryBatchDetail)
+                    .collect(Collectors.toList()));
+        }
+        return detail;
+    }
+
+    private ScmView.InventoryBatchDetail toInventoryBatchDetail(InventoryEntity entity) {
+        ScmView.InventoryBatchDetail detail = new ScmView.InventoryBatchDetail();
+        detail.setMaterialCode(entity.getMaterialCode());
+        detail.setBatchNumber(entity.getBatchNumber());
+        detail.setProductionDate(entity.getProductionDate());
+        detail.setExpiryDate(entity.getExpiryDate());
+        detail.setInboundDate(entity.getLastInbound());
+        detail.setQuantity(entity.getCurrentStock());
+        detail.setStatus(StringUtils.hasText(entity.getWarning()) ? entity.getWarning() : entity.getStockStatus());
         return detail;
     }
 }

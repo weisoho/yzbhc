@@ -39,6 +39,7 @@ import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +88,7 @@ public class StockInManagementServiceImpl implements StockInManagementService {
         wrapper.like(StringUtils.hasText(query.getStockInNumber()), StockInOrderEntity::getStockInNumber, query.getStockInNumber())
                 .like(StringUtils.hasText(query.getOrderNumber()), StockInOrderEntity::getOrderNumber, query.getOrderNumber())
                 .like(StringUtils.hasText(query.getSupplier()), StockInOrderEntity::getSupplierName, query.getSupplier())
+                .eq(StringUtils.hasText(query.getStockInType()), StockInOrderEntity::getStockInType, query.getStockInType())
                 .eq(StringUtils.hasText(query.getStatus()), StockInOrderEntity::getStatus, query.getStatus());
 
         // 按物资编码、物资名称或厂家进行过滤
@@ -114,6 +116,19 @@ public class StockInManagementServiceImpl implements StockInManagementService {
                 .like(StringUtils.hasText(query.getProductName()), StockInItemEntity::getMaterialName, query.getProductName())
                 .like(StringUtils.hasText(query.getSupplier()), StockInItemEntity::getSupplierName, query.getSupplier())
                 .like(StringUtils.hasText(query.getManufacturer()), StockInItemEntity::getManufacturer, query.getManufacturer());
+
+        if (StringUtils.hasText(query.getStockInType())) {
+            List<Long> stockInOrderIds = stockInOrderMapper.selectList(new LambdaQueryWrapper<StockInOrderEntity>()
+                            .eq(StockInOrderEntity::getStockInType, query.getStockInType()))
+                    .stream()
+                    .map(StockInOrderEntity::getId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+            if (stockInOrderIds.isEmpty()) {
+                return new PageResult<>(query.getPageNum(), query.getPageSize(), 0, Collections.emptyList());
+            }
+            wrapper.in(StockInItemEntity::getStockInOrderId, stockInOrderIds);
+        }
         
         wrapper.orderByDesc(StockInItemEntity::getCreateTime);
         Page<StockInItemEntity> page = stockInItemMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
@@ -211,8 +226,10 @@ public class StockInManagementServiceImpl implements StockInManagementService {
     @Transactional(rollbackFor = Exception.class)
     public StockInOrderEntity createManualStockIn(ScmRequest.StockInSave request) {
         StockInOrderEntity order = new StockInOrderEntity();
+        String departmentName = StringUtils.hasText(request.getDepartmentName()) ? request.getDepartmentName() : "默认仓库";
         order.setStockInNumber(ScmCodeGenerator.nextCode(stockInOrderMapper, "SI", "stock_in_number"));
         order.setStockInType(request.getStockInType());
+        order.setDepartmentName(departmentName);
         order.setOperatorName(request.getOperatorName());
         order.setStockInDate(LocalDate.now());
         order.setStatus(ScmConstants.STOCK_IN_COMPLETED);
@@ -278,6 +295,7 @@ public class StockInManagementServiceImpl implements StockInManagementService {
                 .filter(item -> !StringUtils.hasText(query.getProductCode()) || item.getProductCode().contains(query.getProductCode()))
                 .filter(item -> !StringUtils.hasText(query.getProductName()) || item.getProductName().contains(query.getProductName()))
                 .filter(item -> !StringUtils.hasText(query.getSupplier()) || item.getSupplierName().contains(query.getSupplier()))
+                .filter(item -> !StringUtils.hasText(query.getManufacturer()) || item.getManufacturer().contains(query.getManufacturer()))
                 .sorted(Comparator.comparing(ScmView.PendingStockInItem::getReceiveId).reversed())
                 .collect(Collectors.toList());
         long startIndex = Math.max(0, (query.getPageNum() - 1) * query.getPageSize());
@@ -315,10 +333,11 @@ public class StockInManagementServiceImpl implements StockInManagementService {
     }
 
     private void syncInventory(StockInItemEntity stockInItem, StockInOrderEntity order) {
+        String warehouse = StringUtils.hasText(order.getDepartmentName()) ? order.getDepartmentName() : "默认仓库";
         InventoryEntity inventory = inventoryMapper.selectOne(new LambdaQueryWrapper<InventoryEntity>()
                 .eq(InventoryEntity::getMaterialCode, stockInItem.getMaterialCode())
                 .eq(InventoryEntity::getBatchNumber, stockInItem.getBatchNumber())
-            .eq(InventoryEntity::getWarehouse, order.getDepartmentName()));
+                .eq(InventoryEntity::getWarehouse, warehouse));
         if (inventory == null) {
             inventory = new InventoryEntity();
             MaterialEntity material = materialMapper.selectById(stockInItem.getMaterialId());
@@ -328,7 +347,7 @@ public class StockInManagementServiceImpl implements StockInManagementService {
             inventory.setCategory(stockInItem.getMaterialType());
             inventory.setSpecification(stockInItem.getSpecification());
             inventory.setModel(stockInItem.getModel());
-            inventory.setWarehouse(order.getDepartmentName());
+            inventory.setWarehouse(warehouse);
             inventory.setShelf("默认货位");
             inventory.setBatchNumber(stockInItem.getBatchNumber());
             inventory.setProductionDate(stockInItem.getProductionDate());

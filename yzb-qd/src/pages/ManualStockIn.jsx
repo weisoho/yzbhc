@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import moment from 'moment';
 import {
   Card,
@@ -6,40 +6,27 @@ import {
   Button,
   Space,
   Input,
-  Select,
   DatePicker,
   Tag,
   Modal,
   Form,
-  Row,
-  Col,
   message,
-  Typography,
   InputNumber,
-  Checkbox,
-  Spin
+  Checkbox
 } from 'antd';
 import api from '../utils/api.js';
 import {
   SearchOutlined,
   PlusOutlined,
-  DeleteOutlined,
-  ReloadOutlined,
   SaveOutlined,
   DownloadOutlined
 } from '@ant-design/icons';
-
-const { Text } = Typography;
-const { RangePicker } = DatePicker;
-const { Option } = Select;
-const { TextArea } = Input;
 
 const ManualStockIn = () => {
   const [searchForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState([]); // 数据库中的历史数据
   const [newItems, setNewItems] = useState([]); // 待提交的新增数据
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 10,
@@ -52,38 +39,64 @@ const ManualStockIn = () => {
   const [filteredMaterials, setFilteredMaterials] = useState([]);
   const [catalogSelectAll, setCatalogSelectAll] = useState(false);
   const [catalogCurrentPage, setCatalogCurrentPage] = useState(1);
-  const [catalogPageSize, setCatalogPageSize] = useState(10);
+  const catalogPageSize = 10;
   const [materialSearchForm] = Form.useForm();
 
+  const getCurrentUserInfo = () => {
+    try {
+      return JSON.parse(localStorage.getItem('userInfo') || '{}');
+    } catch {
+      return {};
+    }
+  };
+
+  const getCurrentOperatorName = () => {
+    const userInfo = getCurrentUserInfo();
+    return userInfo.realName || userInfo.name || userInfo.userName || '管理员';
+  };
+
+  const getCurrentDepartmentName = () => {
+    const userInfo = getCurrentUserInfo();
+    return localStorage.getItem('currentDepartment') || userInfo.user_dep || userInfo.departmentName || '默认仓库';
+  };
+
   // 加载数据库中的入库记录
-  const fetchData = async () => {
+  const fetchData = async (page = pagination.current, pageSize = pagination.pageSize) => {
     try {
       setLoading(true);
       const searchValues = searchForm.getFieldsValue();
       const response = await api.get('/api/scm/stock-in/items', {
-        pageNum: pagination.current,
-        pageSize: pagination.pageSize,
+        pageNum: page,
+        pageSize,
         productCode: searchValues.productCode,
         productName: searchValues.productName,
         supplier: searchValues.supplierName,
-        manufacturer: searchValues.manufacturer
+        manufacturer: searchValues.manufacturer,
+        stockInType: '初始化入库',
       });
 
       if (response.code === 1 && response.data) {
-        const records = response.data.records.map(item => ({
+        const records = (response.data.records || []).map(item => ({
           ...item,
           key: item.id,
           productCode: item.materialCode,
           productName: item.materialName,
           orderUnit: item.unit,
           instockQuantity: item.stockInQuantity,
+          purchasePrice: Number(item.purchasePrice || 0),
+          purchaseAmount: Number(item.purchaseAmount || 0),
           isNew: false
         }));
         setData(records);
         setPagination(prev => ({
           ...prev,
-          total: response.data.total
+          current: page,
+          pageSize,
+          total: response.data.total || 0
         }));
+      } else {
+        setData([]);
+        setPagination(prev => ({ ...prev, current: page, pageSize, total: 0 }));
       }
     } catch (error) {
       console.error('加载入库明细失败:', error);
@@ -127,15 +140,17 @@ const ManualStockIn = () => {
 
   // 搜索处理
   const handleSearch = () => {
-    setPagination(prev => ({ ...prev, current: 1 }));
-    fetchData();
+    fetchData(1, pagination.pageSize);
   };
 
   // 重置搜索
   const handleReset = () => {
     searchForm.resetFields();
-    setPagination(prev => ({ ...prev, current: 1 }));
-    fetchData();
+    fetchData(1, pagination.pageSize);
+  };
+
+  const handleExport = () => {
+    message.info('如需导出，请在“入库单查询”页面按初始化入库单据导出');
   };
 
   // 打开物资选择
@@ -201,7 +216,7 @@ const ManualStockIn = () => {
     }
 
     const newItemsToAdd = selected.map(item => ({
-      key: `new_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      key: `new_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
       productCode: item.materialCode,
       productName: item.materialName,
       materialType: item.materialType,
@@ -245,7 +260,8 @@ const ManualStockIn = () => {
       setLoading(true);
       const saveData = {
         stockInType: '初始化入库',
-        operatorName: JSON.parse(localStorage.getItem('userInfo') || '{}').realName || JSON.parse(localStorage.getItem('userInfo') || '{}').userName || '管理员',
+        departmentName: getCurrentDepartmentName(),
+        operatorName: getCurrentOperatorName(),
         remark: '系统初始化入库',
         items: newItems.map(i => ({
           materialId: i.materialId,
@@ -270,9 +286,9 @@ const ManualStockIn = () => {
 
       const response = await api.post('/api/scm/stock-in/manual', saveData);
       if (response.code === 1) {
-        message.success('入库成功');
+        message.success(`入库成功${response.data?.stockInNumber ? `：${response.data.stockInNumber}` : ''}`);
         setNewItems([]);
-        fetchData();
+        await fetchData(1, pagination.pageSize);
       } else {
         message.error(response.message || '入库失败');
       }
@@ -378,13 +394,13 @@ const ManualStockIn = () => {
           size="small"
           prefix="¥"
         />
-      ) : `¥${record.purchasePrice?.toFixed(2)}`
+      ) : `¥${Number(record.purchasePrice || 0).toFixed(2)}`
     },
     {
       title: '金额',
       key: 'purchaseAmount',
       width: 120,
-      render: (_, record) => `¥${record.purchaseAmount?.toFixed(2)}`
+      render: (_, record) => `¥${Number(record.purchaseAmount || 0).toFixed(2)}`
     },
     { title: '供应商', dataIndex: 'supplierName', key: 'supplierName', width: 150 },
     { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 150 },
@@ -427,7 +443,7 @@ const ManualStockIn = () => {
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
           <Space>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenMaterialSelect}>新增入库</Button>
-            <Button icon={<DownloadOutlined />}>导出数据</Button>
+            <Button icon={<DownloadOutlined />} onClick={handleExport}>导出数据</Button>
           </Space>
           <Button 
             type="primary" 
@@ -451,7 +467,7 @@ const ManualStockIn = () => {
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条历史记录`,
             onChange: (page, pageSize) => {
-              setPagination(prev => ({ ...prev, current: page, pageSize }));
+              fetchData(page, pageSize);
             }
           }}
         />

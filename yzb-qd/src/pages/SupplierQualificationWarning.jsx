@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Card, Empty, Input, Segmented, Select, Space, Table, Tag, Typography, message } from 'antd';
+import { Button, Card, Descriptions, Empty, Input, Modal, Segmented, Select, Space, Table, Tag, Typography, message } from 'antd';
 import { DownloadOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import moment from 'moment';
-import { useNavigate } from 'react-router-dom';
 import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api.js';
 
 const { Title, Text } = Typography;
@@ -101,7 +100,6 @@ const getRecordList = (pageData) => {
 const getDisplayValue = (value) => (value || value === 0 ? value : '--');
 
 const SupplierQualificationWarning = () => {
-	const navigate = useNavigate();
 	const [mainTab, setMainTab] = useState('registration');
 	const [loading, setLoading] = useState(false);
 	const [rows, setRows] = useState([]);
@@ -110,6 +108,10 @@ const SupplierQualificationWarning = () => {
 	const [submittedFilters, setSubmittedFilters] = useState(DEFAULT_FILTERS);
 	const [currentPage, setCurrentPage] = useState(1);
 	const [pageSize, setPageSize] = useState(10);
+	const [detailModalOpen, setDetailModalOpen] = useState(false);
+	const [detailLoading, setDetailLoading] = useState(false);
+	const [detailRecords, setDetailRecords] = useState([]);
+	const [detailRecord, setDetailRecord] = useState(null);
 
 	const currentTabConfig = TAB_DEFINITIONS[mainTab];
 
@@ -183,13 +185,63 @@ const SupplierQualificationWarning = () => {
 		setSubmittedFilters(DEFAULT_FILTERS);
 	};
 
-	const handleOpenQualification = (record) => {
+	const handleOpenQualification = async (record) => {
 		if (!record?.supplierId || record.supplierId === '--') {
 			message.warning('当前记录缺少供应商ID，无法打开资质详情');
 			return;
 		}
-		navigate(`${currentTabConfig.route}/${record.supplierId}`);
+
+		try {
+			setDetailLoading(true);
+			setDetailRecord(record);
+			setDetailModalOpen(true);
+			const response = await api.get(`/api/scm/suppliers/${record.supplierId}/qualifications`, {
+				type: currentTabConfig.type,
+			});
+			if (response.code !== 1) {
+				throw new Error(getApiResponseMessage(response, '加载资质详情失败'));
+			}
+			setDetailRecords(Array.isArray(response.data) ? response.data : []);
+		} catch (error) {
+			setDetailRecords([]);
+			message.error(getApiErrorMessage(error, '加载资质详情失败'));
+		} finally {
+			setDetailLoading(false);
+		}
 	};
+
+	const detailColumns = useMemo(() => {
+		const commonColumns = [
+			{ title: '资质名称', dataIndex: 'certificateName', key: 'certificateName', width: 180, render: getDisplayValue },
+			{ title: '证件编号', dataIndex: 'licenseNumber', key: 'licenseNumber', width: 180, render: getDisplayValue },
+			{ title: '发证日期', dataIndex: 'issueDate', key: 'issueDate', width: 140, render: getDisplayValue },
+			{ title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', width: 140, render: getDisplayValue },
+			{ title: '状态', dataIndex: 'status', key: 'status', width: 120, render: renderStatusTag },
+		];
+
+		if (mainTab === 'registration') {
+			return [
+				...commonColumns,
+				{ title: '注册人名称', dataIndex: 'registrantName', key: 'registrantName', width: 180, render: getDisplayValue },
+				{ title: '代理人名称', dataIndex: 'agentName', key: 'agentName', width: 160, render: getDisplayValue },
+			];
+		}
+
+		if (mainTab === 'businessLicense') {
+			return [
+				...commonColumns,
+				{ title: '法定代表人', dataIndex: 'legalRepresentative', key: 'legalRepresentative', width: 160, render: getDisplayValue },
+				{ title: '发证机构', dataIndex: 'issuingAuthority', key: 'issuingAuthority', width: 180, render: getDisplayValue },
+			];
+		}
+
+		return [
+			...commonColumns,
+			{ title: '统一社会信用代码', dataIndex: 'licenseNumber', key: 'creditCode', width: 200, render: getDisplayValue },
+			{ title: '法定代表人', dataIndex: 'legalRepresentative', key: 'legalRepresentative', width: 160, render: getDisplayValue },
+			{ title: '注册地址', dataIndex: 'address', key: 'address', width: 220, render: getDisplayValue },
+		];
+	}, [mainTab]);
 
 	const handleExportSelectedWarnings = async () => {
 		if (!selectedWarningKeys.length) {
@@ -250,7 +302,7 @@ const SupplierQualificationWarning = () => {
 				</Button>
 			),
 		},
-	], [currentTabConfig.route, navigate]);
+	], [currentTabConfig]);
 
 	const pagedRows = rows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
@@ -331,6 +383,37 @@ const SupplierQualificationWarning = () => {
 						scroll={{ x: 980 }}
 					/>
 				</Card>
+
+				<Modal
+					title={`${currentTabConfig.label}详情`}
+					open={detailModalOpen}
+					onCancel={() => {
+						setDetailModalOpen(false);
+						setDetailRecords([]);
+						setDetailRecord(null);
+					}}
+					footer={null}
+					width={1100}
+				>
+					<Space direction="vertical" size={16} style={{ width: '100%' }}>
+						<Descriptions bordered size="small" column={2}>
+							<Descriptions.Item label="供应商ID">{getDisplayValue(detailRecord?.supplierId)}</Descriptions.Item>
+							<Descriptions.Item label="供应商名称">{getDisplayValue(detailRecord?.supplierName)}</Descriptions.Item>
+							<Descriptions.Item label="资质类型">{currentTabConfig.label}</Descriptions.Item>
+							<Descriptions.Item label="预警状态">{renderStatusTag(detailRecord?.status)}</Descriptions.Item>
+						</Descriptions>
+
+						<Table
+							rowKey={(item) => String(item.id)}
+							columns={detailColumns}
+							dataSource={detailRecords}
+							loading={detailLoading}
+							locale={{ emptyText: <Empty description="暂无资质详情" /> }}
+							pagination={false}
+							scroll={{ x: 980 }}
+						/>
+					</Space>
+				</Modal>
 			</Space>
 		</div>
 	);

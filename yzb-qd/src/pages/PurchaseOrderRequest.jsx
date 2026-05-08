@@ -85,6 +85,18 @@ const PurchaseOrderRequest = () => {
     };
   };
 
+  const resolveDepartmentName = (departmentId) => {
+    const matchedDepartment = departments.find(d => Number(d.id) === Number(departmentId));
+    if (matchedDepartment?.name) {
+      return matchedDepartment.name;
+    }
+    const requester = getCurrentRequesterInfo();
+    if (Number(requester.departmentId) === Number(departmentId) && requester.departmentName) {
+      return requester.departmentName;
+    }
+    return departmentId ? String(departmentId) : '';
+  };
+
   // 加载物资目录（从后端）
   const loadMaterialCatalog = async () => {
     try {
@@ -201,7 +213,7 @@ const PurchaseOrderRequest = () => {
     try {
       const response = await api.get('/api/department/list');
       if (response.code === 1 && response.data && response.data.length > 0) {
-        setDepartments(response.data.map(d => ({ id: d.id, name: d.name })));
+        setDepartments(response.data.map(d => ({ id: d.id, name: d.deptName || d.name })));
         return;
       }
     } catch (error) {
@@ -343,7 +355,7 @@ const PurchaseOrderRequest = () => {
       for (const group of Object.values(supplierGroups)) {
         const purchaseData = {
           departmentId: formValues.departmentId,
-          departmentName: departments.find(d => d.id === formValues.departmentId)?.name || String(formValues.departmentId),
+          departmentName: resolveDepartmentName(formValues.departmentId),
           supplierId: group.supplierId,
           operatorName: formValues.operatorName || getCurrentRequesterInfo().operatorName,
           planType: formValues.planType || 'monthly',
@@ -406,7 +418,7 @@ const PurchaseOrderRequest = () => {
       for (const group of Object.values(supplierGroups)) {
         const purchaseData = {
           departmentId: formValues.departmentId,
-          departmentName: departments.find(d => d.id === formValues.departmentId)?.name || String(formValues.departmentId),
+          departmentName: resolveDepartmentName(formValues.departmentId),
           supplierId: group.supplierId,
           operatorName: operatorName,
           planType: formValues.planType || 'monthly',
@@ -1195,7 +1207,7 @@ const PurchaseOrderRequest = () => {
         {/* 采购基本信息 */}
         <Form form={newOrderForm} layout="inline" style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid #f0f0f0' }}>
           <Form.Item name="departmentId" label="申领科室" rules={[{ required: true, message: '请选择科室' }]}>
-            <Select placeholder="自动带出当前科室，可按需调整" style={{ width: 160 }}>
+            <Select placeholder="自动识别当前科室" style={{ width: 160 }} disabled>
               {departments.map(d => <Select.Option key={d.id} value={d.id}>{d.name}</Select.Option>)}
             </Select>
           </Form.Item>

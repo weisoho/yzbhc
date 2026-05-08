@@ -1,9 +1,7 @@
-import { Form, Input, Select, DatePicker, Button, Table, Card, Space, Modal, Row, Col, Divider, Spin, message } from 'antd';
+import { Form, Input, Button, Table, Card, Space, Modal, Divider, message } from 'antd';
 import { SearchOutlined, EyeOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 import api from '../utils/api.js';
-
-const { Option } = Select;
 
 const StockInDetail = () => {
   const [form] = Form.useForm();
@@ -14,6 +12,19 @@ const StockInDetail = () => {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  const mapStockInOrder = (item, index) => ({
+    ...item,
+    key: item.id || index.toString(),
+    date: item.stockInDate || item.createTime,
+    operator: item.operatorName,
+    stockInType: item.stockInType,
+    materialCount: item.materialCount ?? item.itemCount ?? 0,
+    totalAmount: item.totalAmount || 0,
+    remark: item.remark,
+    supplier: item.supplierName || item.supplier,
+    items: item.items || item.details || []
+  });
+
   // 从后端获取入库单数据
   useEffect(() => {
     const fetchStockInDetails = async () => {
@@ -21,19 +32,7 @@ const StockInDetail = () => {
       try {
         const response = await api.get('/api/scm/stock-in/orders');
         if (response.code === 1 && response.data) {
-          // 为每个记录添加key属性
-          const data = response.data.records.map((item, index) => ({
-            ...item,
-            key: item.id || index.toString(),
-            date: item.createTime,
-            operator: item.operatorName,
-            stockInType: item.stockInType,
-            materialCount: item.itemCount,
-            totalAmount: item.totalAmount,
-            remark: item.remark,
-            supplier: item.supplierName,
-            items: item.details || []
-          }));
+          const data = (response.data.records || []).map(mapStockInOrder);
           setStockInDetails(data);
         } else {
           message.error(response.message || '获取入库单数据失败');
@@ -92,22 +91,13 @@ const StockInDetail = () => {
       };
       
       // 发送搜索请求到后端
-      const response = await api.get('/api/scm/stock-in/orders', { params });
+      const response = await api.get('/api/scm/stock-in/orders', params);
       if (response.code === 1 && response.data) {
-        // 为每个记录添加key属性
-        const data = response.data.records.map((item, index) => ({
-          ...item,
-          key: item.id || index.toString(),
-          date: item.createTime,
-          operator: item.operatorName,
-          stockInType: item.stockInType,
-          materialCount: item.itemCount,
-          totalAmount: item.totalAmount,
-          remark: item.remark,
-          supplier: item.supplierName,
-          materialCode: item.details?.[0]?.materialCode,
-          materialName: item.details?.[0]?.materialName,
-          manufacturer: item.details?.[0]?.manufacturer
+        const data = (response.data.records || []).map((item, index) => ({
+          ...mapStockInOrder(item, index),
+          materialCode: item.items?.[0]?.materialCode || item.details?.[0]?.materialCode,
+          materialName: item.items?.[0]?.materialName || item.details?.[0]?.materialName,
+          manufacturer: item.items?.[0]?.manufacturer || item.details?.[0]?.manufacturer
         }));
         setFilteredData(data);
         setShowCatalog(true);
@@ -131,14 +121,14 @@ const StockInDetail = () => {
         const detailData = {
           ...response.data,
           stockInNumber: response.data.stockInNumber,
-          date: response.data.createTime,
+          date: response.data.stockInDate || response.data.createTime,
           operator: response.data.operatorName,
           stockInType: response.data.stockInType,
-          materialCount: response.data.itemCount,
-          totalAmount: response.data.totalAmount,
+          materialCount: response.data.materialCount ?? response.data.itemCount ?? 0,
+          totalAmount: response.data.totalAmount || 0,
           remark: response.data.remark,
-          supplier: response.data.supplierName,
-          items: response.data.details || []
+          supplier: response.data.supplier,
+          items: response.data.items || response.data.details || []
         };
         setSelectedRecord(detailData);
         setIsDetailModalVisible(true);
@@ -195,8 +185,8 @@ const StockInDetail = () => {
       <div style={{ overflowX: 'auto', marginBottom: 24 }}>
         <Table 
           columns={columns} 
-          dataSource={stockInDetails} 
-          pagination={{ 
+          dataSource={showCatalog ? filteredData : stockInDetails}
+          pagination={{
             pageSize: 10,
             showSizeChanger: true,
             showQuickJumper: true,

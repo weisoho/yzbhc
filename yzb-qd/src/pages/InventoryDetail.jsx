@@ -1,9 +1,87 @@
-import React, { useState, useEffect } from 'react';
-import { Table, Card, Input, Select, DatePicker, Button, Space, Row, Col, Tag, Badge, Modal, Form, InputNumber, message } from 'antd';
-import { SearchOutlined, ExportOutlined, EditOutlined, WarningOutlined, AlertOutlined } from '@ant-design/icons';
+import { useState, useEffect } from 'react';
+import { Table, Card, Input, Button, Space, Tag, Modal, Form, InputNumber, message, Descriptions, Empty } from 'antd';
+import { SearchOutlined, ExportOutlined } from '@ant-design/icons';
 import api from '../utils/api.js';
 
-const { RangePicker } = DatePicker;
+const STOCK_STATUS_MAP = {
+  normal: { color: 'green', text: '正常' },
+  low: { color: 'red', text: '缺货' },
+  high: { color: 'orange', text: '积压' },
+  out: { color: 'purple', text: '停用' },
+};
+
+const WARNING_MAP = {
+  low_stock: { color: 'red', text: '库存预警' },
+  overstock: { color: 'orange', text: '库存积压' },
+  expiring: { color: 'gold', text: '近效期' },
+};
+
+const formatDate = (value) => (value ? String(value).slice(0, 10) : '--');
+const formatCurrency = (value) => `¥${Number(value || 0).toFixed(2)}`;
+
+const renderStockStatusTag = (status) => {
+  const config = STOCK_STATUS_MAP[status] || { color: 'default', text: status || '--' };
+  return <Tag color={config.color}>{config.text}</Tag>;
+};
+
+const renderWarningTag = (warning) => {
+  if (!warning) {
+    return <Tag>无</Tag>;
+  }
+  const config = WARNING_MAP[warning] || { color: 'default', text: warning };
+  return <Tag color={config.color}>{config.text}</Tag>;
+};
+
+const mapInventoryBatch = (batch, parentRecord, index) => ({
+  batchKey: `${parentRecord?.id || parentRecord?.key || 'inventory'}-${batch?.batchNumber || index}`,
+  materialCode: batch?.materialCode || parentRecord?.materialCode,
+  materialName: parentRecord?.materialName,
+  category: parentRecord?.category,
+  specification: parentRecord?.specification,
+  model: parentRecord?.model,
+  batchNumber: batch?.batchNumber || parentRecord?.batchNumber,
+  productionDate: batch?.productionDate || parentRecord?.productionDate,
+  expiryDate: batch?.expiryDate || parentRecord?.expiryDate,
+  minPackage: parentRecord?.minPackage,
+  unit: parentRecord?.unit,
+  purchasePrice: parentRecord?.purchasePrice,
+  quantity: batch?.quantity ?? parentRecord?.currentStock ?? 0,
+  registrationNumber: parentRecord?.registrationNumber,
+  supplier: parentRecord?.supplier,
+  manufacturer: parentRecord?.manufacturer,
+  inboundDate: batch?.inboundDate || parentRecord?.lastInbound,
+  status: batch?.status || parentRecord?.warning || parentRecord?.stockStatus,
+});
+
+const mapInventoryRecord = (item) => ({
+  ...item,
+  key: item.id,
+  id: item.id,
+  materialCode: item.materialCode,
+  materialName: item.materialName,
+  category: item.category,
+  specification: item.specification,
+  model: item.model,
+  department: item.warehouse,
+  warehouse: item.warehouse,
+  batchNumber: item.batchNumber,
+  productionDate: item.productionDate,
+  expiryDate: item.expiryDate,
+  minPackage: item.minPackage,
+  unit: item.unit,
+  purchasePrice: Number(item.purchasePrice || 0),
+  currentStock: Number(item.currentStock || 0),
+  registrationNumber: item.registrationNumber,
+  supplier: item.supplier,
+  manufacturer: item.manufacturer,
+  stockStatus: item.stockStatus,
+  lastInbound: item.lastInbound,
+  warning: item.warning,
+  minStock: Number(item.minStock || 0),
+  maxStock: Number(item.maxStock ?? 0),
+  expiryWarningDays: Number(item.expiryWarningDays || 0),
+  batches: Array.isArray(item.batches) ? item.batches.map((batch, index) => mapInventoryBatch(batch, item, index)) : [],
+});
 
 const InventoryDetail = () => {
   const [inventoryDetails, setInventoryDetails] = useState([]);
@@ -18,6 +96,7 @@ const InventoryDetail = () => {
   const [currentRecord, setCurrentRecord] = useState(null);
   const [adjustForm] = Form.useForm();
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [total, setTotal] = useState(0);
 
   // 定义表格列
   const columns = [
@@ -63,8 +142,8 @@ const InventoryDetail = () => {
     { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', width: 120 },
     { title: '最小包装', dataIndex: 'minPackage', key: 'minPackage', width: 120 },
     { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
-    { title: '采购金额', dataIndex: 'purchasePrice', key: 'purchasePrice', width: 100, render: (price) => `¥${price?.toFixed(2) || '0.00'}` },
-    { title: '库存数量', dataIndex: 'currentStock', key: 'currentStock', width: 100, 
+    { title: '采购金额', dataIndex: 'purchasePrice', key: 'purchasePrice', width: 100, render: (price) => formatCurrency(price) },
+    { title: '库存数量', dataIndex: 'currentStock', key: 'currentStock', width: 100,
       render: (currentStock, record) => {
         let color = 'default';
         if (currentStock <= (record.minStock || 0)) color = 'red';
@@ -76,19 +155,9 @@ const InventoryDetail = () => {
     { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', width: 150 },
     { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 120 },
     { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 150 },
-    { title: '库存状态', dataIndex: 'stockStatus', key: 'stockStatus', width: 100,
-      render: (status) => {
-        const statusMap = {
-          'normal': { color: 'green', text: '正常' },
-          'low': { color: 'red', text: '缺货' },
-          'high': { color: 'orange', text: '积压' },
-          'out': { color: 'purple', text: '停用' }
-        };
-        const config = statusMap[status] || statusMap.normal;
-        return <Tag color={config.color}>{config.text}</Tag>;
-      }
-    },
-    { title: '入库时间', dataIndex: 'lastInbound', key: 'lastInbound', width: 120 },
+    { title: '库存状态', dataIndex: 'stockStatus', key: 'stockStatus', width: 100, render: (status) => renderStockStatusTag(status) },
+    { title: '预警状态', dataIndex: 'warning', key: 'warning', width: 110, render: (warning) => renderWarningTag(warning) },
+    { title: '入库时间', dataIndex: 'lastInbound', key: 'lastInbound', width: 120, render: (value) => formatDate(value) },
     {
       title: '操作', 
       key: 'action',
@@ -111,66 +180,19 @@ const InventoryDetail = () => {
 
   // 查询处理函数
   const handleSearch = async () => {
-    try {
-      setLoading(true);
-      const params = {
-        pageNum: 1,
-        pageSize: pageSize,
-        materialCode: searchParams.materialCode,
-        materialName: searchParams.materialName,
-        supplierName: searchParams.supplier,
-        manufacturer: searchParams.manufacturer
-      };
-      const response = await api.get('/api/scm/inventory', params);
-      if (response.code === 1 && response.data) {
-        const inventoryList = response.data.records.map(item => ({
-          key: item.id,
-          materialCode: item.materialCode,
-          materialName: item.materialName,
-          category: item.materialType,
-          specification: item.specification,
-          model: item.model,
-          department: item.departmentName || item.ownerDepartment || item.department,
-          batchNumber: item.batchNumber,
-          productionDate: item.productionDate,
-          expiryDate: item.expiryDate,
-          minPackage: item.minPackage,
-          unit: item.unit,
-          purchasePrice: item.purchasePrice,
-          currentStock: item.stockQuantity,
-          registrationNumber: item.registrationNumber,
-          supplier: item.supplierName,
-          manufacturer: item.manufacturer,
-          stockStatus: item.status,
-          lastInbound: item.lastInboundDate,
-          warning: item.warning,
-          minStock: item.minStock,
-          maxStock: item.maxStock,
-          expiryWarningDays: item.expiryWarningDays,
-          batches: item.batches || []
-        }));
-        setInventoryDetails(inventoryList);
-        setCurrentPage(1);
-      } else {
-        message.error('查询库存数据失败');
-      }
-    } catch (error) {
-      console.error('查询库存数据失败:', error);
-      message.error('查询库存数据失败');
-    } finally {
-      setLoading(false);
-    }
+    loadInventoryDetails(1, pageSize, searchParams);
   };
 
   // 重置查询条件
   const handleReset = () => {
-    setSearchParams({
+    const nextSearchParams = {
       materialCode: '',
       materialName: '',
       supplier: '',
       manufacturer: ''
-    });
-    loadInventoryDetails();
+    };
+    setSearchParams(nextSearchParams);
+    loadInventoryDetails(1, pageSize, nextSearchParams);
   };
 
   // 导出功能
@@ -200,9 +222,26 @@ const InventoryDetail = () => {
   };
 
   // 打开明细模态框
-  const handleViewDetail = (record) => {
-    setCurrentRecord(record);
-    setDetailModalVisible(true);
+  const handleViewDetail = async (record) => {
+    try {
+      setLoading(true);
+      const response = await api.get(`/api/scm/inventory/${record.id || record.key}`);
+      if (response.code !== 1 || !response.data) {
+        message.error(response.message || '加载库存详情失败');
+        return;
+      }
+      const detailRecord = mapInventoryRecord(response.data);
+      if (!detailRecord.batches || detailRecord.batches.length === 0) {
+        detailRecord.batches = [mapInventoryBatch(detailRecord, detailRecord, 0)];
+      }
+      setCurrentRecord(detailRecord);
+      setDetailModalVisible(true);
+    } catch (error) {
+      console.error('加载库存详情失败:', error);
+      message.error(error.message || '加载库存详情失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 提交设置调整
@@ -231,7 +270,7 @@ const InventoryDetail = () => {
         message.success('设置调整成功');
         setAdjustModalVisible(false);
         adjustForm.resetFields();
-        loadInventoryDetails(); // 重新加载库存数据
+        await loadInventoryDetails(currentPage, pageSize, searchParams);
       } else {
         message.error(response.message || '设置调整失败');
       }
@@ -243,20 +282,6 @@ const InventoryDetail = () => {
     }
   };
 
-  // 获取库存状态
-  const getStockStatus = (currentStock, minStock, maxStock) => {
-    if (currentStock <= minStock) return 'low';
-    if (currentStock > maxStock) return 'high';
-    return 'normal';
-  };
-
-  // 获取库存预警
-  const getStockWarning = (currentStock, minStock, maxStock) => {
-    if (currentStock <= minStock) return 'low_stock';
-    if (currentStock > maxStock) return 'overstock';
-    return null;
-  };
-
   // 关闭调整模态框
   const handleAdjustCancel = () => {
     setAdjustModalVisible(false);
@@ -264,41 +289,24 @@ const InventoryDetail = () => {
   };
 
   // 加载库存数据
-  const loadInventoryDetails = async () => {
+  const loadInventoryDetails = async (page = currentPage, size = pageSize, filters = searchParams) => {
     try {
       setLoading(true);
       const params = {
-        pageNum: currentPage,
-        pageSize: pageSize
+        pageNum: page,
+        pageSize: size,
+        materialCode: filters.materialCode,
+        materialName: filters.materialName,
+        supplier: filters.supplier,
+        manufacturer: filters.manufacturer,
       };
       const response = await api.get('/api/scm/inventory', params);
       if (response.code === 1 && response.data) {
-        const inventoryList = response.data.records.map(item => ({
-          key: item.id,
-          materialCode: item.materialCode,
-          materialName: item.materialName,
-          category: item.materialType,
-          specification: item.specification,
-          model: item.model,
-          batchNumber: item.batchNumber,
-          productionDate: item.productionDate,
-          expiryDate: item.expiryDate,
-          minPackage: item.minPackage,
-          unit: item.unit,
-          purchasePrice: item.purchasePrice,
-          currentStock: item.stockQuantity,
-          registrationNumber: item.registrationNumber,
-          supplier: item.supplierName,
-          manufacturer: item.manufacturer,
-          stockStatus: item.status,
-          lastInbound: item.lastInboundDate,
-          warning: item.warning,
-          minStock: item.minStock,
-          maxStock: item.maxStock,
-          expiryWarningDays: item.expiryWarningDays,
-          batches: item.batches || []
-        }));
+        const inventoryList = (response.data.records || []).map(mapInventoryRecord);
         setInventoryDetails(inventoryList);
+        setTotal(response.data.total || 0);
+        setCurrentPage(page);
+        setPageSize(size);
       } else {
         message.error('加载库存数据失败');
       }
@@ -362,6 +370,9 @@ const InventoryDetail = () => {
           <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>
             查询
           </Button>
+          <Button onClick={handleReset}>
+            重置
+          </Button>
           <Button icon={<ExportOutlined />} onClick={handleExport}>
             导出库存报表
           </Button>
@@ -371,9 +382,9 @@ const InventoryDetail = () => {
       <Card style={{ marginTop: 16 }}>
         <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <span>共 {inventoryDetails.length} 条记录</span>
+            <span>共 {total} 条记录</span>
             <span style={{ marginLeft: 16, color: '#ff4d4f' }}>
-              预警物资: {inventoryDetails.filter(item => item.warning).length} 种
+              预警物资: {inventoryDetails.filter(item => Boolean(item.warning)).length} 种
             </span>
             <span style={{ marginLeft: 16, color: '#faad14' }}>
               缺货物资: {inventoryDetails.filter(item => item.stockStatus === 'low').length} 种
@@ -389,16 +400,15 @@ const InventoryDetail = () => {
             pageSize: pageSize,
             showSizeChanger: true,
             showQuickJumper: true,
-            showTotal: (total) => `共 ${total} 条记录`,
+            total: total,
+            showTotal: (pageTotal) => `共 ${pageTotal} 条记录`,
             style: {
               display: 'flex',
               justifyContent: 'center',
               marginTop: '16px'
             },
             onChange: (page, size) => {
-              setCurrentPage(page);
-              setPageSize(size);
-              loadInventoryDetails();
+              loadInventoryDetails(page, size, searchParams);
             }
           }}
           scroll={{ x: 1400 }}
@@ -513,7 +523,6 @@ const InventoryDetail = () => {
                 style={{ width: '100%' }} 
                 placeholder="请输入有效期前多少天提醒"
                 min={1}
-                addonAfter="天"
               />
             </Form.Item>
 
@@ -544,34 +553,46 @@ const InventoryDetail = () => {
         ]}
       >
         {currentRecord && (
-          <div>
-            <div style={{ marginBottom: 20 }}>
+          <Space direction="vertical" size={16} style={{ width: '100%' }}>
+            <Descriptions bordered size="small" column={2}>
+              <Descriptions.Item label="物资编码">{currentRecord.materialCode || '--'}</Descriptions.Item>
+              <Descriptions.Item label="物资名称">{currentRecord.materialName || '--'}</Descriptions.Item>
+              <Descriptions.Item label="所属科室">{currentRecord.department || '--'}</Descriptions.Item>
+              <Descriptions.Item label="当前库存">{currentRecord.currentStock} {currentRecord.unit || ''}</Descriptions.Item>
+              <Descriptions.Item label="库存状态">{renderStockStatusTag(currentRecord.stockStatus)}</Descriptions.Item>
+              <Descriptions.Item label="预警状态">{renderWarningTag(currentRecord.warning)}</Descriptions.Item>
+            </Descriptions>
+
+            {(currentRecord.batches || []).length > 0 ? (
               <Table
                 columns={[
-                  { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode', width: 150, align: 'center', ellipsis: false },
-                  { title: '物资名称', dataIndex: 'materialName', key: 'materialName', width: 150, render: () => currentRecord.materialName, align: 'center', ellipsis: false },
-                  { title: '物资类型', dataIndex: 'category', key: 'category', width: 100, render: () => currentRecord.category, align: 'center', ellipsis: false },
-                  { title: '规格', dataIndex: 'specification', key: 'specification', width: 120, render: () => currentRecord.specification, align: 'center', ellipsis: false },
-                  { title: '型号', dataIndex: 'model', key: 'model', width: 100, render: () => currentRecord.model, align: 'center', ellipsis: false },
-                  { title: '批号', dataIndex: 'batchNumber', key: 'batchNumber', width: 120, align: 'center', ellipsis: false },
-                  { title: '生产日期', dataIndex: 'productionDate', key: 'productionDate', width: 120, align: 'center', ellipsis: false },
-                  { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', width: 120, align: 'center', ellipsis: false },
-                  { title: '最小包装', dataIndex: 'minPackage', key: 'minPackage', width: 120, render: () => currentRecord.minPackage, align: 'center', ellipsis: false },
-                  { title: '单位', dataIndex: 'unit', key: 'unit', width: 80, render: () => currentRecord.unit, align: 'center', ellipsis: false },
-                  { title: '采购价格', dataIndex: 'purchasePrice', key: 'purchasePrice', width: 100, render: () => `¥${currentRecord.purchasePrice?.toFixed(2) || '0.00'}`, align: 'center', ellipsis: false },
-                  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 100, align: 'center', ellipsis: false },
-                  { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', width: 150, render: () => currentRecord.registrationNumber, align: 'center', ellipsis: false },
-                  { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 120, render: () => currentRecord.supplier, align: 'center', ellipsis: false },
-                  { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 150, render: () => currentRecord.manufacturer, align: 'center', ellipsis: false },
-                  { title: '入库时间', dataIndex: 'inboundDate', key: 'inboundDate', width: 120, align: 'center', ellipsis: false },
+                  { title: '物资编码', dataIndex: 'materialCode', key: 'materialCode', width: 150, align: 'center' },
+                  { title: '物资名称', dataIndex: 'materialName', key: 'materialName', width: 150, align: 'center' },
+                  { title: '物资类型', dataIndex: 'category', key: 'category', width: 100, align: 'center' },
+                  { title: '规格', dataIndex: 'specification', key: 'specification', width: 120, align: 'center' },
+                  { title: '型号', dataIndex: 'model', key: 'model', width: 100, align: 'center' },
+                  { title: '批号', dataIndex: 'batchNumber', key: 'batchNumber', width: 120, align: 'center' },
+                  { title: '生产日期', dataIndex: 'productionDate', key: 'productionDate', width: 120, align: 'center', render: (value) => formatDate(value) },
+                  { title: '失效日期', dataIndex: 'expiryDate', key: 'expiryDate', width: 120, align: 'center', render: (value) => formatDate(value) },
+                  { title: '最小包装', dataIndex: 'minPackage', key: 'minPackage', width: 120, align: 'center' },
+                  { title: '单位', dataIndex: 'unit', key: 'unit', width: 80, align: 'center' },
+                  { title: '采购价格', dataIndex: 'purchasePrice', key: 'purchasePrice', width: 100, align: 'center', render: (value) => formatCurrency(value) },
+                  { title: '数量', dataIndex: 'quantity', key: 'quantity', width: 100, align: 'center' },
+                  { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', width: 150, align: 'center' },
+                  { title: '供应商', dataIndex: 'supplier', key: 'supplier', width: 120, align: 'center' },
+                  { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 150, align: 'center' },
+                  { title: '入库时间', dataIndex: 'inboundDate', key: 'inboundDate', width: 120, align: 'center', render: (value) => formatDate(value) },
+                  { title: '批次状态', dataIndex: 'status', key: 'status', width: 120, align: 'center', render: (value) => renderWarningTag(value) },
                 ]}
                 dataSource={currentRecord.batches || []}
                 pagination={false}
                 rowKey="batchKey"
-                scroll={{ x: 1600 }}
+                scroll={{ x: 2100 }}
               />
-            </div>
-          </div>
+            ) : (
+              <Empty description="暂无批次明细" />
+            )}
+          </Space>
         )}
       </Modal>
     </div>

@@ -56,7 +56,6 @@ import CampusManagement from './pages/CampusManagement.jsx';
 import PurchaseOrderRequest from './pages/PurchaseOrderRequest.jsx';
 import PurchaseOrderApproval from './pages/PurchaseOrderApproval.jsx';
 import PurchaseOrderQuery from './pages/PurchaseOrderQuery.jsx';
-import PurchaseOrderAcceptance from './pages/PurchaseOrderAcceptance.jsx';
 import ManualStockIn from './pages/ManualStockIn.jsx';
 import PurchaseReceipt from './pages/PurchaseReceipt.jsx';
 import AbnormalOrderManagement from './pages/AbnormalOrderManagement.jsx';
@@ -968,7 +967,7 @@ const AppContent = () => {
                     <Route path="/purchase-order-request" element={<PurchaseOrderRequest />} />
                     <Route path="/purchase-order-approval" element={<PurchaseOrderApproval />} />
                     <Route path="/purchase-order-query" element={<PurchaseOrderQuery />} />
-                    <Route path="/purchase-order-acceptance" element={<PurchaseOrderAcceptance />} />
+                    <Route path="/purchase-order-acceptance" element={<StockInAccept />} />
                     <Route path="/manual-stock-in" element={<ManualStockIn />} />
                     <Route path="/purchase-receipt" element={<PurchaseReceipt />} />
                     <Route path="/abnormal-order-management" element={<AbnormalOrderManagement />} />
