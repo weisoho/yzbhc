@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Card, Input, Select, Button, Space, Row, Col, message } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
+import { useLocation } from 'react-router-dom';
 import api from '../utils/api.js';
 
 const { Option } = Select;
 
 const InventoryExpiry = () => {
+  const location = useLocation();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
@@ -59,8 +61,23 @@ const InventoryExpiry = () => {
             };
           })
           .filter(item => {
+            if (params.materialCode && !String(item.materialCode || '').includes(params.materialCode)) {
+              return false;
+            }
+            if (params.materialName && !String(item.materialName || '').includes(params.materialName)) {
+              return false;
+            }
+            if (params.supplier && !String(item.supplier || '').includes(params.supplier)) {
+              return false;
+            }
+            if (params.manufacturer && !String(item.manufacturer || '').includes(params.manufacturer)) {
+              return false;
+            }
             // 根据剩余天数筛选
             if (params.remainingDays) {
+              if (params.remainingDays === 'expired') {
+                return item.remainingDays < 0;
+              }
               const days = parseInt(params.remainingDays);
               return item.remainingDays <= days;
             }
@@ -97,6 +114,25 @@ const InventoryExpiry = () => {
   useEffect(() => {
     loadExpiryData();
   }, []);
+
+  useEffect(() => {
+    if (location.state?.source !== 'home-pending') {
+      return;
+    }
+
+    const nextParams = {
+      materialCode: '',
+      materialName: '',
+      supplier: '',
+      manufacturer: '',
+      remainingDays: '',
+      ...(location.state.initialFilters || {}),
+    };
+
+    setSearchParams(nextParams);
+    setCurrentPage(1);
+    loadExpiryData(nextParams);
+  }, [location.state]);
 
   const expiryColumns = [
     {
@@ -205,6 +241,7 @@ const InventoryExpiry = () => {
               value={searchParams.remainingDays}
               onChange={(value) => handleSearchParamChange('remainingDays', value)}
             >
+              <Option value="expired">已过期</Option>
               <Option value="30">30天内</Option>
               <Option value="60">60天内</Option>
               <Option value="90">90天内</Option>

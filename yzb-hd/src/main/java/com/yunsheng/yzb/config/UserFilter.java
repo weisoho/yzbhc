@@ -23,6 +23,10 @@ import java.util.stream.Collectors;
 @Order(1)
 @WebFilter(filterName = "appFilter")
 public class UserFilter implements Filter {
+    private static final List<String> EXCLUDE_PATH_PREFIXES = Arrays.asList(
+            "/api/files/"
+    );
+
     @Resource
     private YsUserMapper ysUserMapper;
 
@@ -39,7 +43,8 @@ public class UserFilter implements Filter {
                 "/public/login",
                 "/yzb/selectRepairList",
                 "/yzb/addRepair",
-                "/yzb/updateRepair"
+            "/yzb/updateRepair",
+            "/api/upload"
         ).stream().collect(Collectors.toSet());
     }
 
@@ -55,7 +60,7 @@ public class UserFilter implements Filter {
             return;
         }
 
-        if (excludePaths.contains(requestURI)) {
+        if (excludePaths.contains(requestURI) || EXCLUDE_PATH_PREFIXES.stream().anyMatch(requestURI::startsWith)) {
             chain.doFilter(request, response);
             return;
         }

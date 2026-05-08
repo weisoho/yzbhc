@@ -5,6 +5,14 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutli
 import dayjs from 'dayjs';
 import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api.js';
 
+const getUploadedFileMeta = (file) => {
+  const payload = file?.response?.data;
+  return {
+    attachmentName: payload?.originalName || file?.name || '',
+    attachmentUrl: payload?.url || file?.url || '',
+  };
+};
+
 const SupplierBusinessLicense = () => {
   const { supplierId } = useParams();
   const [visible, setVisible] = useState(false);
@@ -25,6 +33,16 @@ const SupplierBusinessLicense = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [suppliers, setSuppliers] = useState([]);
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewRecord, setPreviewRecord] = useState(null);
+
+  const formatDate = (value) => {
+    if (!value) {
+      return '--';
+    }
+    const parsed = dayjs(value);
+    return parsed.isValid() ? parsed.format('YYYY-MM-DD') : '--';
+  };
 
   const datePickerProps = {
     style: { width: '100%' },
@@ -145,6 +163,7 @@ const SupplierBusinessLicense = () => {
     try {
       setSubmitting(true);
       const values = await editForm.validateFields();
+      const uploadedFile = editFileList.length > 0 ? getUploadedFileMeta(editFileList[editFileList.length - 1]) : null;
       
       // 构建许可证数据
             const licenseData = {
@@ -156,8 +175,8 @@ const SupplierBusinessLicense = () => {
               expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,  // 有效期
               issuingAuthority: values.issuingAuthority,  // 发证机构
               legalRepresentative: values.legalRepresentative,  // 法定代表人
-              attachmentName: editFileList.length > 0 ? editFileList[editFileList.length - 1].name : editingRecord.attachment,  // 附件名称
-              licenseFile: ''  // 附件地址
+              attachmentName: uploadedFile?.attachmentName || editingRecord.attachment || '',
+              licenseFile: uploadedFile?.attachmentUrl || editingRecord.attachmentUrl || ''
             };
       
       // 编辑许可证
@@ -222,7 +241,7 @@ const SupplierBusinessLicense = () => {
       title: '许可证编号', 
       dataIndex: 'licenseNumber', 
       key: 'licenseNumber',
-      width: 150,
+      width: 180,
       align: 'center',
       onCell: () => ({
         style: {
@@ -235,7 +254,7 @@ const SupplierBusinessLicense = () => {
       title: '供应商名称', 
       dataIndex: 'name', 
       key: 'name',
-      width: 150,
+      width: 220,
       align: 'center',
       onCell: () => ({
         style: {
@@ -248,7 +267,7 @@ const SupplierBusinessLicense = () => {
       title: '统一社会信用代码',
       dataIndex: 'unifiedSocialCreditCode',
       key: 'unifiedSocialCreditCode',
-      width: 180,
+      width: 240,
       align: 'center',
       render: (value) => value || '-',
       onCell: () => ({
@@ -295,7 +314,8 @@ const SupplierBusinessLicense = () => {
           whiteSpace: 'nowrap',
           overflow: 'visible'
         }
-      })
+      }),
+      render: (value) => formatDate(value)
     },
     { 
       title: '失效日期', 
@@ -308,50 +328,70 @@ const SupplierBusinessLicense = () => {
           whiteSpace: 'nowrap',
           overflow: 'visible'
         }
-      })
+      }),
+      render: (value) => formatDate(value)
     },
     { 
       title: '附件', 
       dataIndex: 'attachment', 
       key: 'attachment',
-      width: 150,
+      width: 120,
       align: 'center',
+      ellipsis: true,
       onCell: () => ({
         style: {
           whiteSpace: 'nowrap',
-          overflow: 'visible'
+          overflow: 'hidden',
+          textOverflow: 'ellipsis'
         }
-      })
+      }),
+      render: (_, record) => (
+        <Button type="link" size="small" disabled={!record.attachment && !record.attachmentUrl} onClick={() => {
+          setPreviewRecord(record);
+          setPreviewVisible(true);
+        }}>
+          {record.attachment || record.attachmentUrl ? '查看附件' : '-'}
+        </Button>
+      )
     },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
+      width: 110,
       align: 'center',
-      render: (value) => value || '-',
+      render: (value) => {
+        const text = value || '-';
+        const color = text === '有效' ? '#52c41a' : text === '即将过期' ? '#fa8c16' : text === '已过期' ? '#f5222d' : '#595959';
+        return <span style={{ color, fontWeight: 600, whiteSpace: 'nowrap' }}>{text}</span>;
+      },
       onCell: () => ({
         style: {
           whiteSpace: 'nowrap',
-          overflow: 'visible'
+          overflow: 'hidden'
         }
       })
     },
     { 
       title: '操作', 
       key: 'action',
-      width: 150,
+      width: 170,
       align: 'center',
+      fixed: 'right',
       onCell: () => ({
         style: {
           whiteSpace: 'nowrap',
-          overflow: 'visible'
+          overflow: 'hidden'
         }
       }),
       render: (_, record) => (
-        <Space size="middle">
-          <a onClick={() => handleEdit(record)}><EditOutlined />编辑</a>
-          <a style={{ color: 'red' }} onClick={() => handleDelete(record.key)}><DeleteOutlined />删除</a>
+        <Space size="small" style={{ whiteSpace: 'nowrap' }}>
+          <Button type="link" size="small" onClick={() => handleEdit(record)}>
+            <EditOutlined />编辑
+          </Button>
+          <Button type="link" size="small" danger onClick={() => handleDelete(record.key)}>
+            <DeleteOutlined />删除
+          </Button>
         </Space>
       )
     },
@@ -367,9 +407,9 @@ const SupplierBusinessLicense = () => {
     onChange(info) {
       setFileList(info.fileList);
       if (info.file.status === 'done') {
-        // 文件上传成功
+        message.success('附件上传成功');
       } else if (info.file.status === 'error') {
-        // 文件上传失败
+        message.error('附件上传失败');
       }
     },
   };
@@ -384,9 +424,9 @@ const SupplierBusinessLicense = () => {
     onChange(info) {
       setEditFileList(info.fileList);
       if (info.file.status === 'done') {
-        // 文件上传成功
+        message.success('附件上传成功');
       } else if (info.file.status === 'error') {
-        // 文件上传失败
+        message.error('附件上传失败');
       }
     },
   };
@@ -431,6 +471,7 @@ const SupplierBusinessLicense = () => {
           columns={columns} 
           dataSource={businessLicenses} 
           loading={loading}
+          tableLayout="fixed"
           pagination={{ 
             total: total,
             pageSize: pageSize,
@@ -448,7 +489,7 @@ const SupplierBusinessLicense = () => {
               marginTop: '16px'
             }
           }} 
-          scroll={{ x: 1400 }}
+          scroll={{ x: 1700 }}
         />
       </div>
 
@@ -461,6 +502,7 @@ const SupplierBusinessLicense = () => {
           try {
             setSubmitting(true);
             const values = await form.validateFields();
+            const uploadedFile = fileList.length > 0 ? getUploadedFileMeta(fileList[fileList.length - 1]) : null;
             
             // 构建许可证数据
             const selectedSupplier = suppliers.find(s => s.id === values.supplierId);
@@ -479,8 +521,8 @@ const SupplierBusinessLicense = () => {
               issuingAuthority: values.issuingAuthority,
               legalRepresentative: values.legalRepresentative,
               registrantName: selectedSupplier.name,
-              attachmentName: fileList.length > 0 ? fileList[fileList.length - 1].name : '',
-              licenseFile: ''
+              attachmentName: uploadedFile?.attachmentName || '',
+              licenseFile: uploadedFile?.attachmentUrl || ''
             };
             const response = await api.post(`/api/scm/suppliers/${selectedSupplier.id}/qualifications`, licenseData);
             if (response.code === 1) {
@@ -698,6 +740,55 @@ const SupplierBusinessLicense = () => {
             </Upload>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="附件预览"
+        open={previewVisible}
+        onCancel={() => {
+          setPreviewVisible(false);
+          setPreviewRecord(null);
+        }}
+        footer={[
+          <Button key="download" onClick={() => {
+            if (previewRecord?.attachmentUrl) {
+              const downloadUrl = `${previewRecord.attachmentUrl}?download=1&filename=${encodeURIComponent(previewRecord.attachment || 'attachment')}`;
+              window.open(downloadUrl, '_blank');
+            } else {
+              message.warning('当前附件暂无可访问地址');
+            }
+          }}>
+            下载附件
+          </Button>,
+          <Button key="open" onClick={() => {
+            if (previewRecord?.attachmentUrl) {
+              window.open(previewRecord.attachmentUrl, '_blank');
+            } else {
+              message.warning('当前附件暂无可访问地址');
+            }
+          }}>
+            查看附件
+          </Button>,
+          <Button key="close" type="primary" onClick={() => {
+            setPreviewVisible(false);
+            setPreviewRecord(null);
+          }}>
+            关闭
+          </Button>
+        ]}
+        width={960}
+      >
+        {previewRecord?.attachmentUrl ? (
+          <iframe
+            title="business-license-attachment-preview"
+            src={previewRecord.attachmentUrl}
+            style={{ width: '100%', height: 640, border: 'none' }}
+          />
+        ) : (
+          <div style={{ padding: 32, textAlign: 'center', color: '#8c8c8c' }}>
+            当前附件暂无可预览地址，请重新上传。
+          </div>
+        )}
       </Modal>
     </div>
   );

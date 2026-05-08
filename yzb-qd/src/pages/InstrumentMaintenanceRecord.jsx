@@ -30,7 +30,46 @@ import moment from 'moment';
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
-const { TextArea } = Input;
+
+const normalizeList = (payload) => {
+  if (Array.isArray(payload?.records)) {
+    return payload.records;
+  }
+  if (Array.isArray(payload?.list)) {
+    return payload.list;
+  }
+  return [];
+};
+
+const repairTypeOptions = [
+  { label: '定期维修', value: 1 },
+  { label: '故障维修', value: 2 },
+];
+
+const repairStatusOptions = [
+  { label: '待处理', value: 1, color: 'orange' },
+  { label: '处理中', value: 2, color: 'blue' },
+  { label: '已完成', value: 3, color: 'green' },
+];
+
+const mapRepairRecord = (record, index = 0) => ({
+  ...record,
+  key: record.id || index + 1,
+  deviceName: record.assetName || '-',
+  serialNo: record.assetCode || '-',
+  recordNo: record.repairCode || '-',
+  maintenanceDate: record.repairDate ? String(record.repairDate).slice(0, 10) : '-',
+  completionDate: record.finishDate ? String(record.finishDate).slice(0, 10) : '-',
+  departmentName: record.useDepartment || record.departmentName || '-',
+  status: record.repairStatus,
+  faultReason: record.repairReason || '-',
+  maintenancePlan: record.repairContent || '-',
+  cost: record.repairFee || '0',
+  attachment: record.attachmentName || '无附件',
+});
+
+const mapRepairTypeLabel = (value) => repairTypeOptions.find((item) => item.value === value)?.label || '-';
+const mapRepairStatusMeta = (value) => repairStatusOptions.find((item) => item.value === value) || { label: '-', color: 'default' };
 
 const InstrumentMaintenanceRecord = () => {
   const [form] = Form.useForm();
@@ -49,35 +88,23 @@ const InstrumentMaintenanceRecord = () => {
   const fetchMaintenanceRecords = async (params = {}) => {
     setLoading(true);
     try {
-      // 构建查询参数
-      const queryParams = new URLSearchParams();
-      queryParams.append('pageNum', params.pageNum || currentPage);
-      queryParams.append('pageSize', params.pageSize || pageSize);
-      queryParams.append('assetCode', params.assetCode || '');
-      queryParams.append('assetName', params.assetName || '');
-      if (params.repairType) queryParams.append('repairType', params.repairType);
-      if (params.repairStatus) queryParams.append('repairStatus', params.repairStatus);
-      if (params.assetTypeid) queryParams.append('assetTypeid', params.assetTypeid);
-      if (params.repairStart) queryParams.append('repairStart', params.repairStart);
-      if (params.repairEnd) queryParams.append('repairEnd', params.repairEnd);
-      
-      const response = await api.get(`/api/selectRepairList?${queryParams.toString()}`);
+      const response = await api.get('/api/selectRepairList', {
+        pageNum: params.pageNum || currentPage,
+        pageSize: params.pageSize || pageSize,
+        assetCode: params.assetCode || '',
+        assetName: params.assetName || '',
+        repairType: params.repairType,
+        repairStatus: params.repairStatus,
+        assetTypeid: params.assetTypeid,
+        repairStart: params.repairStart,
+        repairEnd: params.repairEnd,
+      });
       
       if (response.code === 1) {
-        const data = response.data;
-        // 转换数据格式，确保每条记录有key字段
-        const records = data.list.map((record, index) => ({
-          ...record,
-          key: record.id || index + 1,
-          deviceName: record.assetName,
-          serialNo: record.assetCode,
-          recordNo: record.repairNo,
-          maintenanceDate: record.repairDate,
-          departmentName: record.useDepartment || record.departmentName,
-          status: record.repairStatus || record.status,
-        }));
+        const data = response.data || {};
+        const records = normalizeList(data).map((record, index) => mapRepairRecord(record, index));
         setMaintenanceRecords(records);
-        setTotal(data.total);
+        setTotal(data.total || records.length);
       } else {
         message.error(response.message || '获取维修记录失败');
       }
@@ -154,7 +181,10 @@ const InstrumentMaintenanceRecord = () => {
       dataIndex: 'status',
       key: 'status',
       width: 100,
-      render: (value) => <Tag color={value === '已完成' ? 'green' : value === '维修中' ? 'orange' : 'blue'}>{value || '-'}</Tag>
+      render: (value) => {
+        const meta = mapRepairStatusMeta(value);
+        return <Tag color={meta.color}>{meta.label}</Tag>;
+      }
     },
     {
       title: '附件', 
@@ -203,6 +233,7 @@ const InstrumentMaintenanceRecord = () => {
 
   const handleReset = () => {
     form.resetFields();
+    fetchMaintenanceRecords({ pageNum: 1, pageSize });
   };
 
   const handleAddNew = () => {
@@ -217,8 +248,10 @@ const InstrumentMaintenanceRecord = () => {
       assetName: values.deviceName,
       assetCode: values.serialNo,
       faultReason: values.faultReason,
-      maintenancePlan: values.maintenancePlan,
-      cost: values.cost,
+      repairContent: values.maintenancePlan,
+      repairFee: values.cost,
+      repairType: values.maintenanceType,
+      repairStatus: values.status,
       repairDate: values.maintenanceDate ? values.maintenanceDate.format('YYYY-MM-DD') : null
     };
     
@@ -272,7 +305,9 @@ const InstrumentMaintenanceRecord = () => {
       faultReason: record.faultReason,
       maintenancePlan: record.maintenancePlan,
       cost: record.cost,
-      maintenanceDate: record.maintenanceDate ? moment(record.maintenanceDate) : null
+      maintenanceType: record.repairType,
+      status: record.status,
+      maintenanceDate: record.maintenanceDate && record.maintenanceDate !== '-' ? moment(record.maintenanceDate) : null
     });
     // 打开新增模态框作为编辑模态框
     setSelectedRecord(record);
@@ -346,19 +381,18 @@ const InstrumentMaintenanceRecord = () => {
             <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item name="maintenanceType" label="维修类型" style={{ marginBottom: 0 }}>
                 <Select placeholder="请选择维修类型" allowClear style={{ width: '100%' }}>
-                  <Option value="故障维修">故障维修</Option>
-                  <Option value="预防性维护">预防性维护</Option>
-                  <Option value="定期保养">定期保养</Option>
-                  <Option value="校准">校准</Option>
+                  {repairTypeOptions.map((item) => (
+                    <Option key={item.value} value={item.value}>{item.label}</Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col xs={24} sm={12} md={8} lg={6}>
               <Form.Item name="status" label="状态" style={{ marginBottom: 0 }}>
                 <Select placeholder="请选择状态" allowClear style={{ width: '100%' }}>
-                  <Option value="待处理">待处理</Option>
-                  <Option value="进行中">进行中</Option>
-                  <Option value="已完成">已完成</Option>
+                  {repairStatusOptions.map((item) => (
+                    <Option key={item.value} value={item.value}>{item.label}</Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -443,6 +477,8 @@ const InstrumentMaintenanceRecord = () => {
               <p><strong>维修方案：</strong>{selectedRecord.maintenancePlan}</p>
               <p><strong>产生费用：</strong>¥{selectedRecord.cost}</p>
               <p><strong>维修日期：</strong>{selectedRecord.maintenanceDate}</p>
+              <p><strong>维修类型：</strong>{mapRepairTypeLabel(selectedRecord.repairType)}</p>
+              <p><strong>处理状态：</strong>{mapRepairStatusMeta(selectedRecord.status).label}</p>
               <p><strong>附件：</strong>
                 <Button type="link" icon={<FileTextOutlined />}>
                   {selectedRecord.attachment}
@@ -533,6 +569,33 @@ const InstrumentMaintenanceRecord = () => {
                 label="产生费用"
               >
                 <Input placeholder="请输入产生费用" type="number" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="maintenanceType"
+                label="维修类型"
+              >
+                <Select placeholder="请选择维修类型">
+                  {repairTypeOptions.map((item) => (
+                    <Option key={item.value} value={item.value}>{item.label}</Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="status"
+                label="状态"
+              >
+                <Select placeholder="请选择状态">
+                  {repairStatusOptions.map((item) => (
+                    <Option key={item.value} value={item.value}>{item.label}</Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>

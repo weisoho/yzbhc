@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag, message } from 'antd';
+import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag, message } from 'antd';
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import api, { getApiErrorMessage, getApiResponseMessage } from '../utils/api.js';
 
@@ -258,14 +258,6 @@ const CampusManagement = () => {
           </Space>
         }
       >
-        <Alert
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-          message="当前页面已直接连接真实院区数据"
-          description="院区数据复用系统部门树，新增院区会写入 sys_department，并按 CAMPUS 组织类型管理。"
-        />
-
         <Table
           rowKey="id"
           loading={loading}

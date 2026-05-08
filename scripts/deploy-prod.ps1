@@ -47,10 +47,18 @@ $artifactDir = Join-Path $repoRoot '.deploy'
 $composeSource = Join-Path $repoRoot 'docker\docker-compose.yml'
 $nginxSource = Join-Path $frontendDir 'nginx.conf'
 $sqlSource = Join-Path $backendDir 'sql\20260506_add_status_columns.sql'
+$patchJarSource = Join-Path $backendDir 'target\attachment-fix-patch.jar'
 $remoteScriptSource = Join-Path $PSScriptRoot 'prod-remote-deploy.sh'
 $sshHelperSource = Join-Path $PSScriptRoot 'remote_ssh.py'
+$venvPython313 = Join-Path $repoRoot '.venv313\Scripts\python.exe'
 $venvPython = Join-Path $repoRoot '.venv\Scripts\python.exe'
-$pythonCommand = if (Test-Path $venvPython) { $venvPython } else { Resolve-CommandPath -CommandName 'python.exe' }
+$pythonCommand = if (Test-Path $venvPython313) {
+    $venvPython313
+} elseif (Test-Path $venvPython) {
+    $venvPython
+} else {
+    Resolve-CommandPath -CommandName 'python.exe'
+}
 $npmCommand = Resolve-CommandPath -CommandName 'npm.cmd'
 $mavenCommand = Resolve-CommandPath -CommandName 'mvn.cmd'
 $sshCommand = Resolve-CommandPath -CommandName 'ssh.exe'
@@ -130,10 +138,15 @@ if (-not $SkipBackendBuild) {
     }
 }
 
-$jarFile = Get-ChildItem -Path (Join-Path $backendDir 'target') -Filter *.jar |
-    Where-Object { $_.Name -notmatch 'sources|javadoc|original' } |
-    Sort-Object LastWriteTime -Descending |
-    Select-Object -First 1
+$preferredJarPath = Join-Path $backendDir 'target\yzb.jar'
+$jarFile = if (Test-Path $preferredJarPath) {
+    Get-Item $preferredJarPath
+} else {
+    Get-ChildItem -Path (Join-Path $backendDir 'target') -Filter *.jar |
+        Where-Object { $_.Name -notmatch 'sources|javadoc|original|patch' } |
+        Sort-Object LastWriteTime -Descending |
+        Select-Object -First 1
+}
 
 if (-not $jarFile) {
     throw 'No deployable backend jar file was found.'
@@ -150,6 +163,9 @@ Invoke-Step 'Prepare deployment artifacts' {
     Copy-Item $sqlSource (Join-Path $artifactDir '20260506_add_status_columns.sql') -Force
     Copy-Item $remoteScriptSource (Join-Path $artifactDir 'remote-deploy.sh') -Force
     Copy-Item $jarFile.FullName (Join-Path $artifactDir 'yzb.jar') -Force
+    if (Test-Path $patchJarSource) {
+        Copy-Item $patchJarSource (Join-Path $artifactDir 'attachment-fix-patch.jar') -Force
+    }
 
     $distArchive = Join-Path $artifactDir 'frontend-dist.tar.gz'
     if (Test-Path $distArchive) {
@@ -170,6 +186,11 @@ Invoke-Step 'Upload artifacts to server' {
         (Join-Path $artifactDir '20260506_add_status_columns.sql')
         (Join-Path $artifactDir 'remote-deploy.sh')
     )
+
+    $patchJarArtifact = Join-Path $artifactDir 'attachment-fix-patch.jar'
+    if (Test-Path $patchJarArtifact) {
+        $uploadSources += $patchJarArtifact
+    }
 
     if ($SshPassword) {
         & $pythonCommand $sshHelperSource --host $HostName --username $UserName --password $SshPassword mkdir --path "${RemoteDir}/.deploy"
@@ -215,14 +236,14 @@ Invoke-Step 'Upload artifacts to server' {
 
 Invoke-Step 'Run remote deployment script' {
     if ($SshPassword) {
-        $remoteCommand = "chmod +x ${RemoteDir}/.deploy/remote-deploy.sh && bash ${RemoteDir}/.deploy/remote-deploy.sh"
+        $remoteCommand = "sed -i 's/\r$//' ${RemoteDir}/.deploy/remote-deploy.sh && chmod +x ${RemoteDir}/.deploy/remote-deploy.sh && bash ${RemoteDir}/.deploy/remote-deploy.sh"
         & $pythonCommand $sshHelperSource --host $HostName --username $UserName --password $SshPassword run --command-text $remoteCommand --sudo-password $SudoPassword
         if ($LASTEXITCODE -ne 0) {
             throw 'Remote deployment failed.'
         }
     }
     else {
-        & $sshCommand "${UserName}@${HostName}" "chmod +x ${RemoteDir}/.deploy/remote-deploy.sh && sudo bash ${RemoteDir}/.deploy/remote-deploy.sh"
+        & $sshCommand "${UserName}@${HostName}" "sed -i 's/\r$//' ${RemoteDir}/.deploy/remote-deploy.sh && chmod +x ${RemoteDir}/.deploy/remote-deploy.sh && sudo bash ${RemoteDir}/.deploy/remote-deploy.sh"
         if ($LASTEXITCODE -ne 0) {
             throw 'Remote deployment failed.'
         }

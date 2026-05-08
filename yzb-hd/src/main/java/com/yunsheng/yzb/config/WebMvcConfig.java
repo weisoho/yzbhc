@@ -19,7 +19,13 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(permissionInterceptor)
                 .addPathPatterns("/api/**") // 拦截所有API请求
-                .excludePathPatterns("/public/**", "/api/login", "/api/logout"); // 排除公开接口
+            .excludePathPatterns(
+                "/public/**",
+                "/api/login",
+                "/api/logout",
+                "/api/upload",
+                "/api/files/**"
+            ); // 排除公开接口
     }
 
     @Override
