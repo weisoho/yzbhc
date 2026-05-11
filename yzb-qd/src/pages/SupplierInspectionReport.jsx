@@ -235,7 +235,7 @@ const SupplierInspectionReport = () => {
       key: 'supplierName',
       width: 260,
       align: 'center',
-      ellipsis: true,
+      ellipsis: false,
       onHeaderCell: () => ({
         style: {
           whiteSpace: 'nowrap'
@@ -243,8 +243,9 @@ const SupplierInspectionReport = () => {
       }),
       onCell: () => ({
         style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
+          whiteSpace: 'normal',
+          wordBreak: 'break-all',
+          lineHeight: 1.5
         }
       })
     },
@@ -254,7 +255,7 @@ const SupplierInspectionReport = () => {
       key: 'registrantName',
       width: 260,
       align: 'center',
-      ellipsis: true,
+      ellipsis: false,
       render: (value) => value || '-',
       onHeaderCell: () => ({
         style: {
@@ -263,9 +264,9 @@ const SupplierInspectionReport = () => {
       }),
       onCell: () => ({
         style: {
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
+          whiteSpace: 'normal',
+          wordBreak: 'break-all',
+          lineHeight: 1.5
         }
       })
     },
@@ -275,7 +276,7 @@ const SupplierInspectionReport = () => {
       key: 'registrantAddress',
       width: 260,
       align: 'center',
-      ellipsis: true,
+      ellipsis: false,
       render: (value) => value || '-',
       onHeaderCell: () => ({
         style: {
@@ -284,9 +285,9 @@ const SupplierInspectionReport = () => {
       }),
       onCell: () => ({
         style: {
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
+          whiteSpace: 'normal',
+          wordBreak: 'break-all',
+          lineHeight: 1.5
         }
       })
     },
@@ -296,7 +297,7 @@ const SupplierInspectionReport = () => {
       key: 'agentName',
       width: 180,
       align: 'center',
-      ellipsis: true,
+      ellipsis: false,
       onHeaderCell: () => ({
         style: {
           whiteSpace: 'nowrap'
@@ -304,9 +305,9 @@ const SupplierInspectionReport = () => {
       }),
       onCell: () => ({
         style: {
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
+          whiteSpace: 'normal',
+          wordBreak: 'break-all',
+          lineHeight: 1.5
         }
       })
     },
@@ -316,7 +317,7 @@ const SupplierInspectionReport = () => {
       key: 'productName',
       width: 220,
       align: 'center',
-      ellipsis: true,
+      ellipsis: false,
       onHeaderCell: () => ({
         style: {
           whiteSpace: 'nowrap'
@@ -324,9 +325,9 @@ const SupplierInspectionReport = () => {
       }),
       onCell: () => ({
         style: {
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
+          whiteSpace: 'normal',
+          wordBreak: 'break-all',
+          lineHeight: 1.5
         }
       })
     },
@@ -336,7 +337,7 @@ const SupplierInspectionReport = () => {
       key: 'registrationNumber',
       width: 200,
       align: 'center',
-      ellipsis: true,
+      ellipsis: false,
       onHeaderCell: () => ({
         style: {
           whiteSpace: 'nowrap'
@@ -344,9 +345,9 @@ const SupplierInspectionReport = () => {
       }),
       onCell: () => ({
         style: {
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis'
+          whiteSpace: 'normal',
+          wordBreak: 'break-all',
+          lineHeight: 1.5
         }
       })
     },
@@ -562,7 +563,6 @@ const SupplierInspectionReport = () => {
           columns={columns} 
           dataSource={registrationCertificates} 
           loading={loading}
-          tableLayout="fixed"
           pagination={{ 
             total: total,
             pageSize: pageSize,

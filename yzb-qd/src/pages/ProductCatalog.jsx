@@ -5,6 +5,8 @@ import { FORM_STYLES, getFormLayoutStyle, getModalConfig } from '../utils/formSt
 import api from '../utils/api.js';
 
 const { Option } = Select;
+const MATERIAL_TYPE_OPTIONS = ['IVD试剂', '低值耗材', '高值耗材', '办公用品', '其他'];
+const STORAGE_CONDITION_OPTIONS = ['常温', '2-8℃', '冷藏-20℃'];
 
 const ProductCatalog = () => {
   const [searchParams, setSearchParams] = useState({
@@ -468,9 +470,13 @@ const ProductCatalog = () => {
               <Form.Item
                 name="materialType"
                 label="物资类型"
-                rules={[{ required: true, message: '请输入物资类型' }]}
+                rules={[{ required: true, message: '请选择物资类型' }]}
               >
-                <Input placeholder="请输入物资类型" />
+                <Select placeholder="请选择物资类型">
+                  {MATERIAL_TYPE_OPTIONS.map((item) => (
+                    <Option key={item} value={item}>{item}</Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col span={FORM_STYLES.form.edit.colSpan}>
@@ -579,9 +585,13 @@ const ProductCatalog = () => {
               <Form.Item
                 name="storageCondition"
                 label="储存条件"
-                rules={[{ required: true, message: '请输入储存条件' }]}
+                rules={[{ required: true, message: '请选择储存条件' }]}
               >
-                <Input placeholder="请输入储存条件" />
+                <Select placeholder="请选择储存条件">
+                  {STORAGE_CONDITION_OPTIONS.map((item) => (
+                    <Option key={item} value={item}>{item}</Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
@@ -641,9 +651,13 @@ const ProductCatalog = () => {
               <Form.Item
                 name="materialType"
                 label="物资类型"
-                rules={[{ required: true, message: '请输入物资类型' }]}
+                rules={[{ required: true, message: '请选择物资类型' }]}
               >
-                <Input placeholder="请输入物资类型" />
+                <Select placeholder="请选择物资类型">
+                  {MATERIAL_TYPE_OPTIONS.map((item) => (
+                    <Option key={item} value={item}>{item}</Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col span={FORM_STYLES.form.edit.colSpan}>
@@ -752,9 +766,13 @@ const ProductCatalog = () => {
               <Form.Item
                 name="storageCondition"
                 label="储存条件"
-                rules={[{ required: true, message: '请输入储存条件' }]}
+                rules={[{ required: true, message: '请选择储存条件' }]}
               >
-                <Input placeholder="请输入储存条件" />
+                <Select placeholder="请选择储存条件">
+                  {STORAGE_CONDITION_OPTIONS.map((item) => (
+                    <Option key={item} value={item}>{item}</Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>

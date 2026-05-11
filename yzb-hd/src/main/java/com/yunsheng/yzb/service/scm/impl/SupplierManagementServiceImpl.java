@@ -214,6 +214,7 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
             entity.setStatus(resolveQualificationStatus(request.getExpiryDate()));
             entity.setCreateTime(LocalDateTime.now());
             entity.setUpdateTime(LocalDateTime.now());
+            syncSupplierFieldsFromQualification(supplier, request, normalizedType);
             qualificationMapper.insert(entity);
             entity.setType(ScmConstants.normalizeQualificationType(entity.getType()));
             refreshSupplierAvailability(supplierId);
@@ -230,11 +231,13 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
         if (entity == null) {
             throw new ScmBusinessException("供应商资质不存在");
         }
+        SupplierEntity supplier = getSupplier(entity.getSupplierId());
         BeanUtils.copyProperties(request, entity);
         entity.setId(qualificationId);
         entity.setType(ScmConstants.normalizeQualificationType(request.getType()));
         entity.setStatus(resolveQualificationStatus(request.getExpiryDate()));
         entity.setUpdateTime(LocalDateTime.now());
+        syncSupplierFieldsFromQualification(supplier, request, entity.getType());
         qualificationMapper.updateById(entity);
         materialDictionaryService.syncQualificationReferences(qualificationId);
         refreshSupplierAvailability(entity.getSupplierId());
@@ -463,5 +466,47 @@ public class SupplierManagementServiceImpl implements SupplierManagementService 
 
     private int normalizeWarningDays(Integer warningDays) {
         return warningDays == null || warningDays < 1 ? DEFAULT_WARNING_DAYS : warningDays;
+    }
+
+    private void syncSupplierFieldsFromQualification(SupplierEntity supplier, ScmRequest.QualificationSave request, String qualificationType) {
+        if (supplier == null || !ScmConstants.QUALIFICATION_TYPE_BUSINESS_CERTIFICATE.equals(qualificationType)) {
+            return;
+        }
+
+        boolean changed = false;
+        String normalizedCreditCode = firstNonBlank(request.getCreditCode(), request.getLicenseNumber());
+        String legalRepresentative = firstNonBlank(request.getLegalRepresentative(), supplier.getLegalRepresentative());
+        String registeredCapital = firstNonBlank(request.getRegisteredCapital(), supplier.getRegisteredCapital());
+        String address = firstNonBlank(request.getAddress(), supplier.getAddress());
+
+        if (StringUtils.hasText(normalizedCreditCode) && !normalizedCreditCode.equals(supplier.getCreditCode())) {
+            supplier.setCreditCode(normalizedCreditCode);
+            changed = true;
+        }
+        if (StringUtils.hasText(legalRepresentative) && !legalRepresentative.equals(supplier.getLegalRepresentative())) {
+            supplier.setLegalRepresentative(legalRepresentative);
+            changed = true;
+        }
+        if (StringUtils.hasText(registeredCapital) && !registeredCapital.equals(supplier.getRegisteredCapital())) {
+            supplier.setRegisteredCapital(registeredCapital);
+            changed = true;
+        }
+        if (StringUtils.hasText(address) && !address.equals(supplier.getAddress())) {
+            supplier.setAddress(address);
+            changed = true;
+        }
+        if (request.getIssueDate() != null && !request.getIssueDate().equals(supplier.getRegistrationDate())) {
+            supplier.setRegistrationDate(request.getIssueDate());
+            changed = true;
+        }
+
+        if (changed) {
+            supplier.setUpdateTime(LocalDateTime.now());
+            supplierMapper.updateById(supplier);
+        }
+    }
+
+    private String firstNonBlank(String primary, String fallback) {
+        return StringUtils.hasText(primary) ? primary.trim() : fallback;
     }
 }

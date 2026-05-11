@@ -18,6 +18,54 @@ const sanitizeCapitalInput = (value) => {
   const [integerPart = '', ...decimalParts] = sanitized.split('.');
   return decimalParts.length > 0 ? `${integerPart}.${decimalParts.join('')}` : integerPart;
 };
+const NUMERIC_AMOUNT_REGEX = /^\d+(\.\d+)?$/;
+const CAPITAL_UNIT_OPTIONS = [
+  { label: '万人民币', value: '万人民币' },
+  { label: '人民币', value: '人民币' },
+  { label: '万美元', value: '万美元' },
+  { label: '美元', value: '美元' },
+];
+
+const parseRegisteredCapital = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return { amount: '', unit: '万人民币' };
+  }
+
+  const matchedUnit = CAPITAL_UNIT_OPTIONS
+    .map((item) => item.value)
+    .sort((a, b) => b.length - a.length)
+    .find((unit) => normalized.endsWith(unit));
+
+  if (matchedUnit) {
+    return {
+      amount: normalized.slice(0, -matchedUnit.length).trim(),
+      unit: matchedUnit,
+    };
+  }
+
+  if (NUMERIC_AMOUNT_REGEX.test(normalized)) {
+    return { amount: normalized, unit: '万人民币' };
+  }
+
+  return { amount: normalized, unit: '万人民币' };
+};
+
+const formatRegisteredCapital = (amount, unit) => {
+  const normalizedAmount = String(amount || '').trim();
+  if (!normalizedAmount) {
+    return '';
+  }
+  return `${normalizedAmount}${unit || ''}`;
+};
+
+const formatRegisteredCapitalDisplay = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return '-';
+  }
+  return NUMERIC_AMOUNT_REGEX.test(normalized) ? `${normalized}万人民币` : normalized;
+};
 
 const SupplierBusinessCertificate = () => {
   const { supplierId } = useParams();
@@ -148,6 +196,7 @@ const SupplierBusinessCertificate = () => {
 
   // 编辑处理函数
   const handleEdit = (record) => {
+    const capitalInfo = parseRegisteredCapital(record.registeredCapital);
     setEditingRecord(record);
     // 设置编辑表单数据
     editForm.setFieldsValue({
@@ -155,7 +204,8 @@ const SupplierBusinessCertificate = () => {
       name: record.name,
       unifiedSocialCreditCode: record.unifiedSocialCreditCode,
       legalRepresentative: record.legalRepresentative,
-      registeredCapital: record.registeredCapital,
+      registeredCapitalAmount: capitalInfo.amount,
+      registeredCapitalUnit: capitalInfo.unit,
       establishmentDate: record.establishmentDate ? dayjs(record.establishmentDate) : null,
       expiryDate: record.expiryDate ? dayjs(record.expiryDate) : dayjs('2099-12-31'),
       address: record.address,
@@ -191,8 +241,9 @@ const SupplierBusinessCertificate = () => {
         expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : '2099-12-31',
         issuingAuthority: values.registrationAuthority,
         legalRepresentative: values.legalRepresentative,
-        registeredCapital: values.registeredCapital,
+        registeredCapital: formatRegisteredCapital(values.registeredCapitalAmount, values.registeredCapitalUnit),
         address: values.address,
+        creditCode: values.unifiedSocialCreditCode,
         supplierId: selectedSupplier.id,
         attachmentName: uploadedFile?.attachmentName || editingRecord.attachment || '',
         licenseFile: uploadedFile?.attachmentUrl || editingRecord.attachmentUrl || ''
@@ -308,9 +359,10 @@ const SupplierBusinessCertificate = () => {
       title: '注册资本', 
       dataIndex: 'registeredCapital', 
       key: 'registeredCapital',
-      width: 100,
+      width: 160,
       align: 'center',
       ellipsis: false,
+      render: (value) => formatRegisteredCapitalDisplay(value),
       onHeaderCell: () => ({
         style: {
           whiteSpace: 'nowrap'
@@ -366,7 +418,7 @@ const SupplierBusinessCertificate = () => {
       title: '住所', 
       dataIndex: 'address', 
       key: 'address',
-      width: 200,
+      width: 280,
       align: 'center',
       ellipsis: false,
       onHeaderCell: () => ({
@@ -376,8 +428,9 @@ const SupplierBusinessCertificate = () => {
       }),
       onCell: () => ({
         style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
+          whiteSpace: 'normal',
+          wordBreak: 'break-all',
+          lineHeight: 1.5
         }
       })
     },
@@ -385,7 +438,7 @@ const SupplierBusinessCertificate = () => {
       title: '登记机关', 
       dataIndex: 'registrationAuthority', 
       key: 'registrationAuthority',
-      width: 120,
+      width: 180,
       align: 'center',
       ellipsis: false,
       onHeaderCell: () => ({
@@ -395,8 +448,9 @@ const SupplierBusinessCertificate = () => {
       }),
       onCell: () => ({
         style: {
-          whiteSpace: 'nowrap',
-          overflow: 'visible'
+          whiteSpace: 'normal',
+          wordBreak: 'break-all',
+          lineHeight: 1.5
         }
       })
     },
@@ -549,7 +603,18 @@ const SupplierBusinessCertificate = () => {
           </div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
             <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch}>查询</Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setVisible(true)}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                form.resetFields();
+                form.setFieldsValue({
+                  registeredCapitalUnit: '万人民币',
+                  expiryDate: dayjs('2099-12-31')
+                });
+                setVisible(true);
+              }}
+            >
               新增营业执照
             </Button>
           </div>
@@ -647,6 +712,9 @@ const SupplierBusinessCertificate = () => {
         width={600}
       >
         <Form form={form} layout="vertical">
+          <Form.Item name="name" hidden>
+            <Input />
+          </Form.Item>
           <Form.Item
             name="supplierId"
             label="供应商名称"
@@ -658,10 +726,14 @@ const SupplierBusinessCertificate = () => {
               onChange={(value) => {
                 const selectedSupplier = suppliers.find(s => s.id === value);
                 if (selectedSupplier) {
+                  const capitalInfo = parseRegisteredCapital(selectedSupplier.registeredCapital);
                   form.setFieldsValue({
                     name: selectedSupplier.name,
                     unifiedSocialCreditCode: selectedSupplier.creditCode || '',
-                    legalRepresentative: selectedSupplier.legalRepresentative || ''
+                    legalRepresentative: selectedSupplier.legalRepresentative || '',
+                    registeredCapitalAmount: capitalInfo.amount,
+                    registeredCapitalUnit: capitalInfo.unit,
+                    address: selectedSupplier.address || ''
                   });
                 }
               }}
@@ -694,13 +766,35 @@ const SupplierBusinessCertificate = () => {
             <Input placeholder="请输入法定代表人" />
           </Form.Item>
           
-          <Form.Item
-            name="registeredCapital"
-            label="注册资本"
-            getValueFromEvent={(event) => sanitizeCapitalInput(event?.target?.value)}
-            rules={[{ required: true, message: '请输入注册资本' }]}
-          >
-            <Input placeholder="请输入注册资本" />
+          <Form.Item label="注册资本" required>
+            <Input.Group compact>
+              <Form.Item
+                name="registeredCapitalAmount"
+                noStyle
+                getValueFromEvent={(event) => sanitizeCapitalInput(event?.target?.value)}
+                rules={[
+                  { required: true, message: '请输入注册资本金额' },
+                  {
+                    validator: (_, value) => {
+                      if (!value || NUMERIC_AMOUNT_REGEX.test(String(value).trim())) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(new Error('注册资本金额只能填写数字'));
+                    }
+                  }
+                ]}
+              >
+                <Input style={{ width: '58%' }} placeholder="请输入注册资本金额" />
+              </Form.Item>
+              <Form.Item
+                name="registeredCapitalUnit"
+                noStyle
+                initialValue="万人民币"
+                rules={[{ required: true, message: '请选择币种单位' }]}
+              >
+                <Select style={{ width: '42%' }} options={CAPITAL_UNIT_OPTIONS} />
+              </Form.Item>
+            </Input.Group>
           </Form.Item>
           
           <Form.Item
@@ -764,6 +858,9 @@ const SupplierBusinessCertificate = () => {
         width={600}
       >
         <Form form={editForm} layout="vertical">
+          <Form.Item name="name" hidden>
+            <Input />
+          </Form.Item>
           <Form.Item
             name="supplierId"
             label="供应商名称"
@@ -776,10 +873,14 @@ const SupplierBusinessCertificate = () => {
               onChange={(value) => {
                 const selectedSupplier = suppliers.find(s => s.id === value);
                 if (selectedSupplier) {
+                  const capitalInfo = parseRegisteredCapital(selectedSupplier.registeredCapital);
                   editForm.setFieldsValue({
                     name: selectedSupplier.name,
                     unifiedSocialCreditCode: selectedSupplier.creditCode || '',
-                    legalRepresentative: selectedSupplier.legalRepresentative || ''
+                    legalRepresentative: selectedSupplier.legalRepresentative || '',
+                    registeredCapitalAmount: capitalInfo.amount,
+                    registeredCapitalUnit: capitalInfo.unit,
+                    address: selectedSupplier.address || ''
                   });
                 }
               }}
@@ -812,13 +913,34 @@ const SupplierBusinessCertificate = () => {
             <Input placeholder="请输入法定代表人" />
           </Form.Item>
           
-          <Form.Item
-            name="registeredCapital"
-            label="注册资本"
-            getValueFromEvent={(event) => sanitizeCapitalInput(event?.target?.value)}
-            rules={[{ required: true, message: '请输入注册资本' }]}
-          >
-            <Input placeholder="请输入注册资本" />
+          <Form.Item label="注册资本" required>
+            <Input.Group compact>
+              <Form.Item
+                name="registeredCapitalAmount"
+                noStyle
+                getValueFromEvent={(event) => sanitizeCapitalInput(event?.target?.value)}
+                rules={[
+                  { required: true, message: '请输入注册资本金额' },
+                  {
+                    validator: (_, value) => {
+                      if (!value || NUMERIC_AMOUNT_REGEX.test(String(value).trim())) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(new Error('注册资本金额只能填写数字'));
+                    }
+                  }
+                ]}
+              >
+                <Input style={{ width: '58%' }} placeholder="请输入注册资本金额" />
+              </Form.Item>
+              <Form.Item
+                name="registeredCapitalUnit"
+                noStyle
+                rules={[{ required: true, message: '请选择币种单位' }]}
+              >
+                <Select style={{ width: '42%' }} options={CAPITAL_UNIT_OPTIONS} />
+              </Form.Item>
+            </Input.Group>
           </Form.Item>
           
           <Form.Item

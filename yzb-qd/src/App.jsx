@@ -323,8 +323,16 @@ const AppContent = () => {
     return iconMap[String(iconName || '').toLowerCase()] || undefined;
   }, []);
 
+  const HIDDEN_MENU_PATHS = new Set([
+    '/reports-stock-in-summary',
+    '/reports-consumption-summary',
+    '/reports-loss-summary',
+  ]);
+
   const mapBackendMenuTree = useCallback((menuTree) => {
-    return (menuTree || []).map((item) => {
+    return (menuTree || [])
+      .filter((item) => !HIDDEN_MENU_PATHS.has(item?.path))
+      .map((item) => {
       const key = item.path || item.code || `menu-${item.id}`;
       const children = mapBackendMenuTree(item.children || []);
       const hasRoute = typeof item.path === 'string' && item.path.startsWith('/');
@@ -335,7 +343,7 @@ const AppContent = () => {
         label: children.length > 0 || !hasRoute ? item.name : <Link to={item.path}>{item.name}</Link>,
         children: children.length > 0 ? children : undefined,
       };
-    });
+      });
   }, [resolveMenuIcon]);
 
   const containsLegacyMenuPath = useCallback((menuTree) => {
@@ -768,10 +776,7 @@ const AppContent = () => {
                       label: '仓库报表',
                       children: [
                         { key: '/reports-stock-in-detail', label: <Link to="/reports-stock-in-detail">仓库入库明细</Link> },
-                        { key: '/reports-stock-in-summary', label: <Link to="/reports-stock-in-summary">仓库入库汇总</Link> },
                         { key: '/reports-consumption-detail', label: <Link to="/reports-consumption-detail">仓库消耗明细</Link> },
-                        { key: '/reports-consumption-summary', label: <Link to="/reports-consumption-summary">仓库消耗汇总</Link> },
-                        { key: '/reports-loss-summary', label: <Link to="/reports-loss-summary">损耗汇总</Link> },
                       ]
                     },
                     {

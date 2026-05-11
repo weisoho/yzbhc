@@ -52,10 +52,7 @@ const DEFAULT_CONFIG = {
       '/inventory-check-detail',
       '/inventory-check-diff',
       '/reports-stock-in-detail',
-      '/reports-stock-in-summary',
       '/reports-consumption-detail',
-      '/reports-consumption-summary',
-      '/reports-loss-summary',
       '/user-account-management',
       '/user-permission-settings',
       '/user-role-template',
@@ -246,10 +243,7 @@ export const getAllPagesConfig = () => [
   { key: '/inventory-check-detail', title: '盘点明细查询', path: '/inventory-check-detail', group: 'inventory-check' },
   { key: '/inventory-check-diff', title: '盘点损溢录入', path: '/inventory-check-diff', group: 'inventory-check' },
   { key: '/reports-stock-in-detail', title: '仓库入库明细', path: '/reports-stock-in-detail', group: 'reports' },
-  { key: '/reports-stock-in-summary', title: '仓库入库汇总', path: '/reports-stock-in-summary', group: 'reports' },
   { key: '/reports-consumption-detail', title: '仓库消耗明细', path: '/reports-consumption-detail', group: 'reports' },
-  { key: '/reports-consumption-summary', title: '仓库消耗汇总', path: '/reports-consumption-summary', group: 'reports' },
-  { key: '/reports-loss-summary', title: '损耗汇总', path: '/reports-loss-summary', group: 'reports' },
   { key: '/user-account-management', title: '用户账户管理', path: '/user-account-management', group: 'operation' },
   { key: '/user-permission-settings', title: '用户权限设定', path: '/user-permission-settings', group: 'operation' },
   { key: '/user-role-template', title: '用户角色模板', path: '/user-role-template', group: 'operation' },
@@ -361,10 +355,7 @@ export const generateTreeData = () => [
     key: 'reports-group',
     children: [
       { title: '仓库入库明细', key: '/reports-stock-in-detail' },
-      { title: '仓库入库汇总', key: '/reports-stock-in-summary' },
       { title: '仓库消耗明细', key: '/reports-consumption-detail' },
-      { title: '仓库消耗汇总', key: '/reports-consumption-summary' },
-      { title: '损耗汇总', key: '/reports-loss-summary' },
     ]
   },
   {

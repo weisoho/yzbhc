@@ -172,6 +172,18 @@ public final class ScmRequest {
 
         /** 附件地址。 */
         private String licenseFile;
+
+        /** 法定代表人。 */
+        private String legalRepresentative;
+
+        /** 注册资本展示值。 */
+        private String registeredCapital;
+
+        /** 联系地址/住所。 */
+        private String address;
+
+        /** 统一社会信用代码。 */
+        private String creditCode;
     }
 
     /**
@@ -707,6 +719,10 @@ public final class ScmRequest {
     public static class OperationLogQuery extends PageQuery {
         /** 模糊搜索文本。 */
         private String searchText;
+        /** 操作者。 */
+        private String operatorName;
+        /** 操作科室/模块。 */
+        private String moduleName;
         /** 操作类型。 */
         private String operationType;
         /** 操作状态。 */

@@ -17,6 +17,8 @@ const OperationLog = () => {
     total: 0
   });
   const [searchText, setSearchText] = useState('');
+  const [moduleName, setModuleName] = useState('');
+  const [operatorName, setOperatorName] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [dateRange, setDateRange] = useState([]);
@@ -29,6 +31,8 @@ const OperationLog = () => {
         pageNum: page,
         pageSize: size,
         searchText: searchText,
+        moduleName: moduleName,
+        operatorName: operatorName,
         operationType: selectedType,
         status: selectedStatus,
         startDate: dateRange && dateRange[0] ? dayjs(dateRange[0]).format('YYYY-MM-DD') : undefined,
@@ -40,8 +44,9 @@ const OperationLog = () => {
         const records = response.data.records.map((item, index) => ({
           ...item,
           key: item.id || index.toString(),
-          time: item.operationTime,
-          user: item.userName || item.operatorName || '未知',
+          operationTime: item.operationTime,
+          operatorName: item.userName || item.operatorName || '未知',
+          moduleName: item.moduleName || '-',
           type: item.operationType,
           content: item.operationContent || item.content,
           status: item.status,
@@ -77,6 +82,8 @@ const OperationLog = () => {
   // 重置筛选条件
   const handleReset = () => {
     setSearchText('');
+    setModuleName('');
+    setOperatorName('');
     setSelectedType('');
     setSelectedStatus('');
     setDateRange([]);
@@ -92,7 +99,7 @@ const OperationLog = () => {
   };
 
   // 操作类型选项
-  const operationTypes = ['新增', '修改', '删除', '审核', '提交', '入库', '出库', '盘点', '调整', '调拨', '维护'];
+  const operationTypes = ['新增', '修改', '删除', '审核', '提交', '收货', '入库', '出库', '盘点', '调整', '调拨', '维护'];
 
   // 表格列定义
   const columns = [
@@ -108,10 +115,46 @@ const OperationLog = () => {
       )
     },
     {
+      title: '操作科室',
+      dataIndex: 'moduleName',
+      key: 'moduleName',
+      width: 140,
+      render: (value) => value || '-'
+    },
+    {
+      title: '操作者',
+      dataIndex: 'operatorName',
+      key: 'operatorName',
+      width: 120,
+      render: (value) => value || '-'
+    },
+    {
       title: '操作内容',
       dataIndex: 'content',
       key: 'content',
       ellipsis: { showTitle: false },
+    },
+    {
+      title: '操作日期',
+      dataIndex: 'operationTime',
+      key: 'operationTime',
+      width: 180,
+      render: (value) => value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-'
+    },
+    {
+      title: '操作状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 110,
+      render: (value) => {
+        const statusMap = {
+          success: { color: 'green', text: '成功' },
+          warning: { color: 'orange', text: '警告' },
+          error: { color: 'red', text: '失败' }
+        };
+        const meta = statusMap[value] || { color: 'default', text: value || '-' };
+        return <Tag color={meta.color}>{meta.text}</Tag>;
+      }
     },
     {
       title: 'IP地址',
@@ -134,7 +177,8 @@ const OperationLog = () => {
       '新增': 'lime',
       '修改': 'gold',
       '审核': 'geekblue',
-      '提交': 'volcano'
+      '提交': 'volcano',
+      '收货': 'cyan'
     };
     return colorMap[type] || 'default';
   };
@@ -167,7 +211,7 @@ const OperationLog = () => {
       >
         <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '180px' }}>搜索操作内容/操作人员/IP：</span>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '160px' }}>搜索操作内容/IP：</span>
             <Search
               placeholder="请输入搜索内容"
               allowClear
@@ -178,17 +222,29 @@ const OperationLog = () => {
             />
           </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
-            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>操作日期：</span>
-            <RangePicker
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>操作科室：</span>
+            <Input
+              placeholder="请输入操作科室"
+              allowClear
               size="middle"
-              value={dateRange}
-              onChange={(dates) => setDateRange(dates)}
-              placeholder={['开始日期', '结束日期']}
-              style={{ width: '300px' }}
+              value={moduleName}
+              onChange={(e) => setModuleName(e.target.value)}
+              style={{ width: '220px' }}
             />
           </div>
         </div>
         <div style={{ marginBottom: '16px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>操作者：</span>
+            <Input
+              placeholder="请输入操作者"
+              allowClear
+              size="middle"
+              value={operatorName}
+              onChange={(e) => setOperatorName(e.target.value)}
+              style={{ width: '220px' }}
+            />
+          </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>操作类型：</span>
             <Select
@@ -205,6 +261,16 @@ const OperationLog = () => {
                 </Option>
               ))}
             </Select>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>操作日期：</span>
+            <RangePicker
+              size="middle"
+              value={dateRange}
+              onChange={(dates) => setDateRange(dates)}
+              placeholder={['开始日期', '结束日期']}
+              style={{ width: '300px' }}
+            />
           </div>
           <div style={{ display: 'flex', alignItems: 'center' }}>
             <span style={{ marginRight: '8px', fontWeight: '500', minWidth: '80px' }}>操作状态：</span>

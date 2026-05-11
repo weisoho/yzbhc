@@ -48,9 +48,12 @@ public class OperationLogServiceImpl implements OperationLogService {
     @Override
     public PageResult<OperationLogEntity> queryLogs(ScmRequest.OperationLogQuery query) {
         LambdaQueryWrapper<OperationLogEntity> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(query.getSearchText()), OperationLogEntity::getContent, query.getSearchText())
-                .or(StringUtils.hasText(query.getSearchText()))
-                .like(StringUtils.hasText(query.getSearchText()), OperationLogEntity::getUserName, query.getSearchText())
+        wrapper.and(StringUtils.hasText(query.getSearchText()), item -> item
+                        .like(OperationLogEntity::getContent, query.getSearchText())
+                        .or()
+                        .like(OperationLogEntity::getIp, query.getSearchText()))
+                .like(StringUtils.hasText(query.getOperatorName()), OperationLogEntity::getUserName, query.getOperatorName())
+                .like(StringUtils.hasText(query.getModuleName()), OperationLogEntity::getModuleName, query.getModuleName())
                 .eq(StringUtils.hasText(query.getOperationType()), OperationLogEntity::getOperationType, query.getOperationType())
                 .eq(StringUtils.hasText(query.getStatus()), OperationLogEntity::getStatus, query.getStatus())
                 .ge(query.getStartDate() != null, OperationLogEntity::getOperationTime, query.getStartDate() == null ? null : query.getStartDate().atStartOfDay())

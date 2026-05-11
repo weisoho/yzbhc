@@ -9,6 +9,53 @@ import api from '../utils/api.js';
 const CREDIT_CODE_REGEX = /^[0-9A-Z]{18}$/;
 const CONTACT_PHONE_REGEX = /^1[3-9]\d{9}$|^0\d{2,3}-?\d{7,8}$/;
 const NUMERIC_AMOUNT_REGEX = /^\d+(\.\d+)?$/;
+const CAPITAL_UNIT_OPTIONS = [
+  { label: '万人民币', value: '万人民币' },
+  { label: '人民币', value: '人民币' },
+  { label: '万美元', value: '万美元' },
+  { label: '美元', value: '美元' },
+];
+
+const parseRegisteredCapital = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return { amount: '', unit: '万人民币' };
+  }
+
+  const matchedUnit = CAPITAL_UNIT_OPTIONS
+    .map((item) => item.value)
+    .sort((a, b) => b.length - a.length)
+    .find((unit) => normalized.endsWith(unit));
+
+  if (matchedUnit) {
+    return {
+      amount: normalized.slice(0, -matchedUnit.length).trim(),
+      unit: matchedUnit,
+    };
+  }
+
+  if (NUMERIC_AMOUNT_REGEX.test(normalized)) {
+    return { amount: normalized, unit: '万人民币' };
+  }
+
+  return { amount: normalized, unit: '万人民币' };
+};
+
+const formatRegisteredCapital = (amount, unit) => {
+  const normalizedAmount = String(amount || '').trim();
+  if (!normalizedAmount) {
+    return '';
+  }
+  return `${normalizedAmount}${unit || ''}`;
+};
+
+const formatRegisteredCapitalDisplay = (value) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return '-';
+  }
+  return NUMERIC_AMOUNT_REGEX.test(normalized) ? `${normalized}万人民币` : normalized;
+};
 
 
 
@@ -75,12 +122,12 @@ const SupplierMaintenance = () => {
           enterpriseType: supplier.enterpriseType,
           creditCode: supplier.creditCode,
           legalRepresentative: supplier.legalRepresentative,
-          registeredCapital: supplier.registeredCapital,
+          registeredCapital: formatRegisteredCapitalDisplay(supplier.registeredCapital),
           registrationDate: supplier.registrationDate,
           contactPerson: supplier.contactPerson,
           phone: supplier.contactPhone, // 后端返回的是contactPhone，前端期望的是phone
           address: supplier.address,
-          status: supplier.status,
+          status: supplier.status || '不可用',
         }));
         setSuppliers(supplierList);
         setTotal(response.data.total || supplierList.length);
@@ -115,14 +162,15 @@ const SupplierMaintenance = () => {
   };
 
   const handleEdit = (record) => {
+    const capitalInfo = parseRegisteredCapital(record.registeredCapital);
     setEditingRecord(record);
     form.setFieldsValue({
       name: record.name,
-      supplierCode: record.supplierCode,
       enterpriseType: record.enterpriseType,
       creditCode: record.creditCode,
       legalRepresentative: record.legalRepresentative,
-      registeredCapital: record.registeredCapital,
+      registeredCapitalAmount: capitalInfo.amount,
+      registeredCapitalUnit: capitalInfo.unit,
       registrationDate: record.registrationDate ? dayjs(record.registrationDate) : null,
       contactPerson: record.contactPerson,
       phone: record.phone,
@@ -147,7 +195,7 @@ const SupplierMaintenance = () => {
         address: values.address,
         creditCode: normalizeCreditCode(values.creditCode),
         legalRepresentative: values.legalRepresentative,
-        registeredCapital: values.registeredCapital.trim(),
+        registeredCapital: formatRegisteredCapital(values.registeredCapitalAmount, values.registeredCapitalUnit),
         registrationDate: values.registrationDate ? values.registrationDate.format('YYYY-MM-DD') : null
       };
       
@@ -317,16 +365,6 @@ const SupplierMaintenance = () => {
       onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
       onCell: () => ({ style: { whiteSpace: 'nowrap' } })
     },
-    {
-      title: '供应商编码',
-      dataIndex: 'supplierCode',
-      key: 'supplierCode',
-      ellipsis: false,
-      align: 'center',
-      render: (value) => value || '-',
-      onHeaderCell: () => ({ style: { whiteSpace: 'nowrap' } }),
-      onCell: () => ({ style: { whiteSpace: 'nowrap' } })
-    },
     { 
       title: '企业类型', 
       dataIndex: 'enterpriseType', 
@@ -355,7 +393,7 @@ const SupplierMaintenance = () => {
       onCell: () => ({ style: { whiteSpace: 'nowrap' } })
     },
     { 
-      title: '注册资本（万元）', 
+      title: '注册资本', 
       dataIndex: 'registeredCapital', 
       key: 'registeredCapital',
       ellipsis: false,
@@ -501,6 +539,7 @@ const SupplierMaintenance = () => {
             <Button type="primary" icon={<PlusOutlined />} onClick={() => {
               setEditingRecord(null);
               form.resetFields();
+              form.setFieldsValue({ registeredCapitalUnit: '万人民币', status: '不可用' });
               setVisible(true);
             }}>
               新增供应商
@@ -556,7 +595,8 @@ const SupplierMaintenance = () => {
           {...getFormLayoutStyle('edit')}
           initialValues={{
             enterpriseType: "经营企业",
-            status: '不可用'
+            status: '不可用',
+            registeredCapitalUnit: '万人民币'
           }}
         >
           <Form.Item
@@ -581,15 +621,7 @@ const SupplierMaintenance = () => {
                 <Input placeholder="请输入名称" />
               </Form.Item>
             </Col>
-            <Col span={FORM_STYLES.form.edit.colSpan}>
-              <Form.Item
-                name="supplierCode"
-                label="供应商编码"
-                extra="由系统自动生成，无需手工录入"
-              >
-                <Input placeholder="保存后自动生成" disabled />
-              </Form.Item>
-            </Col>
+            <Col span={FORM_STYLES.form.edit.colSpan} />
           </Row>
 
           <Row gutter={FORM_STYLES.form.edit.rowGutter}>
@@ -640,28 +672,39 @@ const SupplierMaintenance = () => {
               </Form.Item>
             </Col>
             <Col span={FORM_STYLES.form.edit.colSpan}>
-              <Form.Item
-                name="registeredCapital"
-                label="注册资本（万元）"
-                getValueFromEvent={(event) => sanitizeCapitalInput(event?.target?.value)}
-                rules={[
-                  { required: true, message: '请输入注册资本（万元）' },
-                  {
-                    validator: (_, value) => {
-                      if (!value) {
-                        return Promise.resolve();
-                      }
+              <Form.Item label="注册资本" required>
+                <Input.Group compact>
+                  <Form.Item
+                    name="registeredCapitalAmount"
+                    noStyle
+                    getValueFromEvent={(event) => sanitizeCapitalInput(event?.target?.value)}
+                    rules={[
+                      { required: true, message: '请输入注册资本金额' },
+                      {
+                        validator: (_, value) => {
+                          if (!value) {
+                            return Promise.resolve();
+                          }
 
-                      if (!NUMERIC_AMOUNT_REGEX.test(value.trim())) {
-                        return Promise.reject(new Error('注册资本只能填写数字'));
-                      }
+                          if (!NUMERIC_AMOUNT_REGEX.test(value.trim())) {
+                            return Promise.reject(new Error('注册资本金额只能填写数字'));
+                          }
 
-                      return Promise.resolve();
-                    }
-                  }
-                ]}
-              >
-                <Input placeholder="请输入注册资本（万元）" inputMode="decimal" />
+                          return Promise.resolve();
+                        }
+                      }
+                    ]}
+                  >
+                    <Input style={{ width: '58%' }} placeholder="请输入注册资本金额" inputMode="decimal" />
+                  </Form.Item>
+                  <Form.Item
+                    name="registeredCapitalUnit"
+                    noStyle
+                    rules={[{ required: true, message: '请选择币种单位' }]}
+                  >
+                    <Select style={{ width: '42%' }} options={CAPITAL_UNIT_OPTIONS} />
+                  </Form.Item>
+                </Input.Group>
               </Form.Item>
             </Col>
           </Row>
@@ -759,12 +802,6 @@ const SupplierMaintenance = () => {
             <Row gutter={FORM_STYLES.form.edit.rowGutter}>
               <Col span={FORM_STYLES.form.edit.colSpan}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 'bold' }}>供应商编码：</span>
-                  <span>{viewingRecord.supplierCode || '-'}</span>
-                </div>
-              </Col>
-              <Col span={FORM_STYLES.form.edit.colSpan}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <span style={{ fontWeight: 'bold' }}>统一社会信用代码：</span>
                   <span>{viewingRecord.creditCode}</span>
                 </div>
@@ -779,8 +816,8 @@ const SupplierMaintenance = () => {
             <Row gutter={FORM_STYLES.form.edit.rowGutter}>
               <Col span={FORM_STYLES.form.edit.colSpan}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: 'bold' }}>注册资本（万元）：</span>
-                  <span>{viewingRecord.registeredCapital}</span>
+                  <span style={{ fontWeight: 'bold' }}>注册资本：</span>
+                  <span>{formatRegisteredCapitalDisplay(viewingRecord.registeredCapital)}</span>
                 </div>
               </Col>
               <Col span={FORM_STYLES.form.edit.colSpan}>
