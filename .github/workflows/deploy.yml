@@ -1,0 +1,127 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_frontend:
+        description: Skip frontend build
+        type: boolean
+        default: false
+      skip_backend:
+        description: Skip backend build
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: true
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        if: ${{ !inputs.skip_backend }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+          cache: maven
+          cache-dependency-path: yzb-hd/pom.xml
+
+      - name: Set up Node.js 20
+        if: ${{ !inputs.skip_frontend }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: yzb-qd/package-lock.json
+
+      - name: Build backend
+        if: ${{ !inputs.skip_backend }}
+        run: mvn -DskipTests package -B
+        working-directory: yzb-hd
+
+      - name: Build frontend
+        if: ${{ !inputs.skip_frontend }}
+        run: |
+          npm ci
+          npm run build
+        working-directory: yzb-qd
+
+      - name: Package deployment artifacts
+        run: |
+          mkdir -p .deploy
+
+          cp docker/docker-compose.yml .deploy/
+          cp yzb-qd/nginx.conf .deploy/nginx.conf
+          cp yzb-hd/sql/20260506_add_status_columns.sql .deploy/
+          cp scripts/prod-remote-deploy.sh .deploy/remote-deploy.sh
+
+          if [ -f yzb-hd/target/yzb.jar ]; then
+            cp yzb-hd/target/yzb.jar .deploy/yzb.jar
+          fi
+
+          if [ -f yzb-hd/target/attachment-fix-patch.jar ]; then
+            cp yzb-hd/target/attachment-fix-patch.jar .deploy/
+          fi
+
+          tar -czf .deploy/frontend-dist.tar.gz -C yzb-qd dist
+
+          echo "--- Deployment package contents ---"
+          ls -lh .deploy/
+
+      - name: Upload artifacts to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USERNAME }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          port: 22
+          source: .deploy/
+          target: /home/yzb/.deploy
+          rm: true
+
+      - name: Execute remote deployment
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USERNAME }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          port: 22
+          script: |
+            set -e
+            echo "Fix line endings and make script executable"
+            sed -i 's/\r$//' /home/yzb/.deploy/remote-deploy.sh
+            chmod +x /home/yzb/.deploy/remote-deploy.sh
+
+            echo "Run remote-deploy.sh on the server"
+            cd /home/yzb
+            bash /home/yzb/.deploy/remote-deploy.sh
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USERNAME }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          port: 22
+          script: |
+            echo "=== Container status ==="
+            docker compose -f /home/yzb/docker-compose.yml ps
+
+            echo ""
+            echo "=== Backend recent logs ==="
+            docker logs --tail=30 yzbhc-backend
+
+            echo ""
+            echo "=== Nginx connectivity check ==="
+            curl -s -o /dev/null -w "HTTP %{http_code}" http://localhost/ || echo "Nginx check failed"

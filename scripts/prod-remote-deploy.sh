@@ -60,8 +60,9 @@ backup_if_exists() {
 
 column_count() {
   local table_name="$1"
+  local column_name="${2:-status}"
   docker exec -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" "$MYSQL_CONTAINER" \
-    mysql -uroot -Nse "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='yzb' AND table_name='${table_name}' AND column_name='status'"
+    mysql -uroot -Nse "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='yzb' AND table_name='${table_name}' AND column_name='${column_name}'"
 }
 
 cd "$REMOTE_DIR"
@@ -90,8 +91,9 @@ tar -xzf "$DEPLOY_DIR/frontend-dist.tar.gz" -C "$REMOTE_DIR"
 if [ -f "$SQL_FILE" ]; then
   adverse_count="$(column_count adverse_event_record)"
   issue_count="$(column_count consumable_quality_issue)"
+  unique_code_count="$(column_count scm_inventory unique_code)"
 
-  if [ "$adverse_count" = "0" ] || [ "$issue_count" = "0" ]; then
+  if [ "$adverse_count" = "0" ] || [ "$issue_count" = "0" ] || [ "$unique_code_count" = "0" ]; then
     docker exec -i -e MYSQL_PWD="$MYSQL_ROOT_PASSWORD" "$MYSQL_CONTAINER" mysql -uroot yzb < "$SQL_FILE"
   fi
 fi

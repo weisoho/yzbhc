@@ -11,3 +11,6 @@ WHERE status IS NULL;
 UPDATE consumable_quality_issue
 SET status = 1
 WHERE status IS NULL;
+
+ALTER TABLE scm_inventory
+  ADD COLUMN unique_code VARCHAR(64) DEFAULT NULL COMMENT '物资唯一码' AFTER batch_number;

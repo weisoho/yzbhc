@@ -136,6 +136,7 @@ public class InventoryManagementServiceImpl implements InventoryManagementServic
         ScmView.InventoryBatchDetail detail = new ScmView.InventoryBatchDetail();
         detail.setMaterialCode(entity.getMaterialCode());
         detail.setBatchNumber(entity.getBatchNumber());
+        detail.setUniqueCode(entity.getUniqueCode());
         detail.setProductionDate(entity.getProductionDate());
         detail.setExpiryDate(entity.getExpiryDate());
         detail.setInboundDate(entity.getLastInbound());

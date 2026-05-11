@@ -47,6 +47,9 @@ public class InventoryEntity {
     /** 批号。 */
     private String batchNumber;
 
+    /** 物资唯一码。 */
+    private String uniqueCode;
+
     /** 生产日期。 */
     private LocalDate productionDate;
 

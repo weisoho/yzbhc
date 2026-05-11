@@ -305,6 +305,8 @@ public final class ScmView {
         private String materialCode;
         /** 批号。 */
         private String batchNumber;
+        /** 物资唯一码。 */
+        private String uniqueCode;
         /** 生产日期。 */
         private LocalDate productionDate;
         /** 有效期。 */
@@ -340,6 +342,8 @@ public final class ScmView {
         private String shelf;
         /** 批号。 */
         private String batchNumber;
+        /** 物资唯一码。 */
+        private String uniqueCode;
         /** 生产日期。 */
         private LocalDate productionDate;
         /** 有效期。 */

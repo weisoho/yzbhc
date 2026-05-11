@@ -334,61 +334,206 @@ public class StockInManagementServiceImpl implements StockInManagementService {
 
     private void syncInventory(StockInItemEntity stockInItem, StockInOrderEntity order) {
         String warehouse = StringUtils.hasText(order.getDepartmentName()) ? order.getDepartmentName() : "默认仓库";
-        InventoryEntity inventory = inventoryMapper.selectOne(new LambdaQueryWrapper<InventoryEntity>()
+        String minPackageStr = stockInItem.getMinPackage();
+        int parsedPerPackage = parsePackageCount(minPackageStr);
+        String baseUnit = parseBaseUnit(minPackageStr);
+        String packageUnit = parsePackageUnit(minPackageStr);
+
+        List<InventoryEntity> existingRows = inventoryMapper.selectList(new LambdaQueryWrapper<InventoryEntity>()
                 .eq(InventoryEntity::getMaterialCode, stockInItem.getMaterialCode())
                 .eq(InventoryEntity::getBatchNumber, stockInItem.getBatchNumber())
                 .eq(InventoryEntity::getWarehouse, warehouse));
-        if (inventory == null) {
-            inventory = new InventoryEntity();
-            MaterialEntity material = materialMapper.selectById(stockInItem.getMaterialId());
-            inventory.setMaterialId(stockInItem.getMaterialId());
-            inventory.setMaterialCode(stockInItem.getMaterialCode());
-            inventory.setMaterialName(stockInItem.getMaterialName());
-            inventory.setCategory(stockInItem.getMaterialType());
-            inventory.setSpecification(stockInItem.getSpecification());
-            inventory.setModel(stockInItem.getModel());
-            inventory.setWarehouse(warehouse);
-            inventory.setShelf("默认货位");
-            inventory.setBatchNumber(stockInItem.getBatchNumber());
-            inventory.setProductionDate(stockInItem.getProductionDate());
-            inventory.setExpiryDate(stockInItem.getExpiryDate());
-            inventory.setMinPackage(stockInItem.getMinPackage());
-            inventory.setUnit(stockInItem.getUnit());
-            inventory.setPurchasePrice(stockInItem.getPurchasePrice());
-            inventory.setCurrentStock(stockInItem.getStockInQuantity());
-            inventory.setMinStock(10);
-            inventory.setMaxStock(1000);
-            inventory.setExpiryWarningDays(90);
-            inventory.setRegistrationNumber(stockInItem.getRegistrationNumber());
-            inventory.setSupplier(stockInItem.getSupplierName());
-            inventory.setManufacturer(stockInItem.getManufacturer());
-            inventory.setLastInbound(LocalDate.now());
-            inventory.setCreateTime(LocalDateTime.now());
-            inventory.setUpdateTime(LocalDateTime.now());
-            ScmInventorySupport.refreshStatus(inventory);
-            inventoryMapper.insert(inventory);
+
+        if (existingRows == null || existingRows.isEmpty()) {
+            newInventoryWithUniqueCodes(stockInItem, order, warehouse, minPackageStr, parsedPerPackage, baseUnit, packageUnit);
         } else {
-            inventory.setCurrentStock((inventory.getCurrentStock() == null ? 0 : inventory.getCurrentStock()) + stockInItem.getStockInQuantity());
-            inventory.setPurchasePrice(stockInItem.getPurchasePrice());
-            inventory.setLastInbound(LocalDate.now());
-            inventory.setUpdateTime(LocalDateTime.now());
-            ScmInventorySupport.refreshStatus(inventory);
-            inventoryMapper.updateById(inventory);
+            addNewPackageRows(stockInItem, order, warehouse, minPackageStr, parsedPerPackage, baseUnit, packageUnit, existingRows);
         }
+    }
+
+    private void newInventoryWithUniqueCodes(StockInItemEntity stockInItem, StockInOrderEntity order,
+                                              String warehouse, String minPackageStr,
+                                              int perPackageCount, String baseUnit, String packageUnit) {
+        int totalQty = stockInItem.getStockInQuantity();
+        MaterialEntity material = materialMapper.selectById(stockInItem.getMaterialId());
+
+        if (perPackageCount > 0 && totalQty >= perPackageCount) {
+            int fullPackages = totalQty / perPackageCount;
+            int remainder = totalQty % perPackageCount;
+            for (int i = 0; i < fullPackages; i++) {
+                insertInventoryRow(stockInItem, order, warehouse, perPackageCount, packageUnit,
+                        generateUniqueCode(), material, false);
+            }
+            if (remainder > 0) {
+                insertInventoryRow(stockInItem, order, warehouse, remainder, baseUnit,
+                        generateUniqueCode(), material, false);
+            }
+        } else {
+            insertInventoryRow(stockInItem, order, warehouse, totalQty, stockInItem.getUnit(),
+                    generateUniqueCode(), material, true);
+        }
+    }
+
+    private void addNewPackageRows(StockInItemEntity stockInItem, StockInOrderEntity order,
+                                    String warehouse, String minPackageStr,
+                                    int perPackageCount, String baseUnit, String packageUnit,
+                                    List<InventoryEntity> existingRows) {
+        InventoryEntity master = existingRows.stream()
+                .filter(r -> !StringUtils.hasText(r.getUniqueCode()))
+                .findFirst()
+                .orElse(existingRows.get(0));
+
+        master.setCurrentStock((master.getCurrentStock() == null ? 0 : master.getCurrentStock()) + stockInItem.getStockInQuantity());
+        master.setPurchasePrice(stockInItem.getPurchasePrice());
+        master.setLastInbound(LocalDate.now());
+        master.setUpdateTime(LocalDateTime.now());
+        ScmInventorySupport.refreshStatus(master);
+        inventoryMapper.updateById(master);
+
+        int totalQty = stockInItem.getStockInQuantity();
+        MaterialEntity material = materialMapper.selectById(stockInItem.getMaterialId());
+        if (perPackageCount > 0 && totalQty >= perPackageCount) {
+            int fullPackages = totalQty / perPackageCount;
+            int remainder = totalQty % perPackageCount;
+            for (int i = 0; i < fullPackages; i++) {
+                insertInventoryRow(stockInItem, order, warehouse, perPackageCount, packageUnit,
+                        generateUniqueCode(), material, false);
+            }
+            if (remainder > 0) {
+                insertInventoryRow(stockInItem, order, warehouse, remainder, baseUnit,
+                        generateUniqueCode(), material, false);
+            }
+        } else {
+            for (int i = 0; i < totalQty; i++) {
+                insertInventoryRow(stockInItem, order, warehouse, 1, stockInItem.getUnit(),
+                        generateUniqueCode(), material, true);
+            }
+        }
+
         InventoryTransactionEntity transaction = new InventoryTransactionEntity();
-        transaction.setInventoryId(inventory.getId());
-        transaction.setMaterialId(inventory.getMaterialId());
-        transaction.setMaterialCode(inventory.getMaterialCode());
-        transaction.setMaterialName(inventory.getMaterialName());
-        transaction.setBatchNumber(inventory.getBatchNumber());
+        transaction.setInventoryId(master.getId());
+        transaction.setMaterialId(master.getMaterialId());
+        transaction.setMaterialCode(master.getMaterialCode());
+        transaction.setMaterialName(master.getMaterialName());
+        transaction.setBatchNumber(master.getBatchNumber());
         transaction.setOperationType("入库");
         transaction.setQuantity(stockInItem.getStockInQuantity());
-        transaction.setBalanceQuantity(inventory.getCurrentStock());
+        transaction.setBalanceQuantity(master.getCurrentStock());
         transaction.setReferenceNo(order.getStockInNumber());
         transaction.setOperatorName(order.getOperatorName());
         transaction.setRemark(stockInItem.getRemark());
         transaction.setOperationTime(LocalDateTime.now());
         inventoryTransactionMapper.insert(transaction);
+    }
+
+    private void insertInventoryRow(StockInItemEntity stockInItem, StockInOrderEntity order,
+                                     String warehouse, int quantity, String unit,
+                                     String uniqueCode, MaterialEntity material, boolean isStandalone) {
+        InventoryEntity inventory = new InventoryEntity();
+        inventory.setMaterialId(stockInItem.getMaterialId());
+        inventory.setMaterialCode(stockInItem.getMaterialCode());
+        inventory.setMaterialName(stockInItem.getMaterialName());
+        inventory.setCategory(stockInItem.getMaterialType());
+        inventory.setSpecification(stockInItem.getSpecification());
+        inventory.setModel(stockInItem.getModel());
+        inventory.setWarehouse(warehouse);
+        inventory.setShelf("默认货位");
+        inventory.setBatchNumber(stockInItem.getBatchNumber());
+        inventory.setUniqueCode(uniqueCode);
+        inventory.setProductionDate(stockInItem.getProductionDate());
+        inventory.setExpiryDate(stockInItem.getExpiryDate());
+        inventory.setMinPackage(stockInItem.getMinPackage());
+        inventory.setUnit(unit);
+        inventory.setPurchasePrice(stockInItem.getPurchasePrice());
+        inventory.setCurrentStock(quantity);
+        inventory.setMinStock(isStandalone ? 10 : null);
+        inventory.setMaxStock(isStandalone ? 1000 : null);
+        inventory.setExpiryWarningDays(isStandalone ? 90 : null);
+        inventory.setRegistrationNumber(stockInItem.getRegistrationNumber());
+        inventory.setSupplier(stockInItem.getSupplierName());
+        inventory.setManufacturer(stockInItem.getManufacturer());
+        inventory.setLastInbound(LocalDate.now());
+        inventory.setCreateTime(LocalDateTime.now());
+        inventory.setUpdateTime(LocalDateTime.now());
+        if (isStandalone) {
+            ScmInventorySupport.refreshStatus(inventory);
+        } else {
+            inventory.setStockStatus(null);
+            inventory.setWarning(null);
+        }
+        inventoryMapper.insert(inventory);
+
+        if (isStandalone) {
+            InventoryTransactionEntity transaction = new InventoryTransactionEntity();
+            transaction.setInventoryId(inventory.getId());
+            transaction.setMaterialId(inventory.getMaterialId());
+            transaction.setMaterialCode(inventory.getMaterialCode());
+            transaction.setMaterialName(inventory.getMaterialName());
+            transaction.setBatchNumber(inventory.getBatchNumber());
+            transaction.setOperationType("入库");
+            transaction.setQuantity(quantity);
+            transaction.setBalanceQuantity(inventory.getCurrentStock());
+            transaction.setReferenceNo(order.getStockInNumber());
+            transaction.setOperatorName(order.getOperatorName());
+            transaction.setRemark(stockInItem.getRemark());
+            transaction.setOperationTime(LocalDateTime.now());
+            inventoryTransactionMapper.insert(transaction);
+        }
+    }
+
+    private int parsePackageCount(String minPackage) {
+        if (!StringUtils.hasText(minPackage)) {
+            return 0;
+        }
+        try {
+            String cleaned = minPackage.trim().replaceAll("[^0-9/]", "");
+            if (cleaned.contains("/")) {
+                String[] parts = cleaned.split("/");
+                if (parts.length == 2 && parts[0].length() > 0) {
+                    return Integer.parseInt(parts[0]);
+                }
+            }
+            String digits = minPackage.replaceAll("[^0-9]", "");
+            if (digits.length() > 0) {
+                return Integer.parseInt(digits);
+            }
+        } catch (NumberFormatException ignored) {
+        }
+        return 0;
+    }
+
+    private String parseBaseUnit(String minPackage) {
+        if (!StringUtils.hasText(minPackage)) {
+            return "";
+        }
+        String cleaned = minPackage.trim();
+        if (cleaned.contains("/")) {
+            int slashIdx = cleaned.indexOf("/");
+            String beforeSlash = cleaned.substring(0, slashIdx);
+            String unitPart = beforeSlash.replaceAll("[0-9]", "").trim();
+            if (unitPart.length() > 0) {
+                return unitPart;
+            }
+            return beforeSlash.replaceAll("[0-9]", "").trim();
+        }
+        return "";
+    }
+
+    private String parsePackageUnit(String minPackage) {
+        if (!StringUtils.hasText(minPackage)) {
+            return "";
+        }
+        String cleaned = minPackage.trim();
+        if (cleaned.contains("/")) {
+            return cleaned.substring(cleaned.indexOf("/") + 1).trim();
+        }
+        return "";
+    }
+
+    private String generateUniqueCode() {
+        String datePart = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String randomSuffix = String.format("%06d", (int) (Math.random() * 1000000));
+        return "SN" + datePart + randomSuffix;
     }
 
     private ScmView.StockInItemDetail toStockInDetailItem(StockInItemEntity entity) {
