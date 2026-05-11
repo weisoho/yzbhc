@@ -25,8 +25,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  REMOTE_DIR: /home/yzb
-  DEPLOY_DIR: /home/yzb/.deploy
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/${{ github.repository }}/backend
+  NGINX_IMAGE: ghcr.io/${{ github.repository }}/nginx
 
 jobs:
   build-and-deploy:
@@ -70,75 +71,136 @@ jobs:
         run: npm run build
         working-directory: yzb-qd
 
-      - name: Package deployment artifacts
-        run: |
-          mkdir -p .deploy
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-          cp docker/docker-compose.yml .deploy/
-          cp yzb-qd/nginx.conf .deploy/nginx.conf
-          cp yzb-hd/sql/20260506_add_status_columns.sql .deploy/
-          cp scripts/prod-remote-deploy.sh .deploy/remote-deploy.sh
+      - name: Build and push backend image
+        if: ${{ !inputs.skip_backend }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/backend.Dockerfile
+          push: true
+          tags: ${{ env.BACKEND_IMAGE }}:latest
 
-          if [ -f yzb-hd/target/yzb.jar ]; then
-            cp yzb-hd/target/yzb.jar .deploy/yzb.jar
-          fi
-
-          if [ -f yzb-hd/target/attachment-fix-patch.jar ]; then
-            cp yzb-hd/target/attachment-fix-patch.jar .deploy/
-          fi
-
-          tar -czf .deploy/frontend-dist.tar.gz -C yzb-qd dist
-
-          echo "--- Deployment package contents ---"
-          ls -lh .deploy/
-
-          echo "--- Creating deploy tarball ---"
-          tar -czf deploy.tar.gz .deploy
-          echo "deploy.tar.gz ready: $(du -h deploy.tar.gz | cut -f1)"
+      - name: Build and push nginx image
+        if: ${{ !inputs.skip_frontend }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/nginx.Dockerfile
+          push: true
+          tags: ${{ env.NGINX_IMAGE }}:latest
 
       - name: Install sshpass
         run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
 
-      - name: Upload artifacts to server
+      - name: Deploy to server
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
           USERNAME: ${{ secrets.DEPLOY_USERNAME }}
           PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+          GHCR_TOKEN: ${{ secrets.GHCR_DEPLOY_TOKEN }}
         run: |
           set -e
-          echo "--- Uploading deploy.tar.gz to server ---"
-          sshpass -p "$PASSWORD" scp -o StrictHostKeyChecking=no deploy.tar.gz "$USERNAME@$HOST:/tmp/deploy.tar.gz"
-          echo "Upload successful"
 
-          echo "--- Preparing target directory on server ---"
+          if [ -z "$GHCR_TOKEN" ]; then
+            echo "WARNING: GHCR_DEPLOY_TOKEN is not set. The server may fail to pull images from ghcr.io."
+            echo "Create a PAT with 'read:packages' scope and add it as GHCR_DEPLOY_TOKEN secret."
+            LOGIN_CMD=""
+          else
+            LOGIN_CMD="echo '$GHCR_TOKEN' | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin"
+          fi
+
           sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$USERNAME@$HOST" "
             set -e
-            echo 'Cleaning and recreating deploy directory...'
-            rm -rf ${{ env.DEPLOY_DIR }}
-            mkdir -p ${{ env.DEPLOY_DIR }}
-            echo 'Extracting deploy.tar.gz...'
-            tar -xzf /tmp/deploy.tar.gz -C ${{ env.REMOTE_DIR }}
-            rm -f /tmp/deploy.tar.gz
-            echo 'Deploy directory contents:'
-            ls -la ${{ env.DEPLOY_DIR }}/
+
+            if [ -n \"$LOGIN_CMD\" ]; then
+              echo '--- Logging in to GitHub Container Registry ---'
+              $LOGIN_CMD
+            fi
+
+            echo '--- Writing docker-compose.yml ---'
+            cat > /home/yzb/docker-compose.yml << 'COMPOSE_EOF'
+services:
+  mysql:
+    image: mysql:8.0.45
+    container_name: yzbhc-mysql
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+      - --default-authentication-plugin=mysql_native_password
+      - --lower_case_table_names=1
+    environment:
+      MYSQL_ROOT_PASSWORD: YzbhcRoot!2026@Prod#7Qm
+      MYSQL_DATABASE: yzb
+      MYSQL_USER: yzbhc_app
+      MYSQL_PASSWORD: YzbhcApp!2026@Prod#9Lm
+      TZ: Asia/Shanghai
+    ports:
+      - \"33066:3306\"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: [\"CMD-SHELL\", \"mysqladmin ping -h 127.0.0.1 -uroot -p\$\$MYSQL_ROOT_PASSWORD --silent\"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  backend:
+    image: ${{ env.BACKEND_IMAGE }}:latest
+    container_name: yzbhc-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: pro
+      SERVER_PORT: 8088
+      DB_URL: \"jdbc:mysql://mysql:3306/yzb?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true\"
+      DB_USERNAME: yzbhc_app
+      DB_PASSWORD: YzbhcApp!2026@Prod#9Lm
+      JASYPT_ENCRYPTOR_PASSWORD: YZB_PROD_MASTER_2026
+      UPLOAD_PATH: /app/uploads/
+      TZ: Asia/Shanghai
+      JAVA_OPTS: -Xms512m -Xmx1024m
+    ports:
+      - \"8088:8088\"
+    volumes:
+      - backend_uploads:/app/uploads
+
+  nginx:
+    image: ${{ env.NGINX_IMAGE }}:latest
+    container_name: yzbhc-nginx
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - \"80:80\"
+
+volumes:
+  mysql_data:
+  backend_uploads:
+COMPOSE_EOF
+
+            echo '--- Pulling latest images ---'
+            docker compose -f /home/yzb/docker-compose.yml pull
+
+            echo '--- Restarting containers ---'
+            docker compose -f /home/yzb/docker-compose.yml up -d
+
+            echo '--- Removing unused images ---'
+            docker image prune -af >/dev/null 2>&1 || true
+
+            echo '--- Deploy complete ---'
           "
-
-      - name: Execute remote deployment
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USERNAME }}
-          password: ${{ secrets.DEPLOY_PASSWORD }}
-          port: 22
-          script: |
-            set -e
-            echo "Fix line endings and make script executable"
-            sed -i 's/\r$//' ${{ env.DEPLOY_DIR }}/remote-deploy.sh
-            chmod +x ${{ env.DEPLOY_DIR }}/remote-deploy.sh
-
-            echo "Run remote-deploy.sh on the server"
-            cd ${{ env.REMOTE_DIR }}
-            bash ${{ env.DEPLOY_DIR }}/remote-deploy.sh
+          echo "Server deployment triggered successfully"
 
       - name: Verify deployment
         continue-on-error: true
@@ -150,7 +212,7 @@ jobs:
           port: 22
           script: |
             echo "=== Container status ==="
-            docker compose -f ${{ env.REMOTE_DIR }}/docker-compose.yml ps
+            docker compose -f /home/yzb/docker-compose.yml ps
 
             echo ""
             echo "=== Backend recent logs ==="
