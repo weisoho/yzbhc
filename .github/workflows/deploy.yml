@@ -96,36 +96,9 @@ jobs:
           push: true
           tags: ${{ env.NGINX_IMAGE }}:latest
 
-      - name: Install sshpass
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
-
-      - name: Deploy to server
-        env:
-          HOST: ${{ secrets.DEPLOY_HOST }}
-          USERNAME: ${{ secrets.DEPLOY_USERNAME }}
-          PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
-          GHCR_TOKEN: ${{ secrets.GHCR_DEPLOY_TOKEN }}
+      - name: Generate docker-compose with correct images
         run: |
-          set -e
-
-          if [ -z "$GHCR_TOKEN" ]; then
-            echo "WARNING: GHCR_DEPLOY_TOKEN is not set. The server may fail to pull images from ghcr.io."
-            echo "Create a PAT with 'read:packages' scope and add it as GHCR_DEPLOY_TOKEN secret."
-            LOGIN_CMD=""
-          else
-            LOGIN_CMD="echo '$GHCR_TOKEN' | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin"
-          fi
-
-          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$USERNAME@$HOST" "
-            set -e
-
-            if [ -n \"$LOGIN_CMD\" ]; then
-              echo '--- Logging in to GitHub Container Registry ---'
-              $LOGIN_CMD
-            fi
-
-            echo '--- Writing docker-compose.yml ---'
-            cat > /home/yzb/docker-compose.yml << 'COMPOSE_EOF'
+          cat > docker-compose.prod.yml << EOF
 services:
   mysql:
     image: mysql:8.0.45
@@ -143,11 +116,11 @@ services:
       MYSQL_PASSWORD: YzbhcApp!2026@Prod#9Lm
       TZ: Asia/Shanghai
     ports:
-      - \"33066:3306\"
+      - "33066:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: [\"CMD-SHELL\", \"mysqladmin ping -h 127.0.0.1 -uroot -p\$\$MYSQL_ROOT_PASSWORD --silent\"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\$MYSQL_ROOT_PASSWORD --silent"]
       interval: 10s
       timeout: 5s
       retries: 20
@@ -163,7 +136,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: pro
       SERVER_PORT: 8088
-      DB_URL: \"jdbc:mysql://mysql:3306/yzb?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true\"
+      DB_URL: "jdbc:mysql://mysql:3306/yzb?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true"
       DB_USERNAME: yzbhc_app
       DB_PASSWORD: YzbhcApp!2026@Prod#9Lm
       JASYPT_ENCRYPTOR_PASSWORD: YZB_PROD_MASTER_2026
@@ -171,7 +144,7 @@ services:
       TZ: Asia/Shanghai
       JAVA_OPTS: -Xms512m -Xmx1024m
     ports:
-      - \"8088:8088\"
+      - "8088:8088"
     volumes:
       - backend_uploads:/app/uploads
 
@@ -182,24 +155,53 @@ services:
     depends_on:
       - backend
     ports:
-      - \"80:80\"
+      - "80:80"
 
 volumes:
   mysql_data:
   backend_uploads:
-COMPOSE_EOF
+EOF
+          echo "Generated docker-compose.prod.yml"
+          cat docker-compose.prod.yml
 
-            echo '--- Pulling latest images ---'
-            docker compose -f /home/yzb/docker-compose.yml pull
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
 
-            echo '--- Restarting containers ---'
-            docker compose -f /home/yzb/docker-compose.yml up -d
+      - name: Upload docker-compose and deploy
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USERNAME: ${{ secrets.DEPLOY_USERNAME }}
+          PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+          GHCR_TOKEN: ${{ secrets.GHCR_DEPLOY_TOKEN }}
+        run: |
+          set -e
 
-            echo '--- Removing unused images ---'
+          echo "--- Uploading docker-compose.prod.yml to server ---"
+          sshpass -p "$PASSWORD" scp -o StrictHostKeyChecking=no docker-compose.prod.yml "$USERNAME@$HOST:/home/yzb/docker-compose.yml"
+          echo "Upload successful"
+
+          echo "--- Executing remote deployment ---"
+          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$USERNAME@$HOST" GHCR_TOKEN="$GHCR_TOKEN" GITHUB_ACTOR="$GITHUB_ACTOR" bash -s << 'REMOTE_SCRIPT'
+            set -e
+
+            COMPOSE_FILE="/home/yzb/docker-compose.yml"
+
+            if [ -n "$GHCR_TOKEN" ]; then
+              echo "--- Logging in to GitHub Container Registry ---"
+              echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+            fi
+
+            echo "--- Pulling latest images ---"
+            docker compose -f "$COMPOSE_FILE" pull
+
+            echo "--- Restarting containers ---"
+            docker compose -f "$COMPOSE_FILE" up -d
+
+            echo "--- Removing unused images ---"
             docker image prune -af >/dev/null 2>&1 || true
 
-            echo '--- Deploy complete ---'
-          "
+            echo "--- Deploy complete ---"
+REMOTE_SCRIPT
           echo "Server deployment triggered successfully"
 
       - name: Verify deployment
