@@ -163,19 +163,20 @@ jobs:
             fi
 
       - name: Notify on failure
-        if: ${{ failure() && secrets.DINGTALK_WEBHOOK != '' }}
-        uses: zyy14/dingtalk-action@v1
-        with:
-          webhook: ${{ secrets.DINGTALK_WEBHOOK }}
-          msgtype: markdown
-          title: 部署失败
-          text: |
-            ### ❌ 部署失败
-
-            - **仓库**: ${{ github.repository }}
-            - **分支**: ${{ github.ref_name }}
-            - **提交**: ${{ github.sha }}
-            - **触发人**: ${{ github.triggering_actor }}
-            - **时间**: ${{ github.event.head_commit.timestamp || 'workflow_dispatch' }}
-
-            请查看 [Action 日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        if: ${{ failure() }}
+        env:
+          DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+        run: |
+          if [ -z "$DINGTALK_WEBHOOK" ]; then
+            echo "DINGTALK_WEBHOOK not configured, skip notification"
+            exit 0
+          fi
+          curl -s -X POST "$DINGTALK_WEBHOOK" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"msgtype\": \"markdown\",
+              \"markdown\": {
+                \"title\": \"❌ 部署失败\",
+                \"text\": \"### ❌ 部署失败\n\n- **仓库**: ${{ github.repository }}\n- **分支**: ${{ github.ref_name }}\n- **提交**: ${{ github.sha }}\n- **触发人**: ${{ github.triggering_actor }}\n- **时间**: $(date '+%Y-%m-%d %H:%M:%S')\n\n请查看 [Action 日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\"
+              }
+            }"
