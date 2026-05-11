@@ -108,11 +108,11 @@ jobs:
           username: ${{ secrets.DEPLOY_USERNAME }}
           password: ${{ secrets.DEPLOY_PASSWORD }}
           port: 22
-          source: .deploy/
-          target: ${{ env.DEPLOY_DIR }}
-          strip_components: 1
+          source: .deploy
+          target: ${{ env.REMOTE_DIR }}
           overwrite: true
           tar_tmp_path: /tmp
+          debug: true
 
       - name: Execute remote deployment
         uses: appleboy/ssh-action@v1.2.0
