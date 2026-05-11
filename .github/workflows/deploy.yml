@@ -92,27 +92,36 @@ jobs:
           echo "--- Deployment package contents ---"
           ls -lh .deploy/
 
-      - name: Ensure remote deploy directory exists
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USERNAME }}
-          password: ${{ secrets.DEPLOY_PASSWORD }}
-          port: 22
-          script: mkdir -p ${{ env.DEPLOY_DIR }}
+          echo "--- Creating deploy tarball ---"
+          tar -czf deploy.tar.gz .deploy
+          echo "deploy.tar.gz ready: $(du -h deploy.tar.gz | cut -f1)"
+
+      - name: Install sshpass
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
 
       - name: Upload artifacts to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USERNAME }}
-          password: ${{ secrets.DEPLOY_PASSWORD }}
-          port: 22
-          source: .deploy
-          target: ${{ env.REMOTE_DIR }}
-          overwrite: true
-          tar_tmp_path: /tmp
-          debug: true
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USERNAME: ${{ secrets.DEPLOY_USERNAME }}
+          PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
+        run: |
+          set -e
+          echo "--- Uploading deploy.tar.gz to server ---"
+          sshpass -p "$PASSWORD" scp -o StrictHostKeyChecking=no deploy.tar.gz "$USERNAME@$HOST:/tmp/deploy.tar.gz"
+          echo "Upload successful"
+
+          echo "--- Preparing target directory on server ---"
+          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$USERNAME@$HOST" "
+            set -e
+            echo 'Cleaning and recreating deploy directory...'
+            rm -rf ${{ env.DEPLOY_DIR }}
+            mkdir -p ${{ env.DEPLOY_DIR }}
+            echo 'Extracting deploy.tar.gz...'
+            tar -xzf /tmp/deploy.tar.gz -C ${{ env.REMOTE_DIR }}
+            rm -f /tmp/deploy.tar.gz
+            echo 'Deploy directory contents:'
+            ls -la ${{ env.DEPLOY_DIR }}/
+          "
 
       - name: Execute remote deployment
         uses: appleboy/ssh-action@v1.2.0
