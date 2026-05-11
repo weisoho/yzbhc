@@ -11,7 +11,7 @@
  Target Server Version : 80045 (8.0.45)
  File Encoding         : 65001
 
- Date: 30/04/2026 22:51:54
+ Date: 11/05/2026 21:26:44
 */
 
 SET NAMES utf8mb4;
@@ -32,7 +32,7 @@ CREATE TABLE `adverse_event_record`  (
   `involved_project` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '涉及项目',
   `event_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '事件名称',
   `occurrence_date` datetime NOT NULL COMMENT '发生日期',
-  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态 1待处理 2处理中 3已完成',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT 'çŠ¶æ€ 1å¾…å¤„ç† 2å¤„ç†ä¸­ 3å·²å®Œæˆ',
   `event_summary` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '事件概述',
   `investigation_situation` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '调查情况',
   `event_analysis` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '事件分析',
@@ -48,7 +48,7 @@ CREATE TABLE `adverse_event_record`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_adverse_event_no`(`event_no` ASC) USING BTREE,
   INDEX `idx_adverse_event_date`(`occurrence_date` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '医疗器械不良事件登记' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '医疗器械不良事件登记' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of adverse_event_record
@@ -121,7 +121,7 @@ CREATE TABLE `asset_change_record`  (
   INDEX `idx_asset_change_asset`(`asset_id` ASC) USING BTREE,
   INDEX `idx_asset_change_type`(`change_type` ASC) USING BTREE,
   INDEX `idx_asset_change_status`(`audit_status` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '资产报废及变更记录' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '资产报废及变更记录' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of asset_change_record
@@ -262,7 +262,7 @@ CREATE TABLE `asset_warning_record`  (
   `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_asset_warning`(`asset_id` ASC, `warning_type` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '资产预警处理记录' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '资产预警处理记录' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of asset_warning_record
@@ -290,7 +290,7 @@ CREATE TABLE `check_inventory`  (
   `che_status` int NULL DEFAULT 0 COMMENT '1盘亏，2盘盈，0无差异',
   `che_date` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '盘点日期',
   PRIMARY KEY (`id`, `che_date`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_general_ci COMMENT = '盘点表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_general_ci COMMENT = '盘点表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of check_inventory
@@ -312,13 +312,12 @@ CREATE TABLE `consumable_quality_issue`  (
   `registration_number` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '注册证号',
   `manufacturer` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '生产厂家',
   `supplier_name` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '供应商',
-  `batch_number` varchar(120) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '批号',
-  `unique_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '物资唯一码',
+  `batch_number` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '批号',
   `production_date` date NULL DEFAULT NULL COMMENT '生产日期',
   `expiry_date` date NULL DEFAULT NULL COMMENT '有效期',
   `quantity` int NOT NULL COMMENT '问题数量',
   `occurrence_date` datetime NOT NULL COMMENT '发生日期',
-  `status` tinyint NOT NULL DEFAULT 1 COMMENT '状态 1待处理 2处理中 3已完成',
+  `status` tinyint NOT NULL DEFAULT 1 COMMENT 'çŠ¶æ€ 1å¾…å¤„ç† 2å¤„ç†ä¸­ 3å·²å®Œæˆ',
   `issue_description` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '问题描述',
   `attachment` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '附件',
   `creator_id` int NULL DEFAULT NULL COMMENT '登记人ID',
@@ -330,7 +329,7 @@ CREATE TABLE `consumable_quality_issue`  (
   UNIQUE INDEX `uk_quality_issue_no`(`issue_no` ASC) USING BTREE,
   INDEX `idx_quality_issue_inventory`(`inventory_id` ASC) USING BTREE,
   INDEX `idx_quality_issue_date`(`occurrence_date` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '耗材质量问题登记' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '耗材质量问题登记' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of consumable_quality_issue
@@ -353,7 +352,7 @@ CREATE TABLE `sample_item`  (
   `is_charge` int NOT NULL DEFAULT 0 COMMENT '是否收费',
   `charge_code` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NULL DEFAULT NULL COMMENT '收费编码',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_general_ci COMMENT = '样本-项目管理' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_general_ci COMMENT = '样本-项目管理' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sample_item
@@ -377,7 +376,7 @@ CREATE TABLE `sample_man`  (
   `item_id` int NOT NULL COMMENT '项目ID',
   `item_name` varchar(255) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NULL DEFAULT NULL COMMENT '项目名字',
   PRIMARY KEY (`id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_general_ci COMMENT = '样本量管理' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb3 COLLATE = utf8mb3_general_ci COMMENT = '样本量管理' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sample_man
@@ -414,9 +413,9 @@ CREATE TABLE `scm_exception_order`  (
 -- ----------------------------
 -- Records of scm_exception_order
 -- ----------------------------
-INSERT INTO `scm_exception_order` VALUES (1, 'PO202604300002', 2, '南昌云晟健康科技有限公司', 'SUP202604300001', '11', '管理员', '管理员', NULL, '2026-04-30', '2026-05-03', '2026-04-30', '待验收', '部分到货', NULL, 475000.00, '2026-04-30 22:14:06', '2026-04-30 22:15:09');
-INSERT INTO `scm_exception_order` VALUES (2, 'PO202604300001', 1, '南昌云晟健康科技有限公司', 'SUP202604300001', '11', '管理员', '管理员', NULL, '2026-04-30', '2026-05-03', '2026-04-30', '待验收', '部分到货', NULL, 475000.00, '2026-04-30 22:14:21', '2026-04-30 22:15:04');
-INSERT INTO `scm_exception_order` VALUES (3, 'PO202604300004', 4, '南昌云晟健康科技有限公司', 'SUP202604300001', '11', '管理员', '管理员', NULL, '2026-04-30', '2026-05-03', '2026-04-30', '待验收', '部分到货', NULL, 475000.00, '2026-04-30 22:20:12', '2026-04-30 22:20:25');
+INSERT INTO `scm_exception_order` VALUES (1, 'PO202605110001', 1, '罗氏诊断产品（上海）有限公司', 'SUP202605090001', '药剂科', '管理员', '管理员', NULL, '2026-05-11', '2026-05-14', '2026-05-11', '已拒收', '部分到货', NULL, 52500.00, '2026-05-11 21:26:09', NULL);
+INSERT INTO `scm_exception_order` VALUES (2, 'PO202605110001', 1, '罗氏诊断产品（上海）有限公司', 'SUP202605090001', '药剂科', '管理员', '管理员', NULL, '2026-05-11', '2026-05-14', '2026-05-11', '已拒收', '部分到货', NULL, 75000.00, '2026-05-11 21:26:09', NULL);
+INSERT INTO `scm_exception_order` VALUES (3, 'PO202605110001', 1, '罗氏诊断产品（上海）有限公司', 'SUP202605090001', '药剂科', '管理员', '管理员', NULL, '2026-05-11', '2026-05-14', '2026-05-11', '已拒收', '部分到货', NULL, 67500.00, '2026-05-11 21:26:09', NULL);
 
 -- ----------------------------
 -- Table structure for scm_inventory
@@ -452,11 +451,12 @@ CREATE TABLE `scm_inventory`  (
   `update_time` datetime NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `dep_id` int NULL DEFAULT NULL,
   `user_id` int NULL DEFAULT NULL,
+  `unique_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '物资唯一码',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_scm_inventory_batch`(`material_code` ASC, `warehouse` ASC, `batch_number` ASC) USING BTREE,
   INDEX `idx_scm_inventory_status`(`stock_status` ASC) USING BTREE,
   INDEX `idx_scm_inventory_expiry`(`expiry_date` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '库存表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '库存表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_inventory
@@ -484,7 +484,7 @@ CREATE TABLE `scm_inventory_transaction`  (
   INDEX `idx_scm_inventory_transaction_inventory`(`inventory_id` ASC) USING BTREE,
   INDEX `idx_scm_inventory_transaction_material`(`material_code` ASC) USING BTREE,
   INDEX `idx_scm_inventory_transaction_time`(`operation_time` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '库存流水' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '库存流水' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_inventory_transaction
@@ -518,12 +518,14 @@ CREATE TABLE `scm_material`  (
   UNIQUE INDEX `uk_scm_material_unique`(`supplier_id` ASC, `qualification_id` ASC, `name` ASC, `specification` ASC, `model` ASC) USING BTREE,
   INDEX `idx_scm_material_supplier`(`supplier_id` ASC) USING BTREE,
   INDEX `idx_scm_material_status`(`status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '物资字典' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '物资字典' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_material
 -- ----------------------------
-INSERT INTO `scm_material` VALUES (1, '1', 'FT3', 'IVD', '4×1.5ml', '4×1.5ml', '1个测试', '只', 950.00, 1, '南昌云晟健康科技有限公司', 1, '国械注进20162404586', '罗氏诊断', '2-8', 'active', '2026-04-30 22:07:08', '2026-04-30 22:12:35');
+INSERT INTO `scm_material` VALUES (2, 'MAT202605090001', '促甲状腺素定标液TSH', 'IVD试剂', '4×1.5ml', '4×1.5ml', '100个测试/盒', '瓶', 1050.00, 5, '罗氏诊断产品（上海）有限公司', 14, '国械注进20162404377', '罗氏诊断产品（上海）有限公司', '2-8℃', 'active', '2026-05-09 20:03:12', '2026-05-09 20:03:20');
+INSERT INTO `scm_material` VALUES (3, 'MAT202605090002', '游离三碘甲状腺原氨酸定标液FT3', 'IVD试剂', '4×1.5ml', '4×1.5ml', '100个测试/盒', '瓶', 1350.00, 5, '罗氏诊断产品（上海）有限公司', 15, '国械注进20162404586', '罗氏诊断产品（上海）有限公司', '2-8℃', 'active', '2026-05-09 20:04:52', '2026-05-09 20:04:52');
+INSERT INTO `scm_material` VALUES (4, 'MAT202605090003', '孕酮检测试剂盒P', 'IVD试剂', '4×1.5ml', '4×1.5ml', '100个测试/盒', '瓶', 1500.00, 5, '罗氏诊断产品（上海）有限公司', 16, '国械注进20162403208', '罗氏诊断产品（上海）有限公司', '2-8℃', 'active', '2026-05-09 20:05:16', '2026-05-09 20:05:16');
 
 -- ----------------------------
 -- Table structure for scm_operation_log
@@ -544,46 +546,18 @@ CREATE TABLE `scm_operation_log`  (
   INDEX `idx_scm_operation_log_time`(`operation_time` ASC) USING BTREE,
   INDEX `idx_scm_operation_log_type`(`operation_type` ASC) USING BTREE,
   INDEX `idx_scm_operation_log_status`(`status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 36 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '操作日志' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '操作日志' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_operation_log
 -- ----------------------------
-INSERT INTO `scm_operation_log` VALUES (1, '2026-04-30 21:54:36', 'system', '维护', '新增供应商: 南昌云晟健康科技有限公司', 'success', '223.104.86.61', '供应商维护', 'SUP202604300001', '2026-04-30 21:54:36');
-INSERT INTO `scm_operation_log` VALUES (2, '2026-04-30 21:56:14', 'system', '维护', '新增供应商资质: 南昌云晟健康科技有限公司 / REGISTRATION_CERTIFICATE', 'success', '223.104.86.61', '供应商资质', '国械注进20162404586', '2026-04-30 21:56:14');
-INSERT INTO `scm_operation_log` VALUES (3, '2026-04-30 21:56:33', 'system', '维护', '更新供应商资质: INSPECTION_REPORT', 'success', '223.104.86.61', '供应商资质', '国械注进20162404586', '2026-04-30 21:56:33');
-INSERT INTO `scm_operation_log` VALUES (4, '2026-04-30 21:58:07', 'system', '维护', '新增供应商: 罗氏诊断', 'success', '223.104.86.61', '供应商维护', 'SUP202604300002', '2026-04-30 21:58:07');
-INSERT INTO `scm_operation_log` VALUES (5, '2026-04-30 21:59:40', 'system', '维护', '新增供应商资质: 罗氏诊断 / BUSINESS_LICENSE', 'success', '223.104.86.61', '供应商资质', '64236424', '2026-04-30 21:59:40');
-INSERT INTO `scm_operation_log` VALUES (6, '2026-04-30 22:00:17', 'system', '维护', '新增供应商资质: 南昌云晟健康科技有限公司 / BUSINESS_CERTIFICATE', 'success', '223.104.86.61', '供应商资质', '91360122MAK6223Y2X', '2026-04-30 22:00:17');
-INSERT INTO `scm_operation_log` VALUES (7, '2026-04-30 22:04:43', 'system', '维护', '更新供应商资质: BUSINESS_LICENSE', 'success', '223.104.86.61', '供应商资质', '64236424', '2026-04-30 22:04:43');
-INSERT INTO `scm_operation_log` VALUES (8, '2026-04-30 22:05:42', 'system', '维护', '更新供应商资质: BUSINESS_LICENSE', 'success', '223.104.86.61', '供应商资质', '64236424', '2026-04-30 22:05:42');
-INSERT INTO `scm_operation_log` VALUES (9, '2026-04-30 22:05:58', 'system', '维护', '更新供应商资质: BUSINESS_LICENSE', 'success', '223.104.86.61', '供应商资质', '64236424', '2026-04-30 22:05:58');
-INSERT INTO `scm_operation_log` VALUES (10, '2026-04-30 22:06:47', 'system', '维护', '新增供应商资质: 南昌云晟健康科技有限公司 / BUSINESS_LICENSE', 'success', '223.104.86.61', '供应商资质', '64236424', '2026-04-30 22:06:47');
-INSERT INTO `scm_operation_log` VALUES (11, '2026-04-30 22:07:08', 'system', '新增', '新增物资字典: FT3', 'success', '223.104.86.61', '物资字典', '1', '2026-04-30 22:07:08');
-INSERT INTO `scm_operation_log` VALUES (12, '2026-04-30 22:11:43', '管理员', '新增', '创建采购单: PO202604300001', 'success', '223.104.86.61', '采购管理', 'PO202604300001', '2026-04-30 22:11:43');
-INSERT INTO `scm_operation_log` VALUES (13, '2026-04-30 22:11:44', '管理员', '提交', '提交采购单: PO202604300001', 'success', '223.104.86.61', '采购管理', 'PO202604300001', '2026-04-30 22:11:44');
-INSERT INTO `scm_operation_log` VALUES (14, '2026-04-30 22:12:35', 'system', '维护', '更新物资字典: FT3', 'success', '223.104.86.61', '物资字典', '1', '2026-04-30 22:12:35');
-INSERT INTO `scm_operation_log` VALUES (15, '2026-04-30 22:12:54', '管理员', '新增', '创建采购单: PO202604300002', 'success', '223.104.86.61', '采购管理', 'PO202604300002', '2026-04-30 22:12:54');
-INSERT INTO `scm_operation_log` VALUES (16, '2026-04-30 22:12:54', '管理员', '提交', '提交采购单: PO202604300002', 'success', '223.104.86.61', '采购管理', 'PO202604300002', '2026-04-30 22:12:54');
-INSERT INTO `scm_operation_log` VALUES (17, '2026-04-30 22:13:17', '管理员', '审核', '通过采购单: PO202604300002', 'success', '223.104.86.61', '采购审核', 'PO202604300002', '2026-04-30 22:13:17');
-INSERT INTO `scm_operation_log` VALUES (18, '2026-04-30 22:13:23', '管理员', '审核', '通过采购单: PO202604300001', 'success', '223.104.86.61', '采购审核', 'PO202604300001', '2026-04-30 22:13:23');
-INSERT INTO `scm_operation_log` VALUES (19, '2026-04-30 22:14:06', '管理员', '收货', '采购收货: PO202604300002', 'warning', '223.104.86.61', '采购收货', 'RC202604300001', '2026-04-30 22:14:06');
-INSERT INTO `scm_operation_log` VALUES (20, '2026-04-30 22:14:21', '管理员', '收货', '采购收货: PO202604300001', 'warning', '223.104.86.61', '采购收货', 'RC202604300002', '2026-04-30 22:14:21');
-INSERT INTO `scm_operation_log` VALUES (21, '2026-04-30 22:15:04', '当前用户', '提交', '重新提交异常订单: PO202604300001', 'success', '223.104.86.61', '异常订单', 'PO202604300001', '2026-04-30 22:15:04');
-INSERT INTO `scm_operation_log` VALUES (22, '2026-04-30 22:15:09', '当前用户', '提交', '重新提交异常订单: PO202604300002', 'success', '223.104.86.61', '异常订单', 'PO202604300002', '2026-04-30 22:15:09');
-INSERT INTO `scm_operation_log` VALUES (23, '2026-04-30 22:17:14', 'system', '维护', '新增供应商资质: 南昌云晟健康科技有限公司 / REGISTRATION_CERTIFICATE', 'success', '223.104.86.61', '供应商资质', '国械注进201624045888', '2026-04-30 22:17:14');
-INSERT INTO `scm_operation_log` VALUES (24, '2026-04-30 22:17:22', 'system', '删除', '删除供应商资质: 国械注进201624045888', 'success', '223.104.86.61', '供应商资质', '国械注进201624045888', '2026-04-30 22:17:22');
-INSERT INTO `scm_operation_log` VALUES (25, '2026-04-30 22:17:43', 'system', '维护', '新增供应商资质: 南昌云晟健康科技有限公司 / REGISTRATION_CERTIFICATE', 'success', '223.104.86.61', '供应商资质', '国械注进201624045887', '2026-04-30 22:17:43');
-INSERT INTO `scm_operation_log` VALUES (26, '2026-04-30 22:18:22', 'system', '维护', '新增供应商资质: 南昌云晟健康科技有限公司 / BUSINESS_LICENSE', 'success', '223.104.86.61', '供应商资质', '642364', '2026-04-30 22:18:22');
-INSERT INTO `scm_operation_log` VALUES (27, '2026-04-30 22:19:00', '管理员', '新增', '创建采购单: PO202604300003', 'success', '223.104.86.61', '采购管理', 'PO202604300003', '2026-04-30 22:19:00');
-INSERT INTO `scm_operation_log` VALUES (28, '2026-04-30 22:19:01', '管理员', '提交', '提交采购单: PO202604300003', 'success', '223.104.86.61', '采购管理', 'PO202604300003', '2026-04-30 22:19:01');
-INSERT INTO `scm_operation_log` VALUES (29, '2026-04-30 22:19:09', '管理员', '审核', '通过采购单: PO202604300003', 'success', '223.104.86.61', '采购审核', 'PO202604300003', '2026-04-30 22:19:09');
-INSERT INTO `scm_operation_log` VALUES (30, '2026-04-30 22:19:27', '管理员', '收货', '采购收货: PO202604300003', 'success', '223.104.86.61', '采购收货', 'RC202604300003', '2026-04-30 22:19:27');
-INSERT INTO `scm_operation_log` VALUES (31, '2026-04-30 22:19:50', '管理员', '新增', '创建采购单: PO202604300004', 'success', '223.104.86.61', '采购管理', 'PO202604300004', '2026-04-30 22:19:50');
-INSERT INTO `scm_operation_log` VALUES (32, '2026-04-30 22:19:50', '管理员', '提交', '提交采购单: PO202604300004', 'success', '223.104.86.61', '采购管理', 'PO202604300004', '2026-04-30 22:19:50');
-INSERT INTO `scm_operation_log` VALUES (33, '2026-04-30 22:19:56', '管理员', '审核', '通过采购单: PO202604300004', 'success', '223.104.86.61', '采购审核', 'PO202604300004', '2026-04-30 22:19:56');
-INSERT INTO `scm_operation_log` VALUES (34, '2026-04-30 22:20:12', '管理员', '收货', '采购收货: PO202604300004', 'warning', '223.104.86.61', '采购收货', 'RC202604300004', '2026-04-30 22:20:12');
-INSERT INTO `scm_operation_log` VALUES (35, '2026-04-30 22:20:25', '当前用户', '提交', '重新提交异常订单: PO202604300004', 'success', '223.104.86.61', '异常订单', 'PO202604300004', '2026-04-30 22:20:25');
+INSERT INTO `scm_operation_log` VALUES (1, '2026-05-11 21:03:59', 'system', '维护', '新增供应商: 广东贝海医疗供应链管理有限公司', 'success', '223.104.67.195', '供应商维护', 'SUP202605110001', '2026-05-11 21:03:59');
+INSERT INTO `scm_operation_log` VALUES (2, '2026-05-11 21:11:45', 'system', '维护', '新增供应商资质: 广东贝海医疗供应链管理有限公司 / BUSINESS_CERTIFICATE', 'success', '223.104.67.195', '供应商资质', '91440101MA59ULG4X6', '2026-05-11 21:11:45');
+INSERT INTO `scm_operation_log` VALUES (3, '2026-05-11 21:18:22', 'system', '维护', '新增供应商资质: 广东贝海医疗供应链管理有限公司 / BUSINESS_LICENSE', 'success', '223.104.67.195', '供应商资质', '粤穗食药监械经营许20180167号', '2026-05-11 21:18:22');
+INSERT INTO `scm_operation_log` VALUES (4, '2026-05-11 21:22:44', '管理员', '新增', '创建采购单: PO202605110001', 'success', '223.104.67.195', '采购管理', 'PO202605110001', '2026-05-11 21:22:44');
+INSERT INTO `scm_operation_log` VALUES (5, '2026-05-11 21:22:45', '管理员', '提交', '提交采购单: PO202605110001', 'success', '223.104.67.195', '采购管理', 'PO202605110001', '2026-05-11 21:22:45');
+INSERT INTO `scm_operation_log` VALUES (6, '2026-05-11 21:25:35', '管理员', '审核', '通过采购单: PO202605110001', 'success', '223.104.67.195', '采购审核', 'PO202605110001', '2026-05-11 21:25:35');
+INSERT INTO `scm_operation_log` VALUES (7, '2026-05-11 21:26:09', '管理员', '收货', '采购收货: PO202605110001', 'warning', '223.104.67.195', '采购收货', 'RC202605110001', '2026-05-11 21:26:09');
 
 -- ----------------------------
 -- Table structure for scm_product_price_adjustment
@@ -620,7 +594,6 @@ CREATE TABLE `scm_product_price_adjustment`  (
 -- ----------------------------
 -- Records of scm_product_price_adjustment
 -- ----------------------------
-INSERT INTO `scm_product_price_adjustment` VALUES (1, 1, '1', 'FT3', 'IVD', '4×1.5ml', '4×1.5ml', '100个测试', '只', 1000.00, '国械注进20162404586', '南昌云晟健康科技有限公司', '罗氏诊断', '渠道调整', NULL, NULL, 1000.00, 950.00, -50.00, -5.00, NULL, '2026-04-30 22:08:28', '2026-04-30 22:08:28', '2026-04-30 22:08:28');
 
 -- ----------------------------
 -- Table structure for scm_purchase_order
@@ -648,15 +621,12 @@ CREATE TABLE `scm_purchase_order`  (
   UNIQUE INDEX `uk_scm_purchase_order_number`(`order_number` ASC) USING BTREE,
   INDEX `idx_scm_purchase_order_status`(`status` ASC) USING BTREE,
   INDEX `idx_scm_purchase_order_supplier`(`supplier_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购单主表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购单主表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_purchase_order
 -- ----------------------------
-INSERT INTO `scm_purchase_order` VALUES (1, 'PO202604300001', 11, '11', 1, '南昌云晟健康科技有限公司', '管理员', 'monthly', '待入库', '1月计划', NULL, 950000.00, 1, '2026-04-30 22:11:43', '2026-04-30 22:13:23', '2026-04-30 22:11:43', '2026-04-30 22:14:21');
-INSERT INTO `scm_purchase_order` VALUES (2, 'PO202604300002', 11, '11', 1, '南昌云晟健康科技有限公司', '管理员', 'monthly', '待入库', '', NULL, 950000.00, 1, '2026-04-30 22:12:54', '2026-04-30 22:13:17', '2026-04-30 22:12:54', '2026-04-30 22:14:06');
-INSERT INTO `scm_purchase_order` VALUES (3, 'PO202604300003', 11, '11', 1, '南昌云晟健康科技有限公司', '管理员', 'monthly', '待入库', '', NULL, 950000.00, 1, '2026-04-30 22:19:01', '2026-04-30 22:19:09', '2026-04-30 22:19:00', '2026-04-30 22:19:27');
-INSERT INTO `scm_purchase_order` VALUES (4, 'PO202604300004', 11, '11', 1, '南昌云晟健康科技有限公司', '管理员', 'monthly', '待入库', '', NULL, 950000.00, 1, '2026-04-30 22:19:50', '2026-04-30 22:19:56', '2026-04-30 22:19:50', '2026-04-30 22:20:12');
+INSERT INTO `scm_purchase_order` VALUES (1, 'PO202605110001', 11, '药剂科', 5, '罗氏诊断产品（上海）有限公司', '管理员', 'monthly', '待入库', '', NULL, 390000.00, 3, '2026-05-11 21:22:45', '2026-05-11 21:25:35', '2026-05-11 21:22:44', '2026-05-11 21:26:09');
 
 -- ----------------------------
 -- Table structure for scm_purchase_order_item
@@ -685,15 +655,14 @@ CREATE TABLE `scm_purchase_order_item`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_scm_purchase_order_item_order`(`purchase_order_id` ASC) USING BTREE,
   INDEX `idx_scm_purchase_order_item_material`(`material_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购单明细' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购单明细' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_purchase_order_item
 -- ----------------------------
-INSERT INTO `scm_purchase_order_item` VALUES (1, 1, 1, '1', 'FT3', '4×1.5ml', '4×1.5ml', '只', '罗氏诊断', '南昌云晟健康科技有限公司', '国械注进20162404586', 950.00, 1000, 500, 0, 950000.00, '部分到货', '2026-04-30 22:11:43', '2026-04-30 22:14:21');
-INSERT INTO `scm_purchase_order_item` VALUES (2, 2, 1, '1', 'FT3', '4×1.5ml', '4×1.5ml', '只', '罗氏诊断', '南昌云晟健康科技有限公司', '国械注进20162404586', 950.00, 1000, 500, 0, 950000.00, '部分到货', '2026-04-30 22:12:54', '2026-04-30 22:14:06');
-INSERT INTO `scm_purchase_order_item` VALUES (3, 3, 1, '1', 'FT3', '4×1.5ml', '4×1.5ml', '只', '罗氏诊断', '南昌云晟健康科技有限公司', '国械注进20162404586', 950.00, 1000, 1000, 0, 950000.00, '已到货', '2026-04-30 22:19:00', '2026-04-30 22:19:27');
-INSERT INTO `scm_purchase_order_item` VALUES (4, 4, 1, '1', 'FT3', '4×1.5ml', '4×1.5ml', '只', '罗氏诊断', '南昌云晟健康科技有限公司', '国械注进20162404586', 950.00, 1000, 500, 0, 950000.00, '部分到货', '2026-04-30 22:19:50', '2026-04-30 22:20:12');
+INSERT INTO `scm_purchase_order_item` VALUES (1, 1, 2, 'MAT202605090001', '促甲状腺素定标液TSH', '4×1.5ml', '4×1.5ml', '瓶', '罗氏诊断产品（上海）有限公司', '罗氏诊断产品（上海）有限公司', '国械注进20162404377', 1050.00, 100, 50, 0, 105000.00, '部分到货', '2026-05-11 21:22:44', '2026-05-11 21:26:09');
+INSERT INTO `scm_purchase_order_item` VALUES (2, 1, 4, 'MAT202605090003', '孕酮检测试剂盒P', '4×1.5ml', '4×1.5ml', '瓶', '罗氏诊断产品（上海）有限公司', '罗氏诊断产品（上海）有限公司', '国械注进20162403208', 1500.00, 100, 50, 0, 150000.00, '部分到货', '2026-05-11 21:22:44', '2026-05-11 21:26:09');
+INSERT INTO `scm_purchase_order_item` VALUES (3, 1, 3, 'MAT202605090002', '游离三碘甲状腺原氨酸定标液FT3', '4×1.5ml', '4×1.5ml', '瓶', '罗氏诊断产品（上海）有限公司', '罗氏诊断产品（上海）有限公司', '国械注进20162404586', 1350.00, 100, 50, 0, 135000.00, '部分到货', '2026-05-11 21:22:44', '2026-05-11 21:26:09');
 
 -- ----------------------------
 -- Table structure for scm_purchase_receive
@@ -725,15 +694,12 @@ CREATE TABLE `scm_purchase_receive`  (
   UNIQUE INDEX `uk_scm_purchase_receive_number`(`receive_number` ASC) USING BTREE,
   INDEX `idx_scm_purchase_receive_order`(`purchase_order_id` ASC) USING BTREE,
   INDEX `idx_scm_purchase_receive_status`(`status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购收货单' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购收货单' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_purchase_receive
 -- ----------------------------
-INSERT INTO `scm_purchase_receive` VALUES (1, 'RC202604300001', 2, 'PO202604300002', 1, '南昌云晟健康科技有限公司', 'SUP202604300001', '11', '管理员', '管理员', '13800000000', '2026-04-30', '2026-05-03', '2026-04-30', '管理员', '待入库', 475000.00, 1, '', '2026-04-30 22:14:06', '2026-04-30 22:14:06');
-INSERT INTO `scm_purchase_receive` VALUES (2, 'RC202604300002', 1, 'PO202604300001', 1, '南昌云晟健康科技有限公司', 'SUP202604300001', '11', '管理员', '管理员', '13800000000', '2026-04-30', '2026-05-03', '2026-04-30', '管理员', '待入库', 475000.00, 1, '', '2026-04-30 22:14:21', '2026-04-30 22:14:21');
-INSERT INTO `scm_purchase_receive` VALUES (3, 'RC202604300003', 3, 'PO202604300003', 1, '南昌云晟健康科技有限公司', 'SUP202604300001', '11', '管理员', '管理员', '13800000000', '2026-04-30', '2026-05-03', '2026-04-30', '管理员', '待入库', 950000.00, 1, '', '2026-04-30 22:19:27', '2026-04-30 22:19:27');
-INSERT INTO `scm_purchase_receive` VALUES (4, 'RC202604300004', 4, 'PO202604300004', 1, '南昌云晟健康科技有限公司', 'SUP202604300001', '11', '管理员', '管理员', '13800000000', '2026-04-30', '2026-05-03', '2026-04-30', '管理员', '待入库', 475000.00, 1, '', '2026-04-30 22:20:12', '2026-04-30 22:20:12');
+INSERT INTO `scm_purchase_receive` VALUES (1, 'RC202605110001', 1, 'PO202605110001', 5, '罗氏诊断产品（上海）有限公司', 'SUP202605090001', '药剂科', '管理员', '管理员', '13800000000', '2026-05-11', '2026-05-14', '2026-05-11', '管理员', '待入库', 195000.00, 3, '', '2026-05-11 21:26:09', '2026-05-11 21:26:09');
 
 -- ----------------------------
 -- Table structure for scm_purchase_receive_item
@@ -764,15 +730,14 @@ CREATE TABLE `scm_purchase_receive_item`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_scm_purchase_receive_item_receive`(`receive_id` ASC) USING BTREE,
   INDEX `idx_scm_purchase_receive_item_order_item`(`purchase_order_item_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购收货明细' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '采购收货明细' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_purchase_receive_item
 -- ----------------------------
-INSERT INTO `scm_purchase_receive_item` VALUES (1, 1, 2, '1', 'FT3', '4×1.5ml', '4×1.5ml', '罗氏诊断', '国械注进20162404586', '只', 950.00, 1000, 500, 475000.00, NULL, NULL, NULL, '部分到货', '部分到货', '2026-04-30 22:14:06', '2026-04-30 22:14:06');
-INSERT INTO `scm_purchase_receive_item` VALUES (2, 2, 1, '1', 'FT3', '4×1.5ml', '4×1.5ml', '罗氏诊断', '国械注进20162404586', '只', 950.00, 1000, 500, 475000.00, NULL, NULL, NULL, '部分到货', '部分到货', '2026-04-30 22:14:21', '2026-04-30 22:14:21');
-INSERT INTO `scm_purchase_receive_item` VALUES (3, 3, 3, '1', 'FT3', '4×1.5ml', '4×1.5ml', '罗氏诊断', '国械注进20162404586', '只', 950.00, 1000, 1000, 950000.00, NULL, NULL, NULL, '已到货', '', '2026-04-30 22:19:27', '2026-04-30 22:19:27');
-INSERT INTO `scm_purchase_receive_item` VALUES (4, 4, 4, '1', 'FT3', '4×1.5ml', '4×1.5ml', '罗氏诊断', '国械注进20162404586', '只', 950.00, 1000, 500, 475000.00, NULL, NULL, NULL, '部分到货', '部分到货', '2026-04-30 22:20:12', '2026-04-30 22:20:12');
+INSERT INTO `scm_purchase_receive_item` VALUES (1, 1, 1, 'MAT202605090001', '促甲状腺素定标液TSH', '4×1.5ml', '4×1.5ml', '罗氏诊断产品（上海）有限公司', '国械注进20162404377', '瓶', 1050.00, 100, 50, 52500.00, NULL, NULL, NULL, '部分到货', '部分到货', '2026-05-11 21:26:09', '2026-05-11 21:26:09');
+INSERT INTO `scm_purchase_receive_item` VALUES (2, 1, 2, 'MAT202605090003', '孕酮检测试剂盒P', '4×1.5ml', '4×1.5ml', '罗氏诊断产品（上海）有限公司', '国械注进20162403208', '瓶', 1500.00, 100, 50, 75000.00, NULL, NULL, NULL, '部分到货', '部分到货', '2026-05-11 21:26:09', '2026-05-11 21:26:09');
+INSERT INTO `scm_purchase_receive_item` VALUES (3, 1, 3, 'MAT202605090002', '游离三碘甲状腺原氨酸定标液FT3', '4×1.5ml', '4×1.5ml', '罗氏诊断产品（上海）有限公司', '国械注进20162404586', '瓶', 1350.00, 100, 50, 67500.00, NULL, NULL, NULL, '部分到货', '部分到货', '2026-05-11 21:26:09', '2026-05-11 21:26:09');
 
 -- ----------------------------
 -- Table structure for scm_stock_in_item
@@ -878,7 +843,7 @@ CREATE TABLE `scm_stock_out_item`  (
   INDEX `idx_scm_stock_out_item_order`(`stock_out_order_id` ASC) USING BTREE,
   INDEX `idx_scm_stock_out_item_material`(`material_code` ASC) USING BTREE,
   INDEX `idx_scm_stock_out_item_undo`(`undo_status` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '出库单明细' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '出库单明细' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_stock_out_item
@@ -903,7 +868,7 @@ CREATE TABLE `scm_stock_out_order`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_scm_stock_out_number`(`stock_out_number` ASC) USING BTREE,
   INDEX `idx_scm_stock_out_date`(`outbound_date` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '出库单主表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '出库单主表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_stock_out_order
@@ -924,7 +889,7 @@ CREATE TABLE `scm_transfer_order`  (
   `create_time` datetime NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_scm_transfer_order_number`(`transfer_number` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 2053161412364738562 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_transfer_order
@@ -956,7 +921,7 @@ CREATE TABLE `scm_transfer_order_item`  (
   `transfer_quantity` int NOT NULL COMMENT '调拨数量',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_scm_transfer_order_item_order`(`transfer_order_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 2053161412566065155 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of scm_transfer_order_item
@@ -987,13 +952,14 @@ CREATE TABLE `supplier`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_supplier_name`(`name` ASC) USING BTREE,
   UNIQUE INDEX `uk_supplier_code`(`supplier_code` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '供应商表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '供应商表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of supplier
 -- ----------------------------
-INSERT INTO `supplier` VALUES (1, '南昌云晟健康科技有限公司', '吴志欢', '15288335505', '江西省南昌市', NULL, '经营企业', '可用', 5, '91360122MAK6223Y2X', '吴志欢', '10', '2026-04-30', NULL, 'SUP202604300001', '2026-04-30 21:54:36', '2026-04-30 22:18:22');
-INSERT INTO `supplier` VALUES (2, '罗氏诊断', '韦苏豪', '15288335505', '江西省南昌市', NULL, '生产企业', '可用', 1, '91360122MAK6223Y2X', '韦苏豪', '1000', '2026-03-03', NULL, 'SUP202604300002', '2026-04-30 21:58:07', '2026-04-30 22:05:58');
+INSERT INTO `supplier` VALUES (5, '罗氏诊断产品（上海）有限公司', 'LANCE JAMESLITTLE', '021-9999999', '中国（上海）自由贸易试验区希雅路330号7号厂房第二层', NULL, '生产企业', '可用', 5, '9131000060742079X0', 'LANCE JAMESLITTLE', '3100万美元', '2000-08-28', NULL, 'SUP202605090001', '2026-05-09 19:36:10', '2026-05-11 20:15:56');
+INSERT INTO `supplier` VALUES (6, '南昌云晟健康科技有限公司', '吴志欢', '16788981227', '江西省南昌市新建区武功山大道3966号', NULL, '经营企业', '不可用', 1, '91360122MAK6223Y2X', '吴志欢', '10', '2026-02-10', NULL, 'SUP202605090002', '2026-05-09 19:56:04', '2026-05-09 20:06:53');
+INSERT INTO `supplier` VALUES (7, '广东贝海医疗供应链管理有限公司', '何波涛', '020-87665453', '广州市海珠区石溪新业路18号自编301-303铺', NULL, '经营企业', '可用', 2, '91440101MA59ULG4X6', '何波涛', '1100万人民币', '2017-05-26', NULL, 'SUP202605110001', '2026-05-11 21:03:59', '2026-05-11 21:18:22');
 
 -- ----------------------------
 -- Table structure for supplier_qualification
@@ -1009,6 +975,8 @@ CREATE TABLE `supplier_qualification`  (
   `issue_date` date NULL DEFAULT NULL COMMENT '发证日期',
   `expiry_date` date NULL DEFAULT NULL COMMENT '有效期至',
   `issuing_authority` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '发证机关',
+  `registrant_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '注册人名称',
+  `agent_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '代理人名称',
   `attachment_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '附件名称',
   `license_file` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '文件路径',
   `status` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '1' COMMENT '状态',
@@ -1016,17 +984,19 @@ CREATE TABLE `supplier_qualification`  (
   `update_time` datetime NULL DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_supplier_id`(`supplier_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '供应商资质信息表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 21 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '供应商资质信息表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of supplier_qualification
 -- ----------------------------
-INSERT INTO `supplier_qualification` VALUES (1, 1, 'REGISTRATION_CERTIFICATE', '游离三碘甲状腺原氨酸定标液', '国械注进20162404586', '产品检验报告', '2026-04-30', '2027-04-30', '检验机构', 'Certification_国械注进20162404586_FT3 III CalSet_20300113(1).pdf', '', '有效', '2026-04-30 21:56:14', '2026-04-30 21:56:33');
-INSERT INTO `supplier_qualification` VALUES (2, 2, 'BUSINESS_LICENSE', '南昌云晟健康科技有限公司', '64236424', '经营许可证', '2026-04-01', '2027-04-30', '上海市市场监督管理局', 'Certification_国械注进20162404586_FT3 III CalSet_20300113(1).pdf', '', '有效', '2026-04-30 21:59:40', '2026-04-30 22:05:58');
-INSERT INTO `supplier_qualification` VALUES (3, 1, 'BUSINESS_CERTIFICATE', '南昌云晟健康科技有限公司', '91360122MAK6223Y2X', '营业执照', '2026-04-01', '2030-01-01', '9', 'Certification_国械注进20162404586_FT3 III CalSet_20300113(1).pdf', '', '有效', '2026-04-30 22:00:17', '2026-04-30 22:00:17');
-INSERT INTO `supplier_qualification` VALUES (4, 1, 'BUSINESS_LICENSE', '南昌云晟健康科技有限公司', '64236424', '经营许可证', '2026-04-30', '2027-04-30', '上海市市场监督管理局', '', '', '有效', '2026-04-30 22:06:47', '2026-04-30 22:06:47');
-INSERT INTO `supplier_qualification` VALUES (6, 1, 'REGISTRATION_CERTIFICATE', '游离三碘甲状腺原酸', '国械注进201624045887', '产品检验报告', '2026-04-01', '2027-04-30', '检验机构', '', '', '有效', '2026-04-30 22:17:43', '2026-04-30 22:17:43');
-INSERT INTO `supplier_qualification` VALUES (7, 1, 'BUSINESS_LICENSE', '南昌云晟健康科技有限公司', '642364', '经营许可证', '2026-04-15', '2026-04-30', '上海市市场监督管理局', '', '', '即将过期', '2026-04-30 22:18:22', '2026-04-30 22:18:22');
+INSERT INTO `supplier_qualification` VALUES (13, 5, 'BUSINESS_CERTIFICATE', '罗氏诊断产品（上海）有限公司', '9131000060742079X0', '营业执照', '2000-08-28', '2099-12-31', '中国（上海）自由贸易试验区市场监督管理局', NULL, NULL, '罗氏诊断产品(上海)有限公司-营业执照.pdf', '/api/files/63d6589ce01647bb945e939b608c83b5.pdf', '有效', '2026-05-09 19:42:11', '2026-05-09 20:08:24');
+INSERT INTO `supplier_qualification` VALUES (14, 5, 'REGISTRATION_CERTIFICATE', '促甲状腺素定标液TSH', '国械注进20162404377', '注册证', '2025-01-14', '2030-01-13', '罗氏诊断产品（ 上海） 有限公司', '罗氏诊断产品（上海）有限公司', '罗氏诊断产品（ 上海） 有限公司', '促甲状腺素定标液TSH.pdf', '/api/files/5412abcf712e46b9a66c2beaf32f4fb4.pdf', '有效', '2026-05-09 19:44:52', '2026-05-09 19:45:27');
+INSERT INTO `supplier_qualification` VALUES (15, 5, 'REGISTRATION_CERTIFICATE', '游离三碘甲状腺原氨酸定标液FT3', '国械注进20162404586', '注册证', '2025-01-14', '2030-01-13', '罗氏诊断产品（ 上海） 有限公司', '罗氏诊断产品（上海）有限公司', '罗氏诊断产品（ 上海） 有限公司', '游离三碘甲状腺原氨酸定标液FT3.pdf', '/api/files/04fe4cb26cd143aa8d2cc4ac54ff2083.pdf', '有效', '2026-05-09 19:46:44', '2026-05-09 19:46:44');
+INSERT INTO `supplier_qualification` VALUES (16, 5, 'REGISTRATION_CERTIFICATE', '孕酮检测试剂盒P', '国械注进20162403208', '注册证', '2025-01-14', '2030-01-13', '罗氏诊断产品（ 上海） 有限公司', '罗氏诊断产品（上海）有限公司', '罗氏诊断产品（ 上海） 有限公司', '孕酮检测试剂盒P.pdf', '/api/files/7c82f8a10e454c829f2eea0b06884467.pdf', '有效', '2026-05-09 19:48:09', '2026-05-09 19:48:09');
+INSERT INTO `supplier_qualification` VALUES (17, 5, 'BUSINESS_LICENSE', '罗氏诊断产品（上海）有限公司', '20162403208', '经营许可证', '2025-01-01', '2030-01-13', '上海市市场监督管理局', '罗氏诊断产品（上海）有限公司', NULL, '罗氏诊断产品(上海)有限公司-营业执照.pdf', '/api/files/d1beae7f19c240ec89f2366e31ec44da.pdf', '有效', '2026-05-09 19:53:25', '2026-05-09 19:53:51');
+INSERT INTO `supplier_qualification` VALUES (18, 6, 'BUSINESS_CERTIFICATE', '南昌云晟健康科技有限公司', '91360122MAK6223Y2X', '营业执照', '2026-02-10', '2099-12-31', '南昌市新建区市场监督管理局', NULL, NULL, '南昌云晟健康科技有限公司-营业执照.pdf', '/api/files/1f2938b41ff04a73b32d573852260761.pdf', '有效', '2026-05-09 20:06:53', '2026-05-09 20:06:53');
+INSERT INTO `supplier_qualification` VALUES (19, 7, 'BUSINESS_CERTIFICATE', '广东贝海医疗供应链管理有限公司', '91440101MA59ULG4X6', '营业执照', '2017-05-26', '2099-12-31', '广州市海珠区市场监督管理局', NULL, NULL, '营业执照.pdf', '/api/files/74cb008e276e458fbd782e31850ec058.pdf', '有效', '2026-05-11 21:11:45', '2026-05-11 21:11:45');
+INSERT INTO `supplier_qualification` VALUES (20, 7, 'BUSINESS_LICENSE', '广东贝海医疗供应链管理有限公司', '粤穗食药监械经营许20180167号', '经营许可证', '2023-02-09', '2028-02-08', '广州市市场监督管理局', '广东贝海医疗供应链管理有限公司', NULL, '经营许可证.pdf', '/api/files/4664f293ce96450e9aa28fd659e3c815.pdf', '有效', '2026-05-11 21:18:22', '2026-05-11 21:18:22');
 
 -- ----------------------------
 -- Table structure for sys_department
@@ -1153,7 +1123,7 @@ INSERT INTO `sys_permission` VALUES (235, 0, '为角色分配权限接口', 'api
 INSERT INTO `sys_permission` VALUES (236, 0, '为用户分配角色接口', 'api:role:assign:user', 3, NULL, NULL, NULL, 'POST', '/api/role/user/{userId}/roles', 1, 36, NULL, '2026-03-16 14:05:23', NULL, '2026-03-16 14:05:23', 0);
 INSERT INTO `sys_permission` VALUES (3001, 0, '院区管理', 'menu:campus', 1, '/campus-group', NULL, 'team', NULL, NULL, 1, 14, NULL, '2026-03-26 14:19:35', NULL, '2026-03-26 14:19:35', 0);
 INSERT INTO `sys_permission` VALUES (3002, 3001, '分院管理', 'menu:campus:management', 1, '/campus-management', NULL, 'team', NULL, NULL, 1, 2, NULL, '2026-03-26 14:19:35', NULL, '2026-03-26 14:19:35', 0);
-INSERT INTO `sys_permission` VALUES (3003, 0, '操作日志', 'menu:operation-log', 1, '/operation-log', NULL, 'clock-circle', NULL, NULL, 1, 13, NULL, '2026-03-26 14:19:35', NULL, '2026-03-26 14:19:35', 0);
+INSERT INTO `sys_permission` VALUES (3003, 0, '操作日志', 'menu:operation-log', 1, '/operation-log', NULL, 'clock-circle', NULL, NULL, 1, 99, NULL, '2026-03-26 14:19:35', NULL, '2026-03-26 14:19:35', 0);
 INSERT INTO `sys_permission` VALUES (3004, 0, '首页', 'menu:home', 1, '/', NULL, 'dashboard', NULL, NULL, 1, 1, NULL, '2026-03-26 14:19:35', NULL, '2026-03-26 14:19:35', 0);
 INSERT INTO `sys_permission` VALUES (3100, 0, '供应商维护', 'menu:supplier', 1, '/supplier-group', NULL, 'team', NULL, NULL, 1, 2, NULL, '2026-03-26 14:19:35', NULL, '2026-03-26 14:19:35', 0);
 INSERT INTO `sys_permission` VALUES (3101, 3100, '供应商管理', 'menu:supplier:maintenance', 1, '/supplier-maintenance', NULL, 'team', NULL, NULL, 1, 1, NULL, '2026-03-26 14:19:35', NULL, '2026-03-26 14:19:35', 0);
@@ -1280,246 +1250,247 @@ CREATE TABLE `sys_role_permission`  (
   UNIQUE INDEX `uk_role_permission`(`role_id` ASC, `permission_id` ASC) USING BTREE,
   INDEX `idx_role_id`(`role_id` ASC) USING BTREE,
   INDEX `idx_permission_id`(`permission_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 254 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '角色权限关联表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 431 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '角色权限关联表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_role_permission
 -- ----------------------------
-INSERT INTO `sys_role_permission` VALUES (1, 1, 1, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (2, 1, 2, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (3, 1, 3, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (4, 1, 4, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (5, 1, 5, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (6, 1, 101, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (7, 1, 102, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (8, 1, 103, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (9, 1, 104, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (10, 1, 105, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (11, 1, 106, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (12, 1, 107, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (13, 1, 108, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (14, 1, 109, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (15, 1, 110, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (16, 1, 111, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (17, 1, 112, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (18, 1, 113, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (19, 1, 114, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (20, 1, 201, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (21, 1, 202, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (22, 1, 203, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (23, 1, 204, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (24, 1, 205, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (25, 1, 206, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (26, 1, 207, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (27, 1, 208, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (28, 1, 209, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (29, 1, 210, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (30, 1, 211, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (31, 1, 212, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (32, 1, 213, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (33, 1, 214, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (34, 1, 215, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (35, 1, 216, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (36, 1, 217, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (37, 1, 218, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (38, 1, 219, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (39, 1, 220, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (40, 1, 221, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (41, 1, 222, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (42, 1, 223, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (43, 1, 224, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (44, 1, 225, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (45, 1, 226, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (46, 1, 227, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (47, 1, 228, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (48, 1, 229, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (49, 1, 230, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (50, 1, 231, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (51, 1, 232, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (52, 1, 233, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (53, 1, 234, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (54, 1, 235, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (55, 1, 236, NULL, '2026-03-16 14:05:23');
-INSERT INTO `sys_role_permission` VALUES (64, 1, 3001, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (65, 1, 3002, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (66, 1, 3003, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (67, 1, 3004, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (68, 1, 3100, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (69, 1, 3101, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (70, 1, 3102, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (71, 1, 3103, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (72, 1, 3104, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (73, 1, 3105, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (74, 1, 3106, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (75, 1, 3200, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (76, 1, 3201, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (77, 1, 3202, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (78, 1, 3300, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (79, 1, 3301, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (80, 1, 3302, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (81, 1, 3303, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (82, 1, 3400, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (83, 1, 3401, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (84, 1, 3402, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (85, 1, 3403, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (86, 1, 3404, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (87, 1, 3405, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (88, 1, 3406, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (89, 1, 3500, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (90, 1, 3501, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (91, 1, 3502, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (92, 1, 3503, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (93, 1, 3600, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (94, 1, 3601, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (95, 1, 3602, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (96, 1, 3603, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (97, 1, 3604, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (98, 1, 3700, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (99, 1, 3701, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (100, 1, 3702, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (101, 1, 3703, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (102, 1, 3800, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (103, 1, 3801, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (104, 1, 3802, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (105, 1, 3803, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (106, 1, 3804, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (107, 1, 3805, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (108, 1, 3900, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (109, 1, 3901, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (110, 1, 3902, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (111, 1, 3903, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (112, 1, 3904, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (113, 1, 3905, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (114, 1, 3906, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (115, 1, 3907, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (116, 1, 3908, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (117, 1, 3909, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (118, 1, 4000, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (119, 1, 4001, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (120, 1, 4002, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (121, 1, 4100, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (122, 1, 4101, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (123, 1, 4102, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (124, 1, 4103, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (125, 1, 4104, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (127, 3, 3004, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (128, 2, 3004, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (129, 3, 3100, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (130, 2, 3100, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (131, 3, 3101, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (132, 2, 3101, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (133, 3, 3102, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (134, 2, 3102, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (135, 3, 3103, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (136, 2, 3103, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (137, 3, 3104, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (138, 2, 3104, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (139, 3, 3105, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (140, 2, 3105, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (141, 3, 3106, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (142, 2, 3106, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (143, 3, 3200, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (144, 2, 3200, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (145, 3, 3201, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (146, 2, 3201, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (147, 3, 3202, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (148, 2, 3202, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (149, 3, 3300, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (150, 2, 3300, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (151, 3, 3301, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (152, 2, 3301, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (153, 3, 3302, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (154, 2, 3302, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (155, 3, 3303, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (156, 2, 3303, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (157, 3, 3400, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (158, 2, 3400, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (159, 3, 3401, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (160, 2, 3401, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (161, 3, 3402, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (162, 2, 3402, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (163, 3, 3403, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (164, 2, 3403, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (165, 3, 3404, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (166, 2, 3404, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (167, 3, 3405, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (168, 2, 3405, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (169, 3, 3406, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (170, 2, 3406, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (171, 3, 3500, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (172, 2, 3500, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (173, 3, 3501, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (174, 2, 3501, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (175, 3, 3502, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (176, 2, 3502, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (177, 3, 3503, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (178, 2, 3503, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (179, 3, 3600, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (180, 2, 3600, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (181, 3, 3601, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (182, 2, 3601, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (183, 3, 3602, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (184, 2, 3602, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (185, 3, 3603, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (186, 2, 3603, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (187, 3, 3604, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (188, 2, 3604, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (189, 3, 3700, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (190, 2, 3700, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (191, 3, 3701, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (192, 2, 3701, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (193, 3, 3702, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (194, 2, 3702, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (195, 3, 3703, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (196, 2, 3703, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (197, 3, 3800, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (198, 2, 3800, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (199, 3, 3801, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (200, 2, 3801, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (201, 3, 3802, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (202, 2, 3802, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (203, 3, 3803, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (204, 2, 3803, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (205, 3, 3804, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (206, 2, 3804, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (207, 3, 3805, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (208, 2, 3805, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (209, 3, 3900, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (210, 2, 3900, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (211, 3, 3901, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (212, 2, 3901, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (213, 3, 3902, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (214, 2, 3902, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (215, 3, 3903, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (216, 2, 3903, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (217, 3, 3904, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (218, 2, 3904, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (219, 3, 3905, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (220, 2, 3905, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (221, 3, 3906, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (222, 2, 3906, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (223, 3, 3907, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (224, 2, 3907, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (225, 3, 3908, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (226, 2, 3908, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (227, 3, 3909, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (228, 2, 3909, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (229, 3, 4000, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (230, 2, 4000, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (231, 3, 4001, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (232, 2, 4001, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (233, 3, 4002, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (234, 2, 4002, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (235, 3, 4100, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (236, 2, 4100, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (237, 3, 4101, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (238, 2, 4101, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (239, 3, 4102, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (240, 2, 4102, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (241, 3, 4103, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (242, 2, 4103, NULL, '2026-03-26 14:19:35');
-INSERT INTO `sys_role_permission` VALUES (243, 3, 4104, NULL, '2026-03-26 14:19:35');
 INSERT INTO `sys_role_permission` VALUES (244, 2, 4104, NULL, '2026-03-26 14:19:35');
+INSERT INTO `sys_role_permission` VALUES (254, 1, 5, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (255, 1, 3004, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (256, 1, 3101, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (257, 1, 3103, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (258, 1, 3201, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (259, 1, 3301, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (260, 1, 3401, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (261, 1, 3501, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (262, 1, 3601, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (263, 1, 3701, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (264, 1, 3901, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (265, 1, 4001, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (266, 1, 4101, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (267, 1, 3002, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (268, 1, 3100, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (269, 1, 3102, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (270, 1, 3104, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (271, 1, 3202, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (272, 1, 3302, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (273, 1, 3402, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (274, 1, 3502, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (275, 1, 3602, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (276, 1, 3702, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (277, 1, 3902, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (278, 1, 4002, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (279, 1, 4102, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (280, 1, 3105, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (281, 1, 3106, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (282, 1, 3200, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (283, 1, 3303, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (284, 1, 3403, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (285, 1, 3503, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (286, 1, 3603, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (287, 1, 3703, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (288, 1, 3903, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (289, 1, 4103, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (290, 1, 3300, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (291, 1, 3404, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (292, 1, 3604, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (293, 1, 3904, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (294, 1, 4104, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (295, 1, 3400, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (296, 1, 3405, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (297, 1, 3905, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (298, 1, 206, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (299, 1, 3406, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (300, 1, 3500, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (301, 1, 3906, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (302, 1, 207, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (303, 1, 3600, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (304, 1, 3907, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (305, 1, 208, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (306, 1, 3700, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (307, 1, 3908, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (308, 1, 209, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (309, 1, 3909, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (310, 1, 210, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (311, 1, 3900, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (312, 1, 211, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (313, 1, 4000, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (314, 1, 212, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (315, 1, 4100, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (316, 1, 213, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (317, 1, 214, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (318, 1, 3001, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (319, 1, 215, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (320, 1, 216, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (321, 1, 217, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (322, 1, 218, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (323, 1, 219, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (324, 1, 220, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (325, 1, 221, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (326, 1, 222, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (327, 1, 223, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (328, 1, 224, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (329, 1, 225, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (330, 1, 226, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (331, 1, 227, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (332, 1, 228, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (333, 1, 229, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (334, 1, 230, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (335, 1, 231, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (336, 1, 232, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (337, 1, 233, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (338, 1, 234, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (339, 1, 235, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (340, 1, 236, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (341, 1, 3003, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (342, 1, 3800, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (343, 1, 3801, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (344, 1, 3802, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (345, 1, 3803, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (346, 1, 3804, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (347, 1, 3805, 1, '2026-05-02 19:04:05');
+INSERT INTO `sys_role_permission` VALUES (348, 1, 1, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (349, 1, 2, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (350, 1, 3, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (351, 1, 4, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (352, 1, 101, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (353, 1, 102, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (354, 1, 103, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (355, 1, 104, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (356, 1, 105, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (357, 1, 106, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (358, 1, 107, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (359, 1, 108, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (360, 1, 109, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (361, 1, 110, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (362, 1, 111, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (363, 1, 112, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (364, 1, 113, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (365, 1, 114, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (366, 1, 201, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (367, 1, 202, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (368, 1, 203, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (369, 1, 204, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (370, 1, 205, 1, '2026-05-08 10:34:17');
+INSERT INTO `sys_role_permission` VALUES (371, 3, 3004, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (372, 3, 3101, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (373, 3, 3103, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (374, 3, 3201, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (375, 3, 3301, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (376, 3, 3401, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (377, 3, 3501, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (378, 3, 3601, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (379, 3, 3701, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (380, 3, 3801, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (381, 3, 3901, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (382, 3, 4001, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (383, 3, 4101, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (384, 3, 3100, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (385, 3, 3102, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (386, 3, 3104, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (387, 3, 3202, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (388, 3, 3302, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (389, 3, 3402, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (390, 3, 3502, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (391, 3, 3602, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (392, 3, 3702, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (393, 3, 3802, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (394, 3, 3902, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (395, 3, 4002, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (396, 3, 4102, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (397, 3, 3105, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (398, 3, 3106, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (399, 3, 3200, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (400, 3, 3303, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (401, 3, 3403, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (402, 3, 3503, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (403, 3, 3603, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (404, 3, 3703, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (405, 3, 3803, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (406, 3, 3903, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (407, 3, 4103, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (408, 3, 3300, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (409, 3, 3404, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (410, 3, 3604, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (411, 3, 3804, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (412, 3, 3904, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (413, 3, 4104, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (414, 3, 3400, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (415, 3, 3405, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (416, 3, 3805, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (417, 3, 3905, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (418, 3, 3406, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (419, 3, 3500, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (420, 3, 3906, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (421, 3, 3600, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (422, 3, 3907, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (423, 3, 3700, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (424, 3, 3908, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (425, 3, 3800, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (426, 3, 3909, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (427, 3, 3900, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (428, 3, 4000, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (429, 3, 4100, 1, '2026-05-08 13:06:37');
+INSERT INTO `sys_role_permission` VALUES (430, 3, 206, 1, '2026-05-08 13:06:37');
 
 -- ----------------------------
 -- Table structure for sys_user_role
@@ -1535,16 +1506,16 @@ CREATE TABLE `sys_user_role`  (
   UNIQUE INDEX `uk_user_role`(`user_id` ASC, `role_id` ASC) USING BTREE,
   INDEX `idx_user_id`(`user_id` ASC) USING BTREE,
   INDEX `idx_role_id`(`role_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户角色关联表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 15 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '用户角色关联表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_user_role
 -- ----------------------------
-INSERT INTO `sys_user_role` VALUES (1, 1, 1, NULL, '2026-03-24 10:39:49');
-INSERT INTO `sys_user_role` VALUES (2, 2, 2, NULL, '2026-03-24 10:39:49');
 INSERT INTO `sys_user_role` VALUES (3, 3, 2, NULL, '2026-03-24 10:39:49');
-INSERT INTO `sys_user_role` VALUES (4, 4, 3, NULL, '2026-03-24 10:39:49');
-INSERT INTO `sys_user_role` VALUES (5, 5, 3, 1, '2026-03-26 15:06:08');
+INSERT INTO `sys_user_role` VALUES (10, 2, 2, 1, '2026-05-08 16:32:27');
+INSERT INTO `sys_user_role` VALUES (12, 4, 3, 1, '2026-05-08 21:02:19');
+INSERT INTO `sys_user_role` VALUES (13, 5, 3, 1, '2026-05-08 21:02:24');
+INSERT INTO `sys_user_role` VALUES (14, 1, 1, 1, '2026-05-08 22:46:21');
 
 -- ----------------------------
 -- Table structure for user_token
@@ -1560,7 +1531,7 @@ CREATE TABLE `user_token`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_token`(`user_token` ASC) USING BTREE,
   INDEX `idx_user_id`(`user_id` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user_token
@@ -1568,6 +1539,12 @@ CREATE TABLE `user_token`  (
 INSERT INTO `user_token` VALUES (1, 'a554e9b9-d17a-4895-a76c-d113f250dc89', '2026-04-30 21:53:18', '2026-05-30 21:53:18', 1, 1);
 INSERT INTO `user_token` VALUES (2, 'be6906f0-9476-483a-8925-6ad6e5b5404b', '2026-04-30 21:53:54', '2026-05-30 21:53:54', 1, 1);
 INSERT INTO `user_token` VALUES (3, '49af84b1-8965-44be-ba35-909b342862e0', '2026-04-30 22:24:17', '2026-05-30 22:24:17', 1, 1);
+INSERT INTO `user_token` VALUES (4, 'fba51b3c-7b8a-494b-b22d-39a17b81484e', '2026-05-01 22:27:24', '2026-06-01 22:27:24', 1, 1);
+INSERT INTO `user_token` VALUES (5, '67624a4d-fd88-4fa1-8cbf-2d2854fdbe51', '2026-05-02 19:05:21', '2026-06-02 19:05:21', 1, 1);
+INSERT INTO `user_token` VALUES (6, '0399f3c6-4d45-474c-9449-75af4d5f05aa', '2026-05-02 19:05:36', '2026-06-02 19:05:36', 2, 1);
+INSERT INTO `user_token` VALUES (7, 'ffcf054d-baaf-4bda-a22b-473b9606fabc', '2026-05-02 19:06:21', '2026-06-02 19:06:21', 1, 1);
+INSERT INTO `user_token` VALUES (8, 'ffdf935a-f805-4aee-af6c-3ddd4eaf78e5', '2026-05-06 15:11:34', '2026-06-06 15:11:34', 1, 1);
+INSERT INTO `user_token` VALUES (9, 'fe38230f-a699-44ea-a94f-aeaa18a74089', '2026-05-08 21:12:36', '2026-06-08 21:12:36', 1, 1);
 
 -- ----------------------------
 -- Table structure for warehouse
@@ -1613,9 +1590,9 @@ CREATE TABLE `ys_user`  (
 -- ----------------------------
 -- Records of ys_user
 -- ----------------------------
-INSERT INTO `ys_user` VALUES (1, 'admin', '123456', '管理员', '药剂科', 11, NULL, NULL, '管理员', '全部仓库', '2026-03-16 14:05:23', '2026-03-24 10:39:49', 1);
-INSERT INTO `ys_user` VALUES (2, 'lier', '000000', '李二', '手术室', 12, NULL, NULL, '科室管理员', '全部仓库', '2026-03-16 14:06:25', '2026-03-24 10:39:49', 1);
-INSERT INTO `ys_user` VALUES (4, 'zhaoliu', '123456', '赵六', '检验科', 14, NULL, NULL, '操作员', '全部仓库', '2026-03-24 10:39:49', '2026-03-24 10:39:49', 1);
-INSERT INTO `ys_user` VALUES (5, 'ceshi', '000000', '测试', '手术室', 12, '15070268187', NULL, '操作员', '仓库123', '2026-03-26 15:06:07', '2026-03-26 15:06:07', 1);
+INSERT INTO `ys_user` VALUES (1, 'admin', '123456', '管理员', '药剂科', 11, NULL, NULL, '管理员', '当前院区全部库存', '2026-03-16 14:05:23', '2026-05-08 19:37:11', 1);
+INSERT INTO `ys_user` VALUES (2, 'lier', '000000', '李二', '手术室', 12, NULL, NULL, '科室管理员', '当前院区全部库存', '2026-03-16 14:06:25', '2026-05-08 21:11:47', 1);
+INSERT INTO `ys_user` VALUES (4, 'zhaoliu', '000000', '赵六', '检验科', 14, NULL, NULL, '操作员', '当前院区全部库存', '2026-03-24 10:39:49', '2026-05-08 21:10:14', 1);
+INSERT INTO `ys_user` VALUES (5, 'ceshi', '000000', '测试', '手术室', 12, '15070268187', NULL, '操作员', '当前院区全部库存', '2026-03-26 15:06:07', '2026-05-08 21:09:41', 1);
 
 SET FOREIGN_KEY_CHECKS = 1;

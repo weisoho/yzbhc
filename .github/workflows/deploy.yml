@@ -3,6 +3,12 @@ name: Deploy to Production
 on:
   push:
     branches: [main]
+    paths:
+      - yzb-hd/**
+      - yzb-qd/**
+      - docker/**
+      - scripts/**
+      - .github/workflows/deploy.yml
   workflow_dispatch:
     inputs:
       skip_frontend:
@@ -17,6 +23,10 @@ on:
 concurrency:
   group: deploy-prod
   cancel-in-progress: true
+
+env:
+  REMOTE_DIR: /home/yzb
+  DEPLOY_DIR: /home/yzb/.deploy
 
 jobs:
   build-and-deploy:
@@ -45,6 +55,11 @@ jobs:
           cache: npm
           cache-dependency-path: yzb-qd/package-lock.json
 
+      - name: Install frontend dependencies
+        if: ${{ !inputs.skip_frontend }}
+        run: npm ci
+        working-directory: yzb-qd
+
       - name: Build backend
         if: ${{ !inputs.skip_backend }}
         run: mvn -DskipTests package -B
@@ -52,9 +67,7 @@ jobs:
 
       - name: Build frontend
         if: ${{ !inputs.skip_frontend }}
-        run: |
-          npm ci
-          npm run build
+        run: npm run build
         working-directory: yzb-qd
 
       - name: Package deployment artifacts
@@ -79,6 +92,15 @@ jobs:
           echo "--- Deployment package contents ---"
           ls -lh .deploy/
 
+      - name: Ensure remote deploy directory exists
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USERNAME }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          port: 22
+          script: mkdir -p ${{ env.DEPLOY_DIR }}
+
       - name: Upload artifacts to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -87,8 +109,10 @@ jobs:
           password: ${{ secrets.DEPLOY_PASSWORD }}
           port: 22
           source: .deploy/
-          target: /home/yzb/.deploy
-          rm: true
+          target: ${{ env.DEPLOY_DIR }}
+          strip_components: 1
+          overwrite: true
+          tar_tmp_path: /tmp
 
       - name: Execute remote deployment
         uses: appleboy/ssh-action@v1.2.0
@@ -100,14 +124,15 @@ jobs:
           script: |
             set -e
             echo "Fix line endings and make script executable"
-            sed -i 's/\r$//' /home/yzb/.deploy/remote-deploy.sh
-            chmod +x /home/yzb/.deploy/remote-deploy.sh
+            sed -i 's/\r$//' ${{ env.DEPLOY_DIR }}/remote-deploy.sh
+            chmod +x ${{ env.DEPLOY_DIR }}/remote-deploy.sh
 
             echo "Run remote-deploy.sh on the server"
-            cd /home/yzb
-            bash /home/yzb/.deploy/remote-deploy.sh
+            cd ${{ env.REMOTE_DIR }}
+            bash ${{ env.DEPLOY_DIR }}/remote-deploy.sh
 
       - name: Verify deployment
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -116,7 +141,7 @@ jobs:
           port: 22
           script: |
             echo "=== Container status ==="
-            docker compose -f /home/yzb/docker-compose.yml ps
+            docker compose -f ${{ env.REMOTE_DIR }}/docker-compose.yml ps
 
             echo ""
             echo "=== Backend recent logs ==="
@@ -124,4 +149,33 @@ jobs:
 
             echo ""
             echo "=== Nginx connectivity check ==="
-            curl -s -o /dev/null -w "HTTP %{http_code}" http://localhost/ || echo "Nginx check failed"
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/ || echo "failed")
+            echo "HTTP status: $STATUS"
+
+            echo ""
+            echo "=== Database unique_code column check ==="
+            DB_PWD=$(docker inspect yzbhc-mysql --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^MYSQL_ROOT_PASSWORD=//p')
+            HAS_COL=$(docker exec yzbhc-mysql mysql -uroot -p"$DB_PWD" -Nse "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='yzb' AND table_name='scm_inventory' AND column_name='unique_code'" 2>/dev/null)
+            if [ "$HAS_COL" = "1" ]; then
+              echo "unique_code column: OK"
+            else
+              echo "unique_code column: MISSING (migration may be needed)"
+            fi
+
+      - name: Notify on failure
+        if: ${{ failure() && secrets.DINGTALK_WEBHOOK != '' }}
+        uses: zyy14/dingtalk-action@v1
+        with:
+          webhook: ${{ secrets.DINGTALK_WEBHOOK }}
+          msgtype: markdown
+          title: 部署失败
+          text: |
+            ### ❌ 部署失败
+
+            - **仓库**: ${{ github.repository }}
+            - **分支**: ${{ github.ref_name }}
+            - **提交**: ${{ github.sha }}
+            - **触发人**: ${{ github.triggering_actor }}
+            - **时间**: ${{ github.event.head_commit.timestamp || 'workflow_dispatch' }}
+
+            请查看 [Action 日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
