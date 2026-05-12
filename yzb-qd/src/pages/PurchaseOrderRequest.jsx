@@ -31,7 +31,6 @@ import {
 import api from '../utils/api.js';
 
 const PurchaseOrderRequest = () => {
-  // 配置dayjs使用中文
   dayjs.locale('zh-cn');
   
   const [messageApi, contextHolder] = message.useMessage();
@@ -44,10 +43,8 @@ const PurchaseOrderRequest = () => {
   const [hasSelectedView, setHasSelectedView] = useState(false); // 是否已选择视图
   const [selectedDetailKeys, setSelectedDetailKeys] = useState([]); // 采购明细弹窗中选中的商品明细行
   
-  // 物资目录数据（用于选择弹窗，从后端加载）
   const [materialCatalog, setMaterialCatalog] = useState([]);
   
-  // 搜索表单状态
   const [searchForm] = Form.useForm();
   const [filteredMaterials, setFilteredMaterials] = useState([]);
   const [catalogSelectAll, setCatalogSelectAll] = useState(false);
@@ -63,8 +60,18 @@ const PurchaseOrderRequest = () => {
   const [submittingAction, setSubmittingAction] = useState(null);
   const [detailSubmittingAction, setDetailSubmittingAction] = useState(null);
   const [suppliers, setSuppliers] = useState([]);
-  // 新建采购申请表单字段
   const [newOrderForm] = Form.useForm();
+
+  const formatDateTime = (value) => {
+    if (!value) {
+      return '-';
+    }
+    const parsed = dayjs(value);
+    if (parsed.isValid()) {
+      return parsed.format('YYYY-MM-DD HH:mm:ss');
+    }
+    return String(value).replace('T', ' ').replace(/\.\d+$/, '');
+  };
 
   const getCurrentRequesterInfo = () => {
     let userInfo = {};
@@ -649,7 +656,6 @@ const PurchaseOrderRequest = () => {
       WAIT_STOCK_IN: { color: 'purple', text: '待入库' },
       COMPLETED: { color: 'success', text: '已完成' },
       REJECTED: { color: 'error', text: '已驳回' },
-      // 兼容旧值和中文
       '待提交': { color: 'warning', text: '待提交' },
       '待审核': { color: 'blue', text: '待审核' },
       '待收货': { color: 'orange', text: '待收货' },
@@ -679,7 +685,6 @@ const PurchaseOrderRequest = () => {
 
   const filteredPurchaseOrders = getFilteredPurchaseOrders();
 
-  // 采购单汇总视图列配置
   const summaryColumns = [
     {
       title: '采购单号',
@@ -723,7 +728,9 @@ const PurchaseOrderRequest = () => {
       title: '创建日期',
       dataIndex: 'createTime',
       key: 'createTime',
-      width: 180
+      width: 180,
+      align: 'center',
+      render: (value) => formatDateTime(value)
     },
     {
       title: '状态',
@@ -743,7 +750,6 @@ const PurchaseOrderRequest = () => {
             size="small"
             onClick={async () => {
               let orderWithDetails = record;
-              // 如果没有详情数据，尝试从后端获取
               if (!record.details || record.details.length === 0) {
                 try {
                   setLoading(true);
@@ -774,11 +780,10 @@ const PurchaseOrderRequest = () => {
               }
               
               setCurrentOrderDetails(orderWithDetails);
-              setSelectedDetailKeys([]); // 重置选中的商品明细行
-              // 初始化编辑数据
+              setSelectedDetailKeys([]);
               setEditingDetails((orderWithDetails.details || []).map(item => ({
                 ...item,
-                originalKey: item.key // 保存原始key用于标识
+                originalKey: item.key
               })));
               setDetailModalVisible(true);
             }}
@@ -790,7 +795,6 @@ const PurchaseOrderRequest = () => {
     },
   ];
 
-  // 采购明细视图列配置
   const detailColumns = [
     {
       title: () => (
@@ -884,7 +888,9 @@ const PurchaseOrderRequest = () => {
       title: '创建时间',
       dataIndex: 'createTime',
       key: 'createTime',
-      width: 180
+      width: 180,
+      align: 'center',
+      render: (value) => formatDateTime(value)
     },
     {
       title: '状态',
@@ -895,7 +901,6 @@ const PurchaseOrderRequest = () => {
     },
   ];
 
-  // 获取明细视图的数据
   const getDetailData = () => {
     const detailData = [];
     purchaseOrders.forEach(order => {

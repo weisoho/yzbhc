@@ -46,9 +46,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-/**
- * 入库管理服务实现。
- */
 @Service
 public class StockInManagementServiceImpl implements StockInManagementService {
 
@@ -91,7 +88,6 @@ public class StockInManagementServiceImpl implements StockInManagementService {
                 .eq(StringUtils.hasText(query.getStockInType()), StockInOrderEntity::getStockInType, query.getStockInType())
                 .eq(StringUtils.hasText(query.getStatus()), StockInOrderEntity::getStatus, query.getStatus());
 
-        // 按物资编码、物资名称或厂家进行过滤
         boolean hasItemFilter = StringUtils.hasText(query.getProductCode()) 
                 || StringUtils.hasText(query.getProductName())
                 || StringUtils.hasText(query.getManufacturer());
@@ -237,7 +233,6 @@ public class StockInManagementServiceImpl implements StockInManagementService {
         order.setCreateTime(LocalDateTime.now());
         order.setUpdateTime(LocalDateTime.now());
         
-        // 假设手动入库时，第一个条目的供应商作为订单供应商
         if (!request.getItems().isEmpty()) {
             order.setSupplierName(request.getItems().get(0).getSupplierName());
         }

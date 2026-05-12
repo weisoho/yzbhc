@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message, Select } from 'antd';
+import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message, Select, Tag } from 'antd';
 import { useParams } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -50,7 +50,6 @@ const SupplierBusinessLicense = () => {
     getPopupContainer: (trigger) => trigger.parentElement || trigger.parentNode,
   };
 
-  // 加载经营许可证列表
   const loadBusinessLicenses = async () => {
     try {
       setLoading(true);
@@ -103,7 +102,6 @@ const SupplierBusinessLicense = () => {
     }
   };
 
-  // 组件加载时获取供应商列表和经营许可证列表
   useEffect(() => {
     const loadData = async () => {
       await loadSuppliers();
@@ -112,7 +110,6 @@ const SupplierBusinessLicense = () => {
     loadData();
   }, [currentPage, pageSize, supplierId]);
 
-  // 加载供应商列表
   const loadSuppliers = async () => {
     try {
       const response = await api.get('/api/scm/suppliers');
@@ -124,7 +121,6 @@ const SupplierBusinessLicense = () => {
     }
   };
 
-  // 处理搜索输入变化
   const handleSearchChange = (field, value) => {
     setSearchParams(prev => ({
       ...prev,
@@ -132,16 +128,13 @@ const SupplierBusinessLicense = () => {
     }));
   };
 
-  // 处理查询按钮点击
   const handleSearch = () => {
     setCurrentPage(1); // 重置为第一页
     loadBusinessLicenses();
   };
 
-  // 编辑处理函数
   const handleEdit = (record) => {
     setEditingRecord(record);
-    // 设置编辑表单数据
     editForm.setFieldsValue({
       supplierId: record.supplierId,
       licenseNumber: record.licenseNumber,
@@ -152,12 +145,10 @@ const SupplierBusinessLicense = () => {
       effectiveDate: record.effectiveDate ? dayjs(record.effectiveDate) : null,
       expiryDate: record.expiryDate ? dayjs(record.expiryDate) : null
     });
-    // 重置编辑文件列表
     setEditFileList([]);
     setEditVisible(true);
   };
 
-  // 保存编辑
   const handleEditSave = async () => {
     if (submitting) return;
     try {
@@ -165,22 +156,19 @@ const SupplierBusinessLicense = () => {
       const values = await editForm.validateFields();
       const uploadedFile = editFileList.length > 0 ? getUploadedFileMeta(editFileList[editFileList.length - 1]) : null;
       
-      // 构建许可证数据
-            const licenseData = {
-              type: 'BUSINESS_LICENSE',  // 资质类型
-              certificateName: values.name,  // 资质名称
-              licenseNumber: values.licenseNumber,  // 证件编号
-              licenseType: '经营许可证',  // 证件类别
-              issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,  // 发证日期
-              expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,  // 有效期
-              issuingAuthority: values.issuingAuthority,  // 发证机构
-              legalRepresentative: values.legalRepresentative,  // 法定代表人
-              attachmentName: uploadedFile?.attachmentName || editingRecord.attachment || '',
-              licenseFile: uploadedFile?.attachmentUrl || editingRecord.attachmentUrl || ''
-            };
+      const licenseData = {
+        type: 'BUSINESS_LICENSE',
+        certificateName: values.name,
+        licenseNumber: values.licenseNumber,
+        licenseType: '经营许可证',
+        issueDate: values.effectiveDate ? values.effectiveDate.format('YYYY-MM-DD') : null,
+        expiryDate: values.expiryDate ? values.expiryDate.format('YYYY-MM-DD') : null,
+        issuingAuthority: values.issuingAuthority,
+        legalRepresentative: values.legalRepresentative,
+        attachmentName: uploadedFile?.attachmentName || editingRecord.attachment || '',
+        licenseFile: uploadedFile?.attachmentUrl || editingRecord.attachmentUrl || ''
+      };
       
-      // 编辑许可证
-      // 从选择的供应商名称查找供应商ID
       const selectedSupplier = suppliers.find(s => s.id === values.supplierId);
       if (!selectedSupplier) {
         message.error('未找到选中的供应商信息');
@@ -188,7 +176,6 @@ const SupplierBusinessLicense = () => {
       }
       licenseData.certificateName = selectedSupplier.name;
       licenseData.registrantName = selectedSupplier.name;
-      // 确保许可证数据中的supplierId正确
       licenseData.supplierId = selectedSupplier.id;
       const response = await api.put(`/api/scm/suppliers/qualifications/${editingRecord.key}`, licenseData);
       if (response.code === 1) {
@@ -209,7 +196,6 @@ const SupplierBusinessLicense = () => {
     }
   };
 
-  // 删除处理函数
   const handleDelete = async (key) => {
     Modal.confirm({
       title: '确认删除',
@@ -362,8 +348,8 @@ const SupplierBusinessLicense = () => {
       align: 'center',
       render: (value) => {
         const text = value || '-';
-        const color = text === '有效' ? '#52c41a' : text === '即将过期' ? '#fa8c16' : text === '已过期' ? '#f5222d' : '#595959';
-        return <span style={{ color, fontWeight: 600, whiteSpace: 'nowrap' }}>{text}</span>;
+        const color = text === '有效' ? 'success' : text === '即将过期' ? 'warning' : text === '已过期' ? 'error' : 'default';
+        return <Tag color={color}>{text}</Tag>;
       },
       onCell: () => ({
         style: {

@@ -7,6 +7,8 @@ import api from '../utils/api.js';
 const { Option } = Select;
 const MATERIAL_TYPE_OPTIONS = ['IVD试剂', '低值耗材', '高值耗材', '办公用品', '其他'];
 const STORAGE_CONDITION_OPTIONS = ['常温', '2-8℃', '冷藏-20℃'];
+const UNIT_OPTIONS = ['包', '瓶', '支', '卷', '片', '盒', '箱', '只', '套', '台'];
+const UNIT_EXAMPLE_TEXT = '常用单位示例：包、瓶、支、卷、片、盒、箱';
 
 const ProductCatalog = () => {
   const [searchParams, setSearchParams] = useState({
@@ -31,7 +33,6 @@ const ProductCatalog = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [qualifications, setQualifications] = useState([]);
 
-  // 加载供应商列表
   const loadSuppliers = async () => {
     try {
       const response = await api.get('/api/scm/suppliers');
@@ -47,7 +48,6 @@ const ProductCatalog = () => {
     }
   };
 
-  // 加载注册证列表
   const loadQualifications = async (supplierId) => {
     try {
       if (!supplierId) {
@@ -69,7 +69,6 @@ const ProductCatalog = () => {
     }
   };
 
-  // 加载物资列表
   const loadProducts = async () => {
     try {
       setLoading(true);
@@ -115,13 +114,11 @@ const ProductCatalog = () => {
     }
   };
 
-  // 组件加载时获取物资列表
   useEffect(() => {
     loadSuppliers();
     loadProducts();
   }, [currentPage, pageSize]);
 
-  // 处理搜索输入变化
   const handleSearchChange = (field, value) => {
     setSearchParams(prev => ({
       ...prev,
@@ -129,12 +126,10 @@ const ProductCatalog = () => {
     }));
   };
 
-  // 处理查询按钮点击
   const handleSearch = () => {
     loadProducts();
   };
 
-  // 处理新增物资
   const handleAddProduct = async (values) => {
     try {
       setLoading(true);
@@ -172,7 +167,6 @@ const ProductCatalog = () => {
     }
   };
 
-  // 处理编辑物资
   const handleEditProduct = async (values) => {
     try {
       setLoading(true);
@@ -209,7 +203,6 @@ const ProductCatalog = () => {
     }
   };
 
-  // 处理删除物资
   const handleDeleteProduct = async (record) => {
     try {
       setLoading(true);
@@ -228,7 +221,6 @@ const ProductCatalog = () => {
     }
   };
 
-  // 处理编辑按钮点击
   const handleEdit = async (record) => {
     setEditingProduct(record);
     editForm.setFieldsValue({
@@ -517,18 +509,14 @@ const ProductCatalog = () => {
                 rules={[{ required: true, message: '请选择单位' }]}
               >
                 <Select placeholder="请选择单位">
-                  <Option value="只">只</Option>
-                  <Option value="套">套</Option>
-                  <Option value="包">包</Option>
-                  <Option value="瓶">瓶</Option>
-                  <Option value="台">台</Option>
-                  <Option value="支">支</Option>
-                  <Option value="卷">卷</Option>
-                  <Option value="片">片</Option>
-                  <Option value="盒">盒</Option>
-                  <Option value="箱">箱</Option>
+                  {UNIT_OPTIONS.map((item) => (
+                    <Option key={item} value={item}>{item}</Option>
+                  ))}
                 </Select>
               </Form.Item>
+              <div style={{ marginTop: '-16px', marginBottom: '8px', color: '#999', fontSize: '12px' }}>
+                {UNIT_EXAMPLE_TEXT}
+              </div>
             </Col>
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
@@ -698,18 +686,14 @@ const ProductCatalog = () => {
                 rules={[{ required: true, message: '请选择单位' }]}
               >
                 <Select placeholder="请选择单位">
-                  <Option value="只">只</Option>
-                  <Option value="套">套</Option>
-                  <Option value="包">包</Option>
-                  <Option value="瓶">瓶</Option>
-                  <Option value="台">台</Option>
-                  <Option value="支">支</Option>
-                  <Option value="卷">卷</Option>
-                  <Option value="片">片</Option>
-                  <Option value="盒">盒</Option>
-                  <Option value="箱">箱</Option>
+                  {UNIT_OPTIONS.map((item) => (
+                    <Option key={item} value={item}>{item}</Option>
+                  ))}
                 </Select>
               </Form.Item>
+              <div style={{ marginTop: '-16px', marginBottom: '8px', color: '#999', fontSize: '12px' }}>
+                {UNIT_EXAMPLE_TEXT}
+              </div>
             </Col>
             <Col span={FORM_STYLES.form.edit.colSpan}>
               <Form.Item
