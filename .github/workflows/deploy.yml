@@ -208,7 +208,7 @@ jobs:
           echo "Upload successful"
 
           echo "--- Executing remote deployment ---"
-          REMOTE_CMD='set -e; COMPOSE_FILE="/home/yzb/docker-compose.yml"; if [ -n "$GHCR_TOKEN" ]; then echo "--- Logging in to GitHub Container Registry ---"; echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin; fi; echo "--- Pulling target images ---"; docker compose -f "$COMPOSE_FILE" pull; echo "--- Recreating containers with pulled images ---"; docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans; echo "--- Running image refs ---"; docker inspect yzbhc-backend --format "{{.Config.Image}}"; docker inspect yzbhc-nginx --format "{{.Config.Image}}"; echo "--- Removing unused images ---"; docker image prune -af >/dev/null 2>&1 || true; echo "--- Deploy complete ---"'
+          REMOTE_CMD='set -e; COMPOSE_FILE="/home/yzb/docker-compose.yml"; if [ -n "$GHCR_TOKEN" ]; then echo "--- Logging in to GitHub Container Registry ---"; echo "$GHCR_TOKEN" | sudo docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin; fi; echo "--- Pulling target images ---"; sudo docker compose -f "$COMPOSE_FILE" pull; echo "--- Removing old backend/nginx containers ---"; sudo docker rm -f yzbhc-backend yzbhc-nginx >/dev/null 2>&1 || true; echo "--- Recreating containers with pulled images ---"; sudo docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans; echo "--- Running image refs ---"; sudo docker inspect yzbhc-backend --format "{{.Config.Image}}"; sudo docker inspect yzbhc-nginx --format "{{.Config.Image}}"; echo "--- Running mounts ---"; sudo docker inspect yzbhc-backend --format "{{json .Mounts}}"; echo "--- Removing unused images ---"; sudo docker image prune -af >/dev/null 2>&1 || true; echo "--- Deploy complete ---"'
           sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$USERNAME@$HOST" GHCR_TOKEN="$GHCR_TOKEN" GHCR_USERNAME="$GHCR_USERNAME" bash -lc "$REMOTE_CMD"
           echo "Server deployment triggered successfully"
 
@@ -222,16 +222,20 @@ jobs:
           port: 22
           script: |
             echo "=== Container status ==="
-            docker compose -f /home/yzb/docker-compose.yml ps
+            sudo docker compose -f /home/yzb/docker-compose.yml ps
 
             echo ""
             echo "=== Running image refs ==="
-            docker inspect yzbhc-backend --format '{{.Config.Image}}'
-            docker inspect yzbhc-nginx --format '{{.Config.Image}}'
+            sudo docker inspect yzbhc-backend --format '{{.Config.Image}}'
+            sudo docker inspect yzbhc-nginx --format '{{.Config.Image}}'
+
+            echo ""
+            echo "=== Backend mounts ==="
+            sudo docker inspect yzbhc-backend --format '{{json .Mounts}}'
 
             echo ""
             echo "=== Backend recent logs ==="
-            docker logs --tail=30 yzbhc-backend
+            sudo docker logs --tail=30 yzbhc-backend
 
             echo ""
             echo "=== Nginx connectivity check ==="
@@ -240,8 +244,8 @@ jobs:
 
             echo ""
             echo "=== Database unique_code column check ==="
-            DB_PWD=$(docker inspect yzbhc-mysql --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^MYSQL_ROOT_PASSWORD=//p')
-            HAS_COL=$(docker exec yzbhc-mysql mysql -uroot -p"$DB_PWD" -Nse "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='yzb' AND table_name='scm_inventory' AND column_name='unique_code'" 2>/dev/null)
+            DB_PWD=$(sudo docker inspect yzbhc-mysql --format '{{range .Config.Env}}{{println .}}{{end}}' | sed -n 's/^MYSQL_ROOT_PASSWORD=//p')
+            HAS_COL=$(sudo docker exec yzbhc-mysql mysql -uroot -p"$DB_PWD" -Nse "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='yzb' AND table_name='scm_inventory' AND column_name='unique_code'" 2>/dev/null)
             if [ "$HAS_COL" = "1" ]; then
               echo "unique_code column: OK"
             else
