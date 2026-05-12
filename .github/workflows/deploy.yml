@@ -2,7 +2,7 @@ name: Deploy to Production
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
     paths:
       - yzb-hd/**
       - yzb-qd/**
@@ -20,6 +20,10 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: read
+  packages: write
+
 concurrency:
   group: deploy-prod
   cancel-in-progress: true
@@ -28,6 +32,7 @@ env:
   REGISTRY: ghcr.io
   BACKEND_IMAGE: ghcr.io/${{ github.repository }}/backend
   NGINX_IMAGE: ghcr.io/${{ github.repository }}/nginx
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   build-and-deploy:
@@ -85,7 +90,9 @@ jobs:
           context: .
           file: docker/backend.Dockerfile
           push: true
-          tags: ${{ env.BACKEND_IMAGE }}:latest
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.BACKEND_IMAGE }}:${{ env.IMAGE_TAG }}
 
       - name: Build and push nginx image
         if: ${{ !inputs.skip_frontend }}
@@ -94,19 +101,23 @@ jobs:
           context: .
           file: docker/nginx.Dockerfile
           push: true
-          tags: ${{ env.NGINX_IMAGE }}:latest
+          tags: |
+            ${{ env.NGINX_IMAGE }}:latest
+            ${{ env.NGINX_IMAGE }}:${{ env.IMAGE_TAG }}
 
       - name: Generate docker-compose with correct images
         env:
           BACKEND_IMAGE: ${{ env.BACKEND_IMAGE }}
           NGINX_IMAGE: ${{ env.NGINX_IMAGE }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
         run: |
           python3 - <<'PY'
           from textwrap import dedent
           import os
           
-          backend_image = os.environ["BACKEND_IMAGE"] + ":latest"
-          nginx_image = os.environ["NGINX_IMAGE"] + ":latest"
+          image_tag = os.environ["IMAGE_TAG"]
+          backend_image = os.environ["BACKEND_IMAGE"] + ":" + image_tag
+          nginx_image = os.environ["NGINX_IMAGE"] + ":" + image_tag
           
           compose = dedent(f"""\
           services:
@@ -188,6 +199,7 @@ jobs:
           USERNAME: ${{ secrets.DEPLOY_USERNAME }}
           PASSWORD: ${{ secrets.DEPLOY_PASSWORD }}
           GHCR_TOKEN: ${{ secrets.GHCR_DEPLOY_TOKEN }}
+          GHCR_USERNAME: ${{ github.repository_owner }}
         run: |
           set -e
 
@@ -196,8 +208,8 @@ jobs:
           echo "Upload successful"
 
           echo "--- Executing remote deployment ---"
-          REMOTE_CMD='set -e; COMPOSE_FILE="/home/yzb/docker-compose.yml"; if [ -n "$GHCR_TOKEN" ]; then echo "--- Logging in to GitHub Container Registry ---"; echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin; fi; echo "--- Pulling latest images ---"; docker compose -f "$COMPOSE_FILE" pull; echo "--- Restarting containers ---"; docker compose -f "$COMPOSE_FILE" up -d; echo "--- Removing unused images ---"; docker image prune -af >/dev/null 2>&1 || true; echo "--- Deploy complete ---"'
-          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$USERNAME@$HOST" GHCR_TOKEN="$GHCR_TOKEN" GITHUB_ACTOR="$GITHUB_ACTOR" bash -lc "$REMOTE_CMD"
+          REMOTE_CMD='set -e; COMPOSE_FILE="/home/yzb/docker-compose.yml"; if [ -n "$GHCR_TOKEN" ]; then echo "--- Logging in to GitHub Container Registry ---"; echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin; fi; echo "--- Pulling target images ---"; docker compose -f "$COMPOSE_FILE" pull; echo "--- Recreating containers with pulled images ---"; docker compose -f "$COMPOSE_FILE" up -d --force-recreate --remove-orphans; echo "--- Running image refs ---"; docker inspect yzbhc-backend --format "{{.Config.Image}}"; docker inspect yzbhc-nginx --format "{{.Config.Image}}"; echo "--- Removing unused images ---"; docker image prune -af >/dev/null 2>&1 || true; echo "--- Deploy complete ---"'
+          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$USERNAME@$HOST" GHCR_TOKEN="$GHCR_TOKEN" GHCR_USERNAME="$GHCR_USERNAME" bash -lc "$REMOTE_CMD"
           echo "Server deployment triggered successfully"
 
       - name: Verify deployment
@@ -211,6 +223,11 @@ jobs:
           script: |
             echo "=== Container status ==="
             docker compose -f /home/yzb/docker-compose.yml ps
+
+            echo ""
+            echo "=== Running image refs ==="
+            docker inspect yzbhc-backend --format '{{.Config.Image}}'
+            docker inspect yzbhc-nginx --format '{{.Config.Image}}'
 
             echo ""
             echo "=== Backend recent logs ==="

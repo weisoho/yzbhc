@@ -26,7 +26,7 @@ services:
       start_period: 30s
 
   backend:
-    image: ghcr.io/yzbhc/yzbhc-backend:latest
+    image: ghcr.io/weisoho/yzbhc/backend:latest
     container_name: yzbhc-backend
     restart: unless-stopped
     depends_on:
@@ -48,7 +48,7 @@ services:
       - backend_uploads:/app/uploads
 
   nginx:
-    image: ghcr.io/yzbhc/yzbhc-nginx:latest
+    image: ghcr.io/weisoho/yzbhc/nginx:latest
     container_name: yzbhc-nginx
     restart: unless-stopped
     depends_on:
