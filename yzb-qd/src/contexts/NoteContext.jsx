@@ -45,7 +45,7 @@ export const NoteProvider = ({ children }) => {
     '/reports-consumption-summary': '消耗汇总报表',
     '/reports-loss-summary': '损耗汇总报表',
     '/supplier-maintenance': '供应商管理',
-    '/supplier-inspection-report': '供应商考察报告',
+    '/supplier-inspection-report': '供应商注册证',
     '/supplier-business-license': '供应商经营许可证',
     '/supplier-business-certificate': '供应商营业执照',
     '/supplier-qualification-warning': '资质预警',

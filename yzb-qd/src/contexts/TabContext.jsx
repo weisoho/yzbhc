@@ -136,8 +136,9 @@ export const TabProvider = ({ children }) => {
       const existingTab = prevTabs.find(tab => tab.key === currentPath);
       
       if (existingTab) {
-        setActiveTab(existingTab);
-        return prevTabs;
+        const updatedTab = existingTab.title === title ? existingTab : { ...existingTab, title };
+        setActiveTab(updatedTab);
+        return prevTabs.map((tab) => (tab.key === currentPath ? updatedTab : tab));
       } else {
         const newTab = { key: currentPath, title, path: currentPath };
         const updatedTabs = [...prevTabs, newTab];
