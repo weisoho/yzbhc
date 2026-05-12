@@ -97,71 +97,86 @@ jobs:
           tags: ${{ env.NGINX_IMAGE }}:latest
 
       - name: Generate docker-compose with correct images
+        env:
+          BACKEND_IMAGE: ${{ env.BACKEND_IMAGE }}
+          NGINX_IMAGE: ${{ env.NGINX_IMAGE }}
         run: |
-          cat > docker-compose.prod.yml << EOF
-services:
-  mysql:
-    image: mysql:8.0.45
-    container_name: yzbhc-mysql
-    restart: unless-stopped
-    command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_general_ci
-      - --default-authentication-plugin=mysql_native_password
-      - --lower_case_table_names=1
-    environment:
-      MYSQL_ROOT_PASSWORD: YzbhcRoot!2026@Prod#7Qm
-      MYSQL_DATABASE: yzb
-      MYSQL_USER: yzbhc_app
-      MYSQL_PASSWORD: YzbhcApp!2026@Prod#9Lm
-      TZ: Asia/Shanghai
-    ports:
-      - "33066:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\$MYSQL_ROOT_PASSWORD --silent"]
-      interval: 10s
-      timeout: 5s
-      retries: 20
-      start_period: 30s
-
-  backend:
-    image: ${{ env.BACKEND_IMAGE }}:latest
-    container_name: yzbhc-backend
-    restart: unless-stopped
-    depends_on:
-      mysql:
-        condition: service_healthy
-    environment:
-      SPRING_PROFILES_ACTIVE: pro
-      SERVER_PORT: 8088
-      DB_URL: "jdbc:mysql://mysql:3306/yzb?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true"
-      DB_USERNAME: yzbhc_app
-      DB_PASSWORD: YzbhcApp!2026@Prod#9Lm
-      JASYPT_ENCRYPTOR_PASSWORD: YZB_PROD_MASTER_2026
-      UPLOAD_PATH: /app/uploads/
-      TZ: Asia/Shanghai
-      JAVA_OPTS: -Xms512m -Xmx1024m
-    ports:
-      - "8088:8088"
-    volumes:
-      - backend_uploads:/app/uploads
-
-  nginx:
-    image: ${{ env.NGINX_IMAGE }}:latest
-    container_name: yzbhc-nginx
-    restart: unless-stopped
-    depends_on:
-      - backend
-    ports:
-      - "80:80"
-
-volumes:
-  mysql_data:
-  backend_uploads:
-EOF
-          echo "Generated docker-compose.prod.yml"
+          python3 - <<'PY'
+          from textwrap import dedent
+          import os
+          
+          backend_image = os.environ["BACKEND_IMAGE"] + ":latest"
+          nginx_image = os.environ["NGINX_IMAGE"] + ":latest"
+          
+          compose = dedent(f"""\
+          services:
+            mysql:
+              image: mysql:8.0.45
+              container_name: yzbhc-mysql
+              restart: unless-stopped
+              command:
+                - --character-set-server=utf8mb4
+                - --collation-server=utf8mb4_general_ci
+                - --default-authentication-plugin=mysql_native_password
+                - --lower_case_table_names=1
+              environment:
+                MYSQL_ROOT_PASSWORD: YzbhcRoot!2026@Prod#7Qm
+                MYSQL_DATABASE: yzb
+                MYSQL_USER: yzbhc_app
+                MYSQL_PASSWORD: YzbhcApp!2026@Prod#9Lm
+                TZ: Asia/Shanghai
+              ports:
+                - "33066:3306"
+              volumes:
+                - mysql_data:/var/lib/mysql
+              healthcheck:
+                test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+                interval: 10s
+                timeout: 5s
+                retries: 20
+                start_period: 30s
+          
+            backend:
+              image: {backend_image}
+              container_name: yzbhc-backend
+              restart: unless-stopped
+              depends_on:
+                mysql:
+                  condition: service_healthy
+              environment:
+                SPRING_PROFILES_ACTIVE: pro
+                SERVER_PORT: 8088
+                DB_URL: "jdbc:mysql://mysql:3306/yzb?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true"
+                DB_USERNAME: yzbhc_app
+                DB_PASSWORD: YzbhcApp!2026@Prod#9Lm
+                JASYPT_ENCRYPTOR_PASSWORD: YZB_PROD_MASTER_2026
+                UPLOAD_PATH: /app/uploads/
+                TZ: Asia/Shanghai
+                JAVA_OPTS: -Xms512m -Xmx1024m
+              ports:
+                - "8088:8088"
+              volumes:
+                - backend_uploads:/app/uploads
+          
+            nginx:
+              image: {nginx_image}
+              container_name: yzbhc-nginx
+              restart: unless-stopped
+              depends_on:
+                - backend
+              ports:
+                - "80:80"
+          
+          volumes:
+            mysql_data:
+            backend_uploads:
+          """)
+          
+          with open("docker-compose.prod.yml", "w", encoding="utf-8") as f:
+            f.write(compose)
+          
+          print("Generated docker-compose.prod.yml")
+          PY
           cat docker-compose.prod.yml
 
       - name: Install sshpass
