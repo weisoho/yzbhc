@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message, Select } from 'antd';
+import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message, Select, Tag } from 'antd';
 import { useParams } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -11,6 +11,12 @@ const getUploadedFileMeta = (file) => {
     attachmentName: payload?.originalName || file?.name || '',
     attachmentUrl: payload?.url || file?.url || '',
   };
+};
+
+const renderStatusTag = (value) => {
+  const text = value || '-';
+  const color = text === '有效' ? 'success' : text === '即将过期' ? 'warning' : text === '已过期' ? 'error' : 'default';
+  return <Tag color={color}>{text}</Tag>;
 };
 
 const SupplierInspectionReport = () => {
@@ -437,14 +443,7 @@ const SupplierInspectionReport = () => {
           overflow: 'hidden'
         }
       }),
-      render: (status) => (
-        <span style={{ 
-          color: status === '有效' ? '#52c41a' : '#f5222d',
-          fontWeight: 'bold'
-        }}>
-          {status}
-        </span>
-      )
+      render: (status) => renderStatusTag(status)
     },
     { 
       title: '操作', 

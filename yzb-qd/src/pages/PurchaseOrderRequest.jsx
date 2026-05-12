@@ -73,6 +73,32 @@ const PurchaseOrderRequest = () => {
     return String(value).replace('T', ' ').replace(/\.\d+$/, '');
   };
 
+  const applyCenteredTableStyles = (tableColumns) =>
+    tableColumns.map((column) => ({
+      ...column,
+      align: 'center',
+      onHeaderCell: (...args) => {
+        const baseConfig = column.onHeaderCell ? column.onHeaderCell(...args) : {};
+        return {
+          ...baseConfig,
+          style: {
+            ...(baseConfig.style || {}),
+            textAlign: 'center',
+          },
+        };
+      },
+      onCell: (...args) => {
+        const baseConfig = column.onCell ? column.onCell(...args) : {};
+        return {
+          ...baseConfig,
+          style: {
+            ...(baseConfig.style || {}),
+            textAlign: 'center',
+          },
+        };
+      },
+    }));
+
   const getCurrentRequesterInfo = () => {
     let userInfo = {};
     try {
@@ -685,7 +711,7 @@ const PurchaseOrderRequest = () => {
 
   const filteredPurchaseOrders = getFilteredPurchaseOrders();
 
-  const summaryColumns = [
+  const summaryColumns = applyCenteredTableStyles([
     {
       title: '采购单号',
       dataIndex: 'orderNumber',
@@ -793,9 +819,9 @@ const PurchaseOrderRequest = () => {
         </Space>
       ),
     },
-  ];
+  ]);
 
-  const detailColumns = [
+  const detailColumns = applyCenteredTableStyles([
     {
       title: () => (
         <Checkbox 
@@ -899,7 +925,7 @@ const PurchaseOrderRequest = () => {
       width: 120,
       render: (status) => getStatusTag(status)
     },
-  ];
+  ]);
 
   const getDetailData = () => {
     const detailData = [];

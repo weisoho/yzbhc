@@ -7,8 +7,8 @@ import api from '../utils/api.js';
 const { Option } = Select;
 const MATERIAL_TYPE_OPTIONS = ['IVD试剂', '低值耗材', '高值耗材', '办公用品', '其他'];
 const STORAGE_CONDITION_OPTIONS = ['常温', '2-8℃', '冷藏-20℃'];
-const UNIT_OPTIONS = ['个', '包', '瓶', '支', '卷', '片', '盒', '箱', '只', '套', '台'];
-const UNIT_EXAMPLE_TEXT = '常用单位示例：个、包、瓶、支、卷、片、盒、箱';
+const UNIT_OPTIONS = ['个', '例', '包', '瓶', '支', '卷', '片', '盒', '箱', '只', '套', '台'];
+const UNIT_EXAMPLE_TEXT = '常用单位示例：个、例、包、瓶、支、卷、片、盒、箱';
 
 const ProductCatalog = () => {
   const [searchParams, setSearchParams] = useState({
@@ -508,7 +508,7 @@ const ProductCatalog = () => {
                 label="单位"
                 rules={[{ required: true, message: '请选择单位' }]}
               >
-                <Select placeholder="请选择单位，如：个、包、瓶、支">
+                <Select placeholder="请选择单位，如：个、例、包、瓶">
                   {UNIT_OPTIONS.map((item) => (
                     <Option key={item} value={item}>{item}</Option>
                   ))}
@@ -685,7 +685,7 @@ const ProductCatalog = () => {
                 label="单位"
                 rules={[{ required: true, message: '请选择单位' }]}
               >
-                <Select placeholder="请选择单位，如：个、包、瓶、支">
+                <Select placeholder="请选择单位，如：个、例、包、瓶">
                   {UNIT_OPTIONS.map((item) => (
                     <Option key={item} value={item}>{item}</Option>
                   ))}
