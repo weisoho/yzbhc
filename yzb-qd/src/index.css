@@ -121,9 +121,88 @@ button.primary:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
+/* 全局列表样式 */
+.ant-table-wrapper .ant-table-thead > tr > th {
+  text-align: center !important;
+  vertical-align: middle;
+  white-space: nowrap;
+  font-weight: 600;
+  background: #fafafa;
+}
+
+.ant-table-wrapper .ant-table-tbody > tr > td {
+  text-align: center;
+  vertical-align: middle;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  line-height: 1.6;
+}
+
+.ant-table-wrapper .ant-table-cell {
+  word-break: break-word;
+}
+
+.ant-table-wrapper .ant-pagination {
+  justify-content: center;
+}
+
+.list-table-datetime {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 158px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.list-table-multiline {
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.list-table-amount {
+  color: #1677ff;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.list-detail-table-wrapper {
+  background: #fff;
+}
+
+.list-detail-table {
+  width: 100%;
+  min-width: 1560px;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.list-detail-table th,
+.list-detail-table td {
+  padding: 12px 10px;
+  text-align: center;
+  vertical-align: middle;
+  border: 1px solid #f0f0f0;
+  line-height: 1.6;
+}
+
+.list-detail-table th {
+  background: #fafafa;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.list-detail-table td {
+  word-break: break-word;
+}
+
 /* 响应式调整 */
 @media (max-width: 768px) {
   body {
     font-size: 14px;
+  }
+
+  .list-table-datetime {
+    min-width: auto;
   }
 }

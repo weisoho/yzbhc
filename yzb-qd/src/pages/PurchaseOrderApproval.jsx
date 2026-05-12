@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, Table, Button, Input, Select, Space, Tag, Modal, message, InputNumber } from 'antd';
 import { EyeOutlined, SearchOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import api from '../utils/api.js';
 
 
@@ -33,6 +34,25 @@ const PurchaseOrderApproval = () => {
     pageSize: 10,
     total: 0
   });
+
+  const formatDateTime = (value) => {
+    if (!value) {
+      return '-';
+    }
+    const parsed = dayjs(value);
+    if (parsed.isValid()) {
+      return parsed.format('YYYY-MM-DD HH:mm:ss');
+    }
+    return String(value).replace('T', ' ').replace(/\.\d+$/, '');
+  };
+
+  const renderDateTime = (value) => (
+    <span className="list-table-datetime">{formatDateTime(value)}</span>
+  );
+
+  const renderMultilineText = (value) => (
+    <div className="list-table-multiline">{value || '-'}</div>
+  );
 
   const [departments, setDepartments] = useState([]);
 
@@ -142,7 +162,7 @@ const PurchaseOrderApproval = () => {
     {
       title: '',
       key: 'checkbox',
-      width: 40,
+      width: 56,
       render: (_, record) => (
         <input 
           type="checkbox" 
@@ -157,23 +177,24 @@ const PurchaseOrderApproval = () => {
         />
       )
     },
-    { title: '订单号', dataIndex: 'orderNo', key: 'orderNo' },
-    { title: '物资编码', dataIndex: 'productCode', key: 'productCode' },
-    { title: '商品名称', dataIndex: 'product', key: 'product' },
-    { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName' },
-    { title: '物资类型', dataIndex: 'materialType', key: 'materialType' },
-    { title: '规格', dataIndex: 'specification', key: 'specification' },
-    { title: '型号', dataIndex: 'model', key: 'model' },
-    { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber' },
-    { title: '订货数量', dataIndex: 'quantity', key: 'quantity' },
-    { title: '订货单位', dataIndex: 'unit', key: 'unit' },
-    { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer' },
-    { title: '申领科室', dataIndex: 'department', key: 'department' },
-    { title: '创建时间', dataIndex: 'createTime', key: 'createTime' },
+    { title: '订单号', dataIndex: 'orderNo', key: 'orderNo', width: 180, render: renderMultilineText },
+    { title: '物资编码', dataIndex: 'productCode', key: 'productCode', width: 140, render: renderMultilineText },
+    { title: '商品名称', dataIndex: 'product', key: 'product', width: 180, render: renderMultilineText },
+    { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 220, render: renderMultilineText },
+    { title: '物资类型', dataIndex: 'materialType', key: 'materialType', width: 120, render: renderMultilineText },
+    { title: '规格', dataIndex: 'specification', key: 'specification', width: 140, render: renderMultilineText },
+    { title: '型号', dataIndex: 'model', key: 'model', width: 120, render: renderMultilineText },
+    { title: '注册证号', dataIndex: 'registrationNumber', key: 'registrationNumber', width: 180, render: renderMultilineText },
+    { title: '订货数量', dataIndex: 'quantity', key: 'quantity', width: 100 },
+    { title: '订货单位', dataIndex: 'unit', key: 'unit', width: 100, render: renderMultilineText },
+    { title: '生产厂家', dataIndex: 'manufacturer', key: 'manufacturer', width: 180, render: renderMultilineText },
+    { title: '申领科室', dataIndex: 'department', key: 'department', width: 120, render: renderMultilineText },
+    { title: '创建时间', dataIndex: 'createTime', key: 'createTime', width: 190, render: renderDateTime },
     {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
+      width: 110,
       render: (status) => {
         const statusMap = {
           'DRAFT': { color: 'warning', text: '待提交' },
@@ -196,12 +217,13 @@ const PurchaseOrderApproval = () => {
       title: '备注',
       dataIndex: 'remark',
       key: 'remark',
-      ellipsis: true,
-      width: 150
+      width: 220,
+      render: renderMultilineText
     },
     {
       title: '操作',
       key: 'action',
+      width: 120,
       render: (_, record) => (
         <Space size="middle">
           <Button 
@@ -255,7 +277,7 @@ const PurchaseOrderApproval = () => {
     {
       title: '',
       key: 'checkbox',
-      width: 40,
+      width: 56,
       render: (_, record) => (
         <input 
           type="checkbox" 
@@ -270,33 +292,36 @@ const PurchaseOrderApproval = () => {
         />
       )
     },
-    { title: '采购单号', dataIndex: 'orderNo', key: 'orderNo' },
-    { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName' },
-    { title: '采购分院', dataIndex: 'department', key: 'department' },
+    { title: '采购单号', dataIndex: 'orderNo', key: 'orderNo', width: 180, render: renderMultilineText },
+    { title: '供应商名称', dataIndex: 'supplierName', key: 'supplierName', width: 220, render: renderMultilineText },
+    { title: '采购分院', dataIndex: 'department', key: 'department', width: 120, render: renderMultilineText },
     { 
       title: '物资数量', 
       dataIndex: 'totalQuantity', 
       key: 'totalQuantity',
+      width: 100,
       render: (quantity) => <span style={{ fontWeight: '500' }}>{quantity}</span>
     },
     { 
       title: '合计金额', 
       dataIndex: 'totalAmount', 
       key: 'totalAmount',
-      render: (amount) => <span style={{ fontWeight: '500', color: '#1890ff' }}>¥{amount?.toFixed(2)}</span>
+      width: 140,
+      render: (amount) => <span className="list-table-amount">¥{amount?.toFixed(2)}</span>
     },
-    { title: '申请人', dataIndex: 'applicant', key: 'applicant' },
-    { title: '创建日期', dataIndex: 'createTime', key: 'createTime' },
+    { title: '申请人', dataIndex: 'applicant', key: 'applicant', width: 110, render: renderMultilineText },
+    { title: '创建日期', dataIndex: 'createTime', key: 'createTime', width: 190, render: renderDateTime },
     {
       title: '备注',
       dataIndex: 'remark',
       key: 'remark',
-      ellipsis: true,
-      width: 150
+      width: 220,
+      render: renderMultilineText
     },
     {
       title: '操作',
       key: 'action',
+      width: 120,
       render: (_, record) => (
         <Space size="middle">
           <Button 
@@ -314,7 +339,15 @@ const PurchaseOrderApproval = () => {
         </Space>
       )
     },
-  ];
+  ].map((column) => ({
+    align: 'center',
+    ...column,
+  }));
+
+  const detailColumns = columns.map((column) => ({
+    align: 'center',
+    ...column,
+  }));
 
   const handleApprove = async (record) => {
     try {
@@ -659,7 +692,8 @@ const PurchaseOrderApproval = () => {
 
       <Card>
         <Table 
-          columns={viewMode === 'detail' ? columns : summaryColumns} 
+          className="list-page-table"
+          columns={viewMode === 'detail' ? detailColumns : summaryColumns} 
           dataSource={viewMode === 'detail' ? [] : summaryOrders} 
           pagination={{ 
             current: pagination.current,
@@ -667,6 +701,7 @@ const PurchaseOrderApproval = () => {
             total: pagination.total,
             showSizeChanger: true,
             showQuickJumper: true,
+            position: ['bottomCenter'],
             showTotal: (total) => `共 ${total} 条记录`,
             onChange: (page, pageSize) => {
               setPagination({
@@ -681,7 +716,10 @@ const PurchaseOrderApproval = () => {
               marginTop: '16px'
             }
           }} 
-          size="small"
+          rowKey="key"
+          scroll={{ x: 1500 }}
+          tableLayout="auto"
+          size="middle"
           loading={loading}
         />
       </Card>
@@ -744,7 +782,7 @@ const PurchaseOrderApproval = () => {
                 </div>
                 <div>
                   <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>创建日期</div>
-                  <div style={{ fontWeight: '500' }}>{currentOrder.createTime}</div>
+                  <div style={{ fontWeight: '500' }}>{formatDateTime(currentOrder.createTime)}</div>
                 </div>
                 <div>
                   <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>状态</div>
@@ -770,7 +808,7 @@ const PurchaseOrderApproval = () => {
                 </div>
                 <div>
                   <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>审核时间</div>
-                  <div style={{ fontWeight: '500' }}>{currentOrder.approveTime || '-'}</div>
+                  <div style={{ fontWeight: '500' }}>{formatDateTime(currentOrder.approveTime)}</div>
                 </div>
                 <div>
                   <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>审核人</div>
@@ -784,13 +822,13 @@ const PurchaseOrderApproval = () => {
             </div>
 
             {/* 采购明细表格 */}
-            <div style={{ 
+            <div className="list-detail-table-wrapper" style={{ 
               overflowX: 'auto', 
               marginBottom: 16,
               border: '1px solid #f0f0f0',
               borderRadius: 8
             }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <table className="list-detail-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ backgroundColor: '#fafafa' }}>
                     <th style={{ padding: '12px 8px', textAlign: 'center', border: '1px solid #f0f0f0', minWidth: '120px' }}>供应商名称</th>

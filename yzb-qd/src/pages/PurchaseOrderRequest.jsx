@@ -130,6 +130,26 @@ const PurchaseOrderRequest = () => {
     return departmentId ? String(departmentId) : '';
   };
 
+  const resolveValidDepartment = (formValues = {}) => {
+    const requester = getCurrentRequesterInfo();
+    const departmentId = formValues.departmentId ?? requester.departmentId;
+    const departmentName = formValues.departmentName || resolveDepartmentName(departmentId) || requester.departmentName;
+    return { departmentId, departmentName };
+  };
+
+  const validateSelectedMaterials = (selectedMaterials) => {
+    const invalidMaterials = selectedMaterials.filter(item => !item.supplierId);
+    if (invalidMaterials.length > 0) {
+      const materialNames = invalidMaterials
+        .slice(0, 3)
+        .map(item => item.materialName || item.materialCode || '未命名物资')
+        .join('、');
+      messageApi.error(`以下物资未绑定供应商，无法生成采购单：${materialNames}`);
+      return false;
+    }
+    return true;
+  };
+
   // 加载物资目录（从后端）
   const loadMaterialCatalog = async () => {
     try {
@@ -369,11 +389,20 @@ const PurchaseOrderRequest = () => {
       messageApi.warning('请至少选择一项物资');
       return;
     }
+    if (!validateSelectedMaterials(selectedMaterials)) {
+      return;
+    }
 
     let formValues;
     try {
       formValues = await newOrderForm.validateFields();
     } catch {
+      return;
+    }
+
+    const { departmentId, departmentName } = resolveValidDepartment(formValues);
+    if (!departmentId || !departmentName) {
+      messageApi.error('当前采购科室未识别，请先重新选择院区/科室后再提交');
       return;
     }
 
@@ -392,8 +421,8 @@ const PurchaseOrderRequest = () => {
       let savedCount = 0;
       for (const group of Object.values(supplierGroups)) {
         const purchaseData = {
-          departmentId: formValues.departmentId,
-          departmentName: resolveDepartmentName(formValues.departmentId),
+          departmentId,
+          departmentName,
           supplierId: group.supplierId,
           operatorName: formValues.operatorName || getCurrentRequesterInfo().operatorName,
           planType: formValues.planType || 'monthly',
@@ -431,11 +460,20 @@ const PurchaseOrderRequest = () => {
       messageApi.warning('请至少选择一项物资');
       return;
     }
+    if (!validateSelectedMaterials(selectedMaterials)) {
+      return;
+    }
 
     let formValues;
     try {
       formValues = await newOrderForm.validateFields();
     } catch {
+      return;
+    }
+
+    const { departmentId, departmentName } = resolveValidDepartment(formValues);
+    if (!departmentId || !departmentName) {
+      messageApi.error('当前采购科室未识别，请先重新选择院区/科室后再提交');
       return;
     }
 
@@ -455,8 +493,8 @@ const PurchaseOrderRequest = () => {
       let submittedCount = 0;
       for (const group of Object.values(supplierGroups)) {
         const purchaseData = {
-          departmentId: formValues.departmentId,
-          departmentName: resolveDepartmentName(formValues.departmentId),
+          departmentId,
+          departmentName,
           supplierId: group.supplierId,
           operatorName: operatorName,
           planType: formValues.planType || 'monthly',
@@ -1954,10 +1992,22 @@ const PurchaseOrderRequest = () => {
                         return;
                       }
 
+                      const requester = getCurrentRequesterInfo();
+                      const detailDepartmentId = currentOrderDetails.departmentId ?? requester.departmentId;
+                      const detailDepartmentName = currentOrderDetails.departmentName || currentOrderDetails.department || requester.departmentName;
+                      if (!detailDepartmentId || !detailDepartmentName) {
+                        messageApi.error('当前采购单缺少采购科室信息，请刷新页面后重试');
+                        return;
+                      }
+                      if (!currentOrderDetails.supplierId) {
+                        messageApi.error('当前采购单缺少供应商信息，请刷新页面后重试');
+                        return;
+                      }
+
                       const updateData = {
                         id: currentOrderDetails.key,
-                        departmentId: currentOrderDetails.departmentId,
-                        departmentName: currentOrderDetails.departmentName || currentOrderDetails.department,
+                        departmentId: detailDepartmentId,
+                        departmentName: detailDepartmentName,
                         supplierId: currentOrderDetails.supplierId,
                         operatorName: currentOrderDetails.operatorName || currentOrderDetails.operator,
                         planType: currentOrderDetails.planType || 'monthly',

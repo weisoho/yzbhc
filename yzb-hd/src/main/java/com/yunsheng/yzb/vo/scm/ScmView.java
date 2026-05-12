@@ -22,6 +22,10 @@ public final class ScmView {
     public static class PurchaseOrderDetail {
         /** 采购单主键。 */
         private Long id;
+        /** 科室主键。 */
+        private Long departmentId;
+        /** 供应商主键。 */
+        private Long supplierId;
         /** 采购单号。 */
         private String orderNumber;
         /** 科室名称。 */
