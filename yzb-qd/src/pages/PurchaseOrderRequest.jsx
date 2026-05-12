@@ -1738,7 +1738,7 @@ const PurchaseOrderRequest = () => {
                 </div>
                 <div>
                   <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>创建日期</div>
-                  <div style={{ fontWeight: '500' }}>{currentOrderDetails.createTime}</div>
+                  <div style={{ fontWeight: '500' }}>{formatDateTime(currentOrderDetails.createTime)}</div>
                 </div>
                 <div>
                   <div style={{ color: '#8c8c8c', fontSize: '12px', marginBottom: '4px' }}>状态</div>

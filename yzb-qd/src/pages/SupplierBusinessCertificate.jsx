@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message, Select } from 'antd';
+import { Card, Button, Table, Form, Input, Space, Modal, Upload, DatePicker, message, Select, Tag } from 'antd';
 import { useParams } from 'react-router-dom';
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, UploadOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
@@ -25,6 +25,12 @@ const CAPITAL_UNIT_OPTIONS = [
   { label: '万美元', value: '万美元' },
   { label: '美元', value: '美元' },
 ];
+
+const renderStatusTag = (value) => {
+  const text = value || '-';
+  const color = text === '有效' ? 'success' : text === '即将过期' ? 'warning' : text === '已过期' ? 'error' : 'default';
+  return <Tag color={color}>{text}</Tag>;
+};
 
 const parseRegisteredCapital = (value) => {
   const normalized = String(value || '').trim();
@@ -460,7 +466,7 @@ const SupplierBusinessCertificate = () => {
       key: 'status',
       width: 100,
       align: 'center',
-      render: (value) => value || '-',
+      render: (value) => renderStatusTag(value),
       onHeaderCell: () => ({
         style: {
           whiteSpace: 'nowrap'
