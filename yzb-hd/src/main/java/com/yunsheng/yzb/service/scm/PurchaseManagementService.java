@@ -49,6 +49,13 @@ public interface PurchaseManagementService {
     PurchaseOrderEntity updateOrder(Long orderId, ScmRequest.PurchaseSave request);
 
     /**
+     * 删除采购单。
+     *
+     * @param orderId 采购单主键
+     */
+    void deleteOrder(Long orderId);
+
+    /**
      * 提交采购单。
      *
      * @param orderId 采购单主键

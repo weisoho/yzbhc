@@ -80,6 +80,18 @@ public class PurchaseManagementController {
     }
 
     /**
+     * 删除采购单。
+     *
+     * @param orderId 采购单主键
+     * @return 删除结果
+     */
+    @DeleteMapping("/orders/{orderId}")
+    public AjaxResult<Void> deleteOrder(@PathVariable Long orderId) {
+        purchaseManagementService.deleteOrder(orderId);
+        return AjaxResult.success();
+    }
+
+    /**
      * 提交采购单进入审核流程。
      *
      * @param orderId 采购单主键

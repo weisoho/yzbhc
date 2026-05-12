@@ -205,6 +205,21 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void deleteOrder(Long orderId) {
+        PurchaseOrderEntity order = mustGetOrder(orderId);
+        if (!Objects.equals(order.getStatus(), ScmConstants.PURCHASE_DRAFT)
+                && !Objects.equals(order.getStatus(), ScmConstants.PURCHASE_REJECTED)) {
+            throw new ScmBusinessException("当前状态不允许删除采购单");
+        }
+        purchaseOrderItemMapper.delete(new LambdaQueryWrapper<PurchaseOrderItemEntity>()
+                .eq(PurchaseOrderItemEntity::getPurchaseOrderId, orderId));
+        purchaseOrderMapper.deleteById(orderId);
+        operationLogService.save(order.getOperatorName(), "删除", "删除采购单: " + order.getOrderNumber(),
+                ScmConstants.LOG_WARNING, "采购管理", order.getOrderNumber());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public PurchaseOrderEntity submitOrder(Long orderId, String operatorName) {
         PurchaseOrderEntity order = mustGetOrder(orderId);
         if (!Objects.equals(order.getStatus(), ScmConstants.PURCHASE_DRAFT)

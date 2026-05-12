@@ -28,7 +28,7 @@ import {
   DeleteOutlined,
   ExportOutlined
 } from '@ant-design/icons';
-import api from '../utils/api.js';
+import api, { getApiErrorMessage } from '../utils/api.js';
 
 const PurchaseOrderRequest = () => {
   dayjs.locale('zh-cn');
@@ -199,6 +199,10 @@ const PurchaseOrderRequest = () => {
       if (response.code === 1 && response.data) {
         const orderList = response.data.records.map(order => ({
           key: order.id,
+          departmentId: order.departmentId,
+          departmentName: order.departmentName,
+          supplierId: order.supplierId,
+          supplierName: order.supplierName,
           orderNumber: order.orderNumber,
           createTime: order.createTime,
           status: order.status,
@@ -206,6 +210,7 @@ const PurchaseOrderRequest = () => {
           department: order.departmentName,
           totalAmount: order.totalAmount,
           itemCount: order.itemCount,
+          operatorName: order.operatorName,
           operator: order.operatorName,
           planType: order.planType,
           details: (order.details || []).map(item => ({
@@ -784,6 +789,13 @@ const PurchaseOrderRequest = () => {
                     const orderData = response.data;
                     orderWithDetails = {
                       ...record,
+                      departmentId: orderData.departmentId,
+                      departmentName: orderData.departmentName,
+                      supplierId: orderData.supplierId,
+                      supplierName: orderData.supplierName,
+                      operatorName: orderData.operatorName,
+                      planType: orderData.planType,
+                      remark: orderData.remark,
                       details: (orderData.details || orderData.items || []).map(item => ({
                         key: item.id,
                         materialCode: item.materialCode,
@@ -1930,13 +1942,29 @@ const PurchaseOrderRequest = () => {
                   if (currentOrderDetails) {
                     try {
                       setDetailSubmittingAction('save');
+                      if (editingDetails.length === 0) {
+                        const deleteResponse = await api.delete(`/api/scm/purchases/orders/${currentOrderDetails.key}`);
+                        if (deleteResponse.code === 1) {
+                          messageApi.success('订单已删除');
+                          loadPurchaseOrders();
+                          setDetailModalVisible(false);
+                        } else {
+                          messageApi.error(deleteResponse.message || '删除订单失败');
+                        }
+                        return;
+                      }
+
                       const updateData = {
                         id: currentOrderDetails.key,
+                        departmentId: currentOrderDetails.departmentId,
+                        departmentName: currentOrderDetails.departmentName || currentOrderDetails.department,
+                        supplierId: currentOrderDetails.supplierId,
+                        operatorName: currentOrderDetails.operatorName || currentOrderDetails.operator,
+                        planType: currentOrderDetails.planType || 'monthly',
                         remark: currentOrderDetails.remark,
                         items: editingDetails.map(item => ({
                           materialId: item.materialId || parseInt(item.key),
                           quantity: item.quantity,
-                          unit: item.unit
                         }))
                       };
                       const response = await api.put(`/api/scm/purchases/orders/${currentOrderDetails.key}`, updateData);
@@ -1949,7 +1977,7 @@ const PurchaseOrderRequest = () => {
                       }
                     } catch (error) {
                       console.error('保存订单失败:', error);
-                      messageApi.error('保存失败，请检查网络连接');
+                      messageApi.error(getApiErrorMessage(error, '保存失败'));
                     } finally {
                       setDetailSubmittingAction(null);
                     }
