@@ -88,7 +88,7 @@ public class PurchaseManagementController {
     @DeleteMapping("/orders/{orderId}")
     public AjaxResult<Void> deleteOrder(@PathVariable Long orderId) {
         purchaseManagementService.deleteOrder(orderId);
-        return AjaxResult.success();
+        return AjaxResult.success(null);
     }
 
     /**
