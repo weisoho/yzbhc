@@ -193,6 +193,8 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
 
       - name: Upload docker-compose and deploy
+        id: deploy_remote
+        continue-on-error: true
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
           USERNAME: ${{ secrets.DEPLOY_USERNAME }}
@@ -203,15 +205,19 @@ jobs:
           set -e
 
           echo "--- Uploading docker-compose.prod.yml to server ---"
-          sshpass -p "$PASSWORD" scp -o StrictHostKeyChecking=no docker-compose.prod.yml "$USERNAME@$HOST:/home/yzb/docker-compose.yml"
+          sshpass -p "$PASSWORD" scp -o StrictHostKeyChecking=no -o ServerAliveInterval=15 -o ServerAliveCountMax=20 docker-compose.prod.yml "$USERNAME@$HOST:/home/yzb/docker-compose.yml"
           echo "Upload successful"
 
           echo "--- Executing remote deployment ---"
-          REMOTE_CMD='set -e; export DOCKER_CLIENT_TIMEOUT=600; export COMPOSE_HTTP_TIMEOUT=600; COMPOSE_FILE="/home/yzb/docker-compose.yml"; echo "--- Server connectivity check ---"; curl -fsSIL --max-time 10 https://ghcr.io/v2/ >/dev/null && echo "ghcr.io: OK" || echo "ghcr.io: FAILED (may cause slow pulls)"; if [ -n "$GHCR_TOKEN" ]; then echo "--- Logging in to GitHub Container Registry ---"; echo "$GHCR_TOKEN" | sudo docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin; fi; echo "--- Pulling target images ---"; for i in 1 2 3; do echo "Pull attempt $i/3"; sudo docker compose -f "$COMPOSE_FILE" pull --quiet backend nginx && break || (echo "Pull failed, retrying..."; sleep 10); done; echo "--- Removing old backend/nginx containers ---"; sudo docker rm -f yzbhc-backend yzbhc-nginx >/dev/null 2>&1 || true; echo "--- Recreating backend/nginx with pulled images ---"; sudo docker compose -f "$COMPOSE_FILE" up -d --force-recreate backend nginx; echo "--- Running image refs ---"; sudo docker inspect yzbhc-backend --format "{{.Config.Image}}"; sudo docker inspect yzbhc-nginx --format "{{.Config.Image}}"; echo "--- Removing unused images ---"; sudo docker image prune -af >/dev/null 2>&1 || true; echo "--- Deploy complete ---"'
-          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$USERNAME@$HOST" GHCR_TOKEN="$GHCR_TOKEN" GHCR_USERNAME="$GHCR_USERNAME" bash -lc "$REMOTE_CMD"
-          echo "Server deployment triggered successfully"
+          REMOTE_CMD='set -e; export DOCKER_CLIENT_TIMEOUT=600; export COMPOSE_HTTP_TIMEOUT=600; COMPOSE_FILE="/home/yzb/docker-compose.yml"; echo "--- Server connectivity check ---"; CODE=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 10 https://ghcr.io/v2/ || echo 000); if [ "$CODE" = "000" ]; then echo "ghcr.io: FAILED (network error)"; else echo "ghcr.io: OK (HTTP $CODE)"; fi; if [ -n "$GHCR_TOKEN" ]; then echo "--- Logging in to GitHub Container Registry ---"; echo "$GHCR_TOKEN" | sudo docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin; fi; echo "--- Pulling target images ---"; for i in 1 2 3; do echo "Pull attempt $i/3"; sudo docker compose -f "$COMPOSE_FILE" pull --quiet backend nginx && break || (echo "Pull failed, retrying..."; sleep 10); done; echo "--- Removing old backend/nginx containers ---"; sudo docker rm -f yzbhc-backend yzbhc-nginx >/dev/null 2>&1 || true; echo "--- Recreating backend/nginx with pulled images ---"; sudo docker compose -f "$COMPOSE_FILE" up -d --force-recreate backend nginx; echo "--- Running image refs ---"; sudo docker inspect yzbhc-backend --format "{{.Config.Image}}"; sudo docker inspect yzbhc-nginx --format "{{.Config.Image}}"; echo "--- Removing unused images ---"; sudo docker image prune -af >/dev/null 2>&1 || true; echo "--- Deploy complete ---"'
+          set +e
+          sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=15 -o ServerAliveCountMax=20 -o ConnectTimeout=20 "$USERNAME@$HOST" GHCR_TOKEN="$GHCR_TOKEN" GHCR_USERNAME="$GHCR_USERNAME" bash -lc "$REMOTE_CMD"
+          DEPLOY_EXIT=$?
+          echo "Remote deploy exit code: $DEPLOY_EXIT"
+          exit $DEPLOY_EXIT
 
       - name: Verify deployment
+        if: ${{ always() }}
         continue-on-error: true
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -219,6 +225,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USERNAME }}
           password: ${{ secrets.DEPLOY_PASSWORD }}
           port: 22
+          command_timeout: 10m
           script: |
             echo "=== Container status ==="
             sudo docker compose -f /home/yzb/docker-compose.yml ps
@@ -250,6 +257,12 @@ jobs:
             else
               echo "unique_code column: MISSING (migration may be needed)"
             fi
+
+      - name: Fail if deployment failed
+        if: ${{ steps.deploy_remote.outcome != 'success' }}
+        run: |
+          echo "Deployment step failed; please check logs above and verify server status output."
+          exit 1
 
       - name: Notify on failure
         if: ${{ failure() }}
