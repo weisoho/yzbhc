@@ -188,7 +188,6 @@ jobs:
           
           print("Generated docker-compose.prod.yml")
           PY
-          cat docker-compose.prod.yml
 
       - name: Install sshpass
         run: sudo apt-get update -qq && sudo apt-get install -y -qq sshpass
@@ -208,7 +207,7 @@ jobs:
           echo "Upload successful"
 
           echo "--- Executing remote deployment ---"
-          REMOTE_CMD='set -e; COMPOSE_FILE="/home/yzb/docker-compose.yml"; if [ -n "$GHCR_TOKEN" ]; then echo "--- Logging in to GitHub Container Registry ---"; echo "$GHCR_TOKEN" | sudo docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin; fi; echo "--- Pulling target images ---"; sudo docker compose -f "$COMPOSE_FILE" pull backend nginx; echo "--- Removing old backend/nginx containers ---"; sudo docker rm -f yzbhc-backend yzbhc-nginx >/dev/null 2>&1 || true; echo "--- Recreating backend/nginx with pulled images ---"; sudo docker compose -f "$COMPOSE_FILE" up -d --force-recreate backend nginx; echo "--- Running image refs ---"; sudo docker inspect yzbhc-backend --format "{{.Config.Image}}"; sudo docker inspect yzbhc-nginx --format "{{.Config.Image}}"; echo "--- Running mounts ---"; sudo docker inspect yzbhc-backend --format "{{json .Mounts}}"; echo "--- Removing unused images ---"; sudo docker image prune -af >/dev/null 2>&1 || true; echo "--- Deploy complete ---"'
+          REMOTE_CMD='set -e; export DOCKER_CLIENT_TIMEOUT=600; export COMPOSE_HTTP_TIMEOUT=600; COMPOSE_FILE="/home/yzb/docker-compose.yml"; echo "--- Server connectivity check ---"; curl -fsSIL --max-time 10 https://ghcr.io/v2/ >/dev/null && echo "ghcr.io: OK" || echo "ghcr.io: FAILED (may cause slow pulls)"; if [ -n "$GHCR_TOKEN" ]; then echo "--- Logging in to GitHub Container Registry ---"; echo "$GHCR_TOKEN" | sudo docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin; fi; echo "--- Pulling target images ---"; for i in 1 2 3; do echo "Pull attempt $i/3"; sudo docker compose -f "$COMPOSE_FILE" pull --quiet backend nginx && break || (echo "Pull failed, retrying..."; sleep 10); done; echo "--- Removing old backend/nginx containers ---"; sudo docker rm -f yzbhc-backend yzbhc-nginx >/dev/null 2>&1 || true; echo "--- Recreating backend/nginx with pulled images ---"; sudo docker compose -f "$COMPOSE_FILE" up -d --force-recreate backend nginx; echo "--- Running image refs ---"; sudo docker inspect yzbhc-backend --format "{{.Config.Image}}"; sudo docker inspect yzbhc-nginx --format "{{.Config.Image}}"; echo "--- Removing unused images ---"; sudo docker image prune -af >/dev/null 2>&1 || true; echo "--- Deploy complete ---"'
           sshpass -p "$PASSWORD" ssh -o StrictHostKeyChecking=no "$USERNAME@$HOST" GHCR_TOKEN="$GHCR_TOKEN" GHCR_USERNAME="$GHCR_USERNAME" bash -lc "$REMOTE_CMD"
           echo "Server deployment triggered successfully"
 
