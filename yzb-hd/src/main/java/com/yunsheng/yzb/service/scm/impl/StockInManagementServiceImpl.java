@@ -209,9 +209,7 @@ public class StockInManagementServiceImpl implements StockInManagementService {
         order.setTotalAmount(totalAmount);
         order.setMaterialCount(materialCount);
         stockInOrderMapper.updateById(order);
-        receipt.setStatus(ScmConstants.RECEIPT_COMPLETED);
-        receipt.setUpdateTime(LocalDateTime.now());
-        purchaseReceiveMapper.updateById(receipt);
+        refreshReceiptStatus(receipt);
         refreshPurchaseOrderAfterStockIn(receipt.getPurchaseOrderId());
         operationLogService.save(request.getOperatorName(), "入库", "完成入库: " + order.getStockInNumber(),
                 ScmConstants.LOG_SUCCESS, "入库管理", order.getStockInNumber());
@@ -319,12 +317,44 @@ public class StockInManagementServiceImpl implements StockInManagementService {
 
     private void refreshPurchaseOrderAfterStockIn(Long purchaseOrderId) {
         PurchaseOrderEntity order = purchaseOrderMapper.selectById(purchaseOrderId);
+        if (order == null) {
+            return;
+        }
         List<PurchaseOrderItemEntity> items = purchaseOrderItemMapper.selectList(new LambdaQueryWrapper<PurchaseOrderItemEntity>()
                 .eq(PurchaseOrderItemEntity::getPurchaseOrderId, purchaseOrderId));
-        boolean finished = items.stream().allMatch(item -> Objects.equals(item.getReceivedQuantity(), item.getStockedQuantity()));
-        order.setStatus(finished ? ScmConstants.PURCHASE_COMPLETED : ScmConstants.PURCHASE_WAIT_STOCK_IN);
+        boolean finished = !items.isEmpty() && items.stream()
+                .allMatch(item -> safeInt(item.getQuantity()) > 0
+                        && safeInt(item.getStockedQuantity()) >= safeInt(item.getQuantity()));
+        boolean hasPendingStockIn = items.stream()
+                .anyMatch(item -> safeInt(item.getReceivedQuantity()) > safeInt(item.getStockedQuantity()));
+        boolean hasPendingReceive = items.stream()
+                .anyMatch(item -> safeInt(item.getReceivedQuantity()) < safeInt(item.getQuantity()));
+        if (finished) {
+            order.setStatus(ScmConstants.PURCHASE_COMPLETED);
+        } else if (hasPendingReceive) {
+            order.setStatus(ScmConstants.PURCHASE_WAIT_RECEIVE);
+        } else if (hasPendingStockIn) {
+            order.setStatus(ScmConstants.PURCHASE_WAIT_STOCK_IN);
+        } else {
+            order.setStatus(ScmConstants.PURCHASE_COMPLETED);
+        }
         order.setUpdateTime(LocalDateTime.now());
         purchaseOrderMapper.updateById(order);
+    }
+
+    private void refreshReceiptStatus(PurchaseReceiveEntity receipt) {
+        List<PurchaseReceiveItemEntity> receiptItems = purchaseReceiveItemMapper.selectList(
+                new LambdaQueryWrapper<PurchaseReceiveItemEntity>()
+                        .eq(PurchaseReceiveItemEntity::getReceiveId, receipt.getId()));
+        boolean completed = !receiptItems.isEmpty() && receiptItems.stream().allMatch(item ->
+                alreadyStockedQuantity(item.getId()) >= safeInt(item.getActualReceivedQuantity()));
+        receipt.setStatus(completed ? ScmConstants.RECEIPT_COMPLETED : ScmConstants.RECEIPT_WAIT_STOCK_IN);
+        receipt.setUpdateTime(LocalDateTime.now());
+        purchaseReceiveMapper.updateById(receipt);
+    }
+
+    private int safeInt(Integer value) {
+        return value == null ? 0 : value;
     }
 
     private void syncInventory(StockInItemEntity stockInItem, StockInOrderEntity order) {
@@ -560,6 +590,8 @@ public class StockInManagementServiceImpl implements StockInManagementService {
         detail.setPurchaseAmount(item.getPrice().multiply(BigDecimal.valueOf(detail.getPendingQuantity())));
         detail.setDepartment(receipt.getDepartmentName());
         detail.setStatus(receipt.getStatus());
+        detail.setActualDeliveryDate(receipt.getActualDeliveryDate());
+        detail.setReceiveTime(receipt.getCreateTime());
         return detail;
     }
 }

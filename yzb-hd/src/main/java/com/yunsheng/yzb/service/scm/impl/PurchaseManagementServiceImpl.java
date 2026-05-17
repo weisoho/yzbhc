@@ -308,80 +308,90 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
         Map<Long, PurchaseOrderItemEntity> itemMap = orderItems.stream()
                 .collect(Collectors.toMap(PurchaseOrderItemEntity::getId, item -> item));
 
-        PurchaseReceiveEntity receipt = new PurchaseReceiveEntity();
-        receipt.setReceiveNumber(ScmCodeGenerator.nextCode(purchaseReceiveMapper, "RC", "receive_number"));
-        receipt.setPurchaseOrderId(order.getId());
-        receipt.setOrderNumber(order.getOrderNumber());
-        receipt.setSupplierId(order.getSupplierId());
-        receipt.setSupplierName(order.getSupplierName());
-        receipt.setSupplierCode(resolveSupplierCode(order.getSupplierId()));
-        receipt.setDepartmentName(order.getDepartmentName());
-        receipt.setBuyer(order.getOperatorName());
-        receipt.setContactPerson(request.getContactPerson());
-        receipt.setContactPhone(request.getContactPhone());
-        receipt.setOrderDate(order.getCreateTime() == null ? LocalDate.now() : order.getCreateTime().toLocalDate());
-        receipt.setExpectedDeliveryDate(order.getCreateTime() == null ? LocalDate.now() : order.getCreateTime().toLocalDate().plusDays(3));
-        receipt.setActualDeliveryDate(request.getActualDeliveryDate());
-        receipt.setReceiver(request.getReceiver());
-        receipt.setStatus(ScmConstants.RECEIPT_WAIT_STOCK_IN);
-        receipt.setRemark(request.getRemark());
-        receipt.setCreateTime(LocalDateTime.now());
-        receipt.setUpdateTime(LocalDateTime.now());
-        purchaseReceiveMapper.insert(receipt);
-
+        PurchaseReceiveEntity receipt = null;
         BigDecimal totalAmount = BigDecimal.ZERO;
         int itemCount = 0;
-        boolean hasShortage = false;
+        List<PurchaseOrderItemEntity> shortageItems = new ArrayList<>();
+        Map<Long, Integer> shortageQuantities = new HashMap<>();
         for (ScmRequest.PurchaseReceiveItemSave itemRequest : request.getItems()) {
             PurchaseOrderItemEntity orderItem = itemMap.get(itemRequest.getPurchaseOrderItemId());
             if (orderItem == null) {
                 throw new ScmBusinessException("存在无效的采购明细");
             }
-            int actualReceived = itemRequest.getActualReceivedQuantity() == null ? 0 : itemRequest.getActualReceivedQuantity();
-            if (actualReceived > orderItem.getQuantity()) {
-                throw new ScmBusinessException("实际到货数量不能超过采购数量");
+            int alreadyReceived = safeInt(orderItem.getReceivedQuantity());
+            int remainingQuantity = safeInt(orderItem.getQuantity()) - alreadyReceived;
+            if (remainingQuantity <= 0) {
+                throw new ScmBusinessException("存在已完成收货的采购明细，请刷新后重试");
             }
-            PurchaseReceiveItemEntity receiptItem = new PurchaseReceiveItemEntity();
-            receiptItem.setReceiveId(receipt.getId());
-            receiptItem.setPurchaseOrderItemId(orderItem.getId());
-            receiptItem.setProductCode(orderItem.getMaterialCode());
-            receiptItem.setProductName(orderItem.getMaterialName());
-            receiptItem.setSpecification(orderItem.getSpecification());
-            receiptItem.setModel(orderItem.getModel());
-            receiptItem.setManufacturer(orderItem.getManufacturer());
-            receiptItem.setRegistrationNumber(orderItem.getRegistrationNumber());
-            receiptItem.setUnit(orderItem.getUnit());
-            receiptItem.setPrice(orderItem.getUnitPrice());
-            receiptItem.setQuantity(orderItem.getQuantity());
-            receiptItem.setActualReceivedQuantity(actualReceived);
-            receiptItem.setAmount(orderItem.getUnitPrice().multiply(BigDecimal.valueOf(actualReceived)));
-            receiptItem.setStatus(actualReceived < orderItem.getQuantity() ? "部分到货" : "已到货");
-            receiptItem.setShortageReason(itemRequest.getShortageReason());
-            receiptItem.setCreateTime(LocalDateTime.now());
-            receiptItem.setUpdateTime(LocalDateTime.now());
-            purchaseReceiveItemMapper.insert(receiptItem);
+            int actualReceived = itemRequest.getActualReceivedQuantity() == null ? 0 : itemRequest.getActualReceivedQuantity();
+            if (actualReceived > remainingQuantity) {
+                throw new ScmBusinessException("实际到货数量不能超过待收货数量");
+            }
+            if (actualReceived > 0) {
+                if (receipt == null) {
+                    receipt = buildReceipt(order, request);
+                    purchaseReceiveMapper.insert(receipt);
+                }
+                PurchaseReceiveItemEntity receiptItem = new PurchaseReceiveItemEntity();
+                receiptItem.setReceiveId(receipt.getId());
+                receiptItem.setPurchaseOrderItemId(orderItem.getId());
+                receiptItem.setProductCode(orderItem.getMaterialCode());
+                receiptItem.setProductName(orderItem.getMaterialName());
+                receiptItem.setSpecification(orderItem.getSpecification());
+                receiptItem.setModel(orderItem.getModel());
+                receiptItem.setManufacturer(orderItem.getManufacturer());
+                receiptItem.setRegistrationNumber(orderItem.getRegistrationNumber());
+                receiptItem.setUnit(orderItem.getUnit());
+                receiptItem.setPrice(orderItem.getUnitPrice());
+                receiptItem.setQuantity(actualReceived);
+                receiptItem.setActualReceivedQuantity(actualReceived);
+                receiptItem.setAmount(orderItem.getUnitPrice().multiply(BigDecimal.valueOf(actualReceived)));
+                receiptItem.setStatus("已到货");
+                receiptItem.setShortageReason(itemRequest.getShortageReason());
+                receiptItem.setCreateTime(LocalDateTime.now());
+                receiptItem.setUpdateTime(LocalDateTime.now());
+                purchaseReceiveItemMapper.insert(receiptItem);
 
-            orderItem.setReceivedQuantity(actualReceived);
-            orderItem.setStatus(receiptItem.getStatus());
-            orderItem.setUpdateTime(LocalDateTime.now());
-            purchaseOrderItemMapper.updateById(orderItem);
-            totalAmount = totalAmount.add(receiptItem.getAmount());
-            itemCount++;
+                orderItem.setReceivedQuantity(alreadyReceived + actualReceived);
+                totalAmount = totalAmount.add(receiptItem.getAmount());
+                itemCount++;
+            }
 
-            if (actualReceived < orderItem.getQuantity()) {
-                hasShortage = true;
-                createExceptionOrder(order, orderItem, itemRequest.getShortageReason(), request.getActualDeliveryDate());
+            if (actualReceived < remainingQuantity) {
+                shortageItems.add(orderItem);
+                shortageQuantities.put(orderItem.getId(), remainingQuantity - actualReceived);
             }
         }
+        if (receipt == null) {
+            throw new ScmBusinessException("本次到货数量为 0，请直接使用拒收处理未到货订单");
+        }
+
+        for (PurchaseOrderItemEntity orderItem : orderItems) {
+            Integer shortageQuantity = shortageQuantities.get(orderItem.getId());
+            if (shortageQuantity == null) {
+                if (itemMap.containsKey(orderItem.getId())) {
+                    applyOriginalItemAfterSplit(orderItem, safeInt(orderItem.getReceivedQuantity()));
+                }
+                continue;
+            }
+            int acceptedQuantity = safeInt(orderItem.getReceivedQuantity());
+            applyOriginalItemAfterSplit(orderItem, acceptedQuantity);
+        }
+
+        if (!shortageItems.isEmpty()) {
+            PurchaseOrderEntity exceptionPurchaseOrder = createExceptionPurchaseOrder(
+                    order, shortageItems, shortageQuantities, "部分到货，剩余明细待补发");
+            createExceptionOrder(exceptionPurchaseOrder, "部分到货",
+                    "部分到货，剩余明细已转异常订单，请补发后重新提交收货", request.getActualDeliveryDate());
+        }
+
         receipt.setTotalAmount(totalAmount);
         receipt.setItemCount(itemCount);
         purchaseReceiveMapper.updateById(receipt);
-
-        order.setStatus(ScmConstants.PURCHASE_WAIT_STOCK_IN);
-        order.setUpdateTime(LocalDateTime.now());
-        purchaseOrderMapper.updateById(order);
+        refreshPurchaseOrderAfterReceive(order);
         operationLogService.save(request.getReceiver(), "收货", "采购收货: " + order.getOrderNumber(),
-                hasShortage ? ScmConstants.LOG_WARNING : ScmConstants.LOG_SUCCESS, "采购收货", receipt.getReceiveNumber());
+                shortageItems.isEmpty() ? ScmConstants.LOG_SUCCESS : ScmConstants.LOG_WARNING,
+                "采购收货", receipt.getReceiveNumber());
         return receipt;
     }
 
@@ -393,17 +403,30 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
             throw new ScmBusinessException("采购单当前不处于待收货状态");
         }
         List<PurchaseOrderItemEntity> orderItems = listOrderItems(orderId);
+        List<PurchaseOrderItemEntity> remainingItems = new ArrayList<>();
+        Map<Long, Integer> remainingQuantities = new HashMap<>();
         for (PurchaseOrderItemEntity item : orderItems) {
-            item.setStatus("已拒收");
-            item.setReceivedQuantity(0);
-            item.setUpdateTime(LocalDateTime.now());
-            purchaseOrderItemMapper.updateById(item);
-            createExceptionOrder(order, item, request.getReason(), LocalDate.now());
+            int remainingQuantity = safeInt(item.getQuantity()) - safeInt(item.getReceivedQuantity());
+            if (remainingQuantity > 0) {
+                remainingItems.add(item);
+                remainingQuantities.put(item.getId(), remainingQuantity);
+            }
         }
-        order.setStatus(ScmConstants.PURCHASE_RECEIVE_REJECTED);
+        if (remainingItems.isEmpty()) {
+            throw new ScmBusinessException("当前采购单没有可拒收的待收货明细");
+        }
+        PurchaseOrderEntity exceptionPurchaseOrder = createExceptionPurchaseOrder(
+                order, remainingItems, remainingQuantities,
+                StringUtils.hasText(request.getReason()) ? request.getReason() : "收货拒收");
+        createExceptionOrder(exceptionPurchaseOrder, "已拒收",
+                StringUtils.hasText(request.getReason()) ? request.getReason() : "收货拒收", LocalDate.now());
+
+        for (PurchaseOrderItemEntity item : remainingItems) {
+            applyOriginalItemAfterSplit(item, safeInt(item.getReceivedQuantity()));
+        }
+
         order.setRejectReason(request.getReason());
-        order.setUpdateTime(LocalDateTime.now());
-        purchaseOrderMapper.updateById(order);
+        refreshPurchaseOrderAfterReceive(order);
         operationLogService.save(request.getOperatorName(), "收货拒收", "收货拒收采购单: " + order.getOrderNumber(),
                 ScmConstants.LOG_WARNING, "采购收货", order.getOrderNumber());
         return order;
@@ -444,8 +467,6 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
                 .orderByDesc(ExceptionOrderEntity::getCreatedAt);
         if (StringUtils.hasText(query.getStatus())) {
             wrapper.eq(ExceptionOrderEntity::getStatus, query.getStatus());
-        } else {
-            wrapper.in(ExceptionOrderEntity::getStatus, Arrays.asList("已拒收", "超时未验收"));
         }
         Page<ExceptionOrderEntity> page = exceptionOrderMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         return ScmPageHelper.of(page);
@@ -534,7 +555,24 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
         if (entity == null) {
             throw new ScmBusinessException("异常订单不存在");
         }
-        entity.setStatus("待验收");
+        if (entity.getPurchaseOrderId() != null) {
+            PurchaseOrderEntity order = purchaseOrderMapper.selectById(entity.getPurchaseOrderId());
+            if (order != null) {
+                order.setStatus(ScmConstants.PURCHASE_WAIT_RECEIVE);
+                order.setRejectReason(null);
+                order.setUpdateTime(LocalDateTime.now());
+                purchaseOrderMapper.updateById(order);
+                List<PurchaseOrderItemEntity> items = listOrderItems(order.getId());
+                for (PurchaseOrderItemEntity item : items) {
+                    item.setStatus(ScmConstants.PURCHASE_WAIT_RECEIVE);
+                    item.setReceivedQuantity(0);
+                    item.setStockedQuantity(0);
+                    item.setUpdateTime(LocalDateTime.now());
+                    purchaseOrderItemMapper.updateById(item);
+                }
+            }
+        }
+        entity.setStatus("待收货");
         entity.setResubmittedAt(LocalDateTime.now());
         exceptionOrderMapper.updateById(entity);
         operationLogService.save(operatorName, "提交", "重新提交异常订单: " + entity.getOrderNo(),
@@ -774,7 +812,137 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
                 itemFingerprint);
     }
 
-    private void createExceptionOrder(PurchaseOrderEntity order, PurchaseOrderItemEntity item,
+    private PurchaseReceiveEntity buildReceipt(PurchaseOrderEntity order, ScmRequest.PurchaseReceiveSave request) {
+        PurchaseReceiveEntity receipt = new PurchaseReceiveEntity();
+        receipt.setReceiveNumber(ScmCodeGenerator.nextCode(purchaseReceiveMapper, "RC", "receive_number"));
+        receipt.setPurchaseOrderId(order.getId());
+        receipt.setOrderNumber(order.getOrderNumber());
+        receipt.setSupplierId(order.getSupplierId());
+        receipt.setSupplierName(order.getSupplierName());
+        receipt.setSupplierCode(resolveSupplierCode(order.getSupplierId()));
+        receipt.setDepartmentName(order.getDepartmentName());
+        receipt.setBuyer(order.getOperatorName());
+        receipt.setContactPerson(request.getContactPerson());
+        receipt.setContactPhone(request.getContactPhone());
+        receipt.setOrderDate(order.getCreateTime() == null ? LocalDate.now() : order.getCreateTime().toLocalDate());
+        receipt.setExpectedDeliveryDate(order.getCreateTime() == null ? LocalDate.now() : order.getCreateTime().toLocalDate().plusDays(3));
+        receipt.setActualDeliveryDate(request.getActualDeliveryDate());
+        receipt.setReceiver(request.getReceiver());
+        receipt.setStatus(ScmConstants.RECEIPT_WAIT_STOCK_IN);
+        receipt.setRemark(request.getRemark());
+        receipt.setCreateTime(LocalDateTime.now());
+        receipt.setUpdateTime(LocalDateTime.now());
+        return receipt;
+    }
+
+    private PurchaseOrderEntity createExceptionPurchaseOrder(PurchaseOrderEntity sourceOrder,
+                                                             List<PurchaseOrderItemEntity> sourceItems,
+                                                             Map<Long, Integer> splitQuantities,
+                                                             String reason) {
+        PurchaseOrderEntity exceptionOrder = new PurchaseOrderEntity();
+        BeanUtils.copyProperties(sourceOrder, exceptionOrder, "id", "orderNumber", "status", "rejectReason",
+                "totalAmount", "itemCount", "submitTime", "auditTime", "createTime", "updateTime");
+        exceptionOrder.setOrderNumber(ScmCodeGenerator.nextCode(purchaseOrderMapper, "PO", "order_number"));
+        exceptionOrder.setStatus(ScmConstants.PURCHASE_REJECTED);
+        exceptionOrder.setRejectReason(reason);
+        exceptionOrder.setAuditTime(LocalDateTime.now());
+        exceptionOrder.setCreateTime(LocalDateTime.now());
+        exceptionOrder.setUpdateTime(LocalDateTime.now());
+        purchaseOrderMapper.insert(exceptionOrder);
+
+        BigDecimal totalAmount = BigDecimal.ZERO;
+        int itemCount = 0;
+        for (PurchaseOrderItemEntity sourceItem : sourceItems) {
+            int splitQuantity = safeInt(splitQuantities.get(sourceItem.getId()));
+            if (splitQuantity <= 0) {
+                continue;
+            }
+            PurchaseOrderItemEntity newItem = new PurchaseOrderItemEntity();
+            BeanUtils.copyProperties(sourceItem, newItem, "id", "purchaseOrderId", "quantity",
+                    "receivedQuantity", "stockedQuantity", "amount", "status", "createTime", "updateTime");
+            newItem.setPurchaseOrderId(exceptionOrder.getId());
+            newItem.setQuantity(splitQuantity);
+            newItem.setReceivedQuantity(0);
+            newItem.setStockedQuantity(0);
+            newItem.setAmount(sourceItem.getUnitPrice().multiply(BigDecimal.valueOf(splitQuantity)));
+            newItem.setStatus(ScmConstants.PURCHASE_REJECTED);
+            newItem.setCreateTime(LocalDateTime.now());
+            newItem.setUpdateTime(LocalDateTime.now());
+            purchaseOrderItemMapper.insert(newItem);
+            totalAmount = totalAmount.add(newItem.getAmount());
+            itemCount++;
+        }
+        exceptionOrder.setTotalAmount(totalAmount);
+        exceptionOrder.setItemCount(itemCount);
+        purchaseOrderMapper.updateById(exceptionOrder);
+        return exceptionOrder;
+    }
+
+    private void applyOriginalItemAfterSplit(PurchaseOrderItemEntity item, int acceptedQuantity) {
+        if (acceptedQuantity <= 0) {
+            purchaseOrderItemMapper.deleteById(item.getId());
+            return;
+        }
+        item.setQuantity(acceptedQuantity);
+        item.setAmount(item.getUnitPrice().multiply(BigDecimal.valueOf(acceptedQuantity)));
+        if (safeInt(item.getReceivedQuantity()) > acceptedQuantity) {
+            item.setReceivedQuantity(acceptedQuantity);
+        }
+        if (safeInt(item.getStockedQuantity()) > acceptedQuantity) {
+            item.setStockedQuantity(acceptedQuantity);
+        }
+        item.setStatus(resolveOrderItemStatus(item));
+        item.setUpdateTime(LocalDateTime.now());
+        purchaseOrderItemMapper.updateById(item);
+    }
+
+    private String resolveOrderItemStatus(PurchaseOrderItemEntity item) {
+        int quantity = safeInt(item.getQuantity());
+        int receivedQuantity = safeInt(item.getReceivedQuantity());
+        int stockedQuantity = safeInt(item.getStockedQuantity());
+        if (stockedQuantity >= quantity && quantity > 0) {
+            return "已入库";
+        }
+        if (receivedQuantity >= quantity && quantity > 0) {
+            return ScmConstants.PURCHASE_WAIT_STOCK_IN;
+        }
+        if (receivedQuantity > 0) {
+            return "部分到货";
+        }
+        return ScmConstants.PURCHASE_WAIT_RECEIVE;
+    }
+
+    private void refreshPurchaseOrderAfterReceive(PurchaseOrderEntity order) {
+        List<PurchaseOrderItemEntity> currentItems = listOrderItems(order.getId());
+        order.setItemCount(currentItems.size());
+        order.setTotalAmount(sumAmount(currentItems));
+        if (currentItems.isEmpty()) {
+            order.setStatus(ScmConstants.PURCHASE_RECEIVE_REJECTED);
+        } else {
+            boolean hasPendingReceive = currentItems.stream()
+                    .anyMatch(item -> safeInt(item.getReceivedQuantity()) < safeInt(item.getQuantity()));
+            boolean hasPendingStockIn = currentItems.stream()
+                    .anyMatch(item -> safeInt(item.getReceivedQuantity()) > safeInt(item.getStockedQuantity()));
+            if (hasPendingReceive) {
+                order.setStatus(ScmConstants.PURCHASE_WAIT_RECEIVE);
+            } else if (hasPendingStockIn) {
+                order.setStatus(ScmConstants.PURCHASE_WAIT_STOCK_IN);
+            } else {
+                order.setStatus(ScmConstants.PURCHASE_COMPLETED);
+            }
+        }
+        if (!Objects.equals(order.getStatus(), ScmConstants.PURCHASE_RECEIVE_REJECTED)) {
+            order.setRejectReason(null);
+        }
+        order.setUpdateTime(LocalDateTime.now());
+        purchaseOrderMapper.updateById(order);
+    }
+
+    private int safeInt(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private void createExceptionOrder(PurchaseOrderEntity order, String status,
                                       String reason, LocalDate actualDeliveryDate) {
         ExceptionOrderEntity entity = new ExceptionOrderEntity();
         entity.setOrderNo(order.getOrderNumber());
@@ -788,9 +956,9 @@ public class PurchaseManagementServiceImpl implements PurchaseManagementService 
         entity.setOrderDate(order.getCreateTime() == null ? LocalDate.now() : order.getCreateTime().toLocalDate());
         entity.setExpectedDeliveryDate(order.getCreateTime() == null ? LocalDate.now() : order.getCreateTime().toLocalDate().plusDays(3));
         entity.setActualDeliveryDate(actualDeliveryDate);
-        entity.setStatus("已拒收");
+        entity.setStatus(status);
         entity.setRejectReason(reason);
-        entity.setTotalAmount(item.getUnitPrice().multiply(BigDecimal.valueOf(item.getQuantity() - item.getReceivedQuantity())));
+        entity.setTotalAmount(order.getTotalAmount());
         entity.setCreatedAt(LocalDateTime.now());
         exceptionOrderMapper.insert(entity);
     }

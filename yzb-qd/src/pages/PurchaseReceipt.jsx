@@ -4,7 +4,6 @@ import {
   Card,
   Form,
   Input,
-  Select,
   Button,
   Space,
   Row,
@@ -21,13 +20,9 @@ import {
   SearchOutlined,
   ReloadOutlined,
   DownloadOutlined,
-  EyeOutlined
 } from '@ant-design/icons';
-import zhCN from 'antd/es/locale/zh_CN';
 import api from '../utils/api.js';
 
-const { Option } = Select;
-const { RangePicker } = DatePicker;
 const { TextArea } = Input;
 
 const PurchaseReceipt = () => {
@@ -44,15 +39,12 @@ const PurchaseReceipt = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [viewMode, setViewMode] = useState('summary'); // 'detail' 或 'summary'
-  const [hasSelectedView, setHasSelectedView] = useState(false); // 是否已选择视图
   
   // 商品明细复选框选择状态
   const [selectedItemKeys, setSelectedItemKeys] = useState([]);
   const [receivedQuantities, setReceivedQuantities] = useState({});
   // 记录哪些商品的到货数量被修改过
   const [modifiedItems, setModifiedItems] = useState({});
-  // 存储批号、生产日期、失效日期的修改
-  const [batchInfo, setBatchInfo] = useState({});
   // 备注
   const [remarks, setRemarks] = useState('');
   const [receiverName, setReceiverName] = useState('');
@@ -115,6 +107,9 @@ const PurchaseReceipt = () => {
             unit: item.unit,
             price: item.unitPrice,
             quantity: item.quantity,
+            receivedQuantity: item.receivedQuantity || 0,
+            stockedQuantity: item.stockedQuantity || 0,
+            remainingQuantity: Math.max((item.quantity || 0) - (item.receivedQuantity || 0), 0),
             amount: item.amount,
             status: item.status
           }))
@@ -145,6 +140,9 @@ const PurchaseReceipt = () => {
       '已验收': { color: 'green', text: '已验收' },
       '已拒收': { color: 'red', text: '已拒收' },
       '部分验收': { color: 'blue', text: '部分验收' },
+      '部分到货': { color: 'gold', text: '部分到货' },
+      '待入库': { color: 'processing', text: '待入库' },
+      '收货拒收': { color: 'red', text: '收货拒收' },
     };
     const config = statusMap[status] || { color: 'default', text: status };
     return <Tag color={config.color}>{config.text}</Tag>;
@@ -191,6 +189,14 @@ const PurchaseReceipt = () => {
       return;
     }
 
+    const validSelectedItems = selectedOrder.items.filter(item =>
+      selectedItemKeys.includes(item.key) && Number(item.remainingQuantity || 0) > 0,
+    );
+    if (validSelectedItems.length === 0) {
+      message.warning('所选商品没有待收货数量，请刷新后重试');
+      return;
+    }
+
     // 检查是否有修改过到货数量的商品
     const hasModifiedItems = selectedItemKeys.some(key => modifiedItems[key]);
     
@@ -225,18 +231,20 @@ const PurchaseReceipt = () => {
             contactPhone: contactPhone || selectedOrder.contactPhone || '13800000000',
             actualDeliveryDate: (actualDeliveryDate || moment()).format('YYYY-MM-DD'),
             remark: remarks,
-            items: selectedItemKeys.map(key => {
-              const item = selectedOrder.items.find(i => i.key === key);
-              return {
-                purchaseOrderItemId: item.id,
-                actualReceivedQuantity: receivedQuantities[key] ?? item.quantity,
-                shortageReason: (receivedQuantities[key] ?? item.quantity) < item.quantity ? '部分到货' : ''
-              };
-            })
+            items: selectedOrder.items
+              .filter(item => selectedItemKeys.includes(item.key) && Number(item.remainingQuantity || 0) > 0)
+              .map(item => {
+                const actualReceived = receivedQuantities[item.key] ?? item.remainingQuantity;
+                return {
+                  purchaseOrderItemId: item.id,
+                  actualReceivedQuantity: actualReceived,
+                  shortageReason: actualReceived < item.remainingQuantity ? '部分到货' : ''
+                };
+              })
           };
           const response = await api.post(`/api/scm/purchases/orders/${selectedOrder.key}/receive`, receiveData);
           if (response.code === 1) {
-            message.success(`成功确认收货 ${selectedItemKeys.length} 项商品，请到采购入库页面录入批号和效期后完成入库`);
+            message.success(`成功确认收货 ${receiveData.items.length} 项商品，请到采购入库页面录入批号、效期后完成入库`);
             loadPurchaseOrders();
             setIsModalVisible(false);
           } else {
@@ -244,7 +252,7 @@ const PurchaseReceipt = () => {
           }
         } catch (error) {
           console.error('验收失败:', error);
-          message.error('验收失败，请检查网络连接或联系管理员');
+          message.error(error.message || '验收失败，请检查网络连接或联系管理员');
         } finally {
           setLoading(false);
         }
@@ -252,16 +260,17 @@ const PurchaseReceipt = () => {
     });
   };
 
-  // 处理拒收选中的商品
+  // 处理拒收剩余待收货商品
   const handleRejectSelectedItems = () => {
-    if (selectedItemKeys.length === 0) {
-      message.warning('请先选择要拒收的商品');
+    const pendingItems = (selectedOrder?.items || []).filter(item => Number(item.remainingQuantity || 0) > 0);
+    if (pendingItems.length === 0) {
+      message.warning('当前订单没有可拒收的待收货明细');
       return;
     }
 
     Modal.confirm({
       title: '确认拒收',
-      content: `确定要拒收选中的 ${selectedItemKeys.length} 项商品吗？`,
+      content: `确定要拒收订单中剩余 ${pendingItems.length} 项待收货商品吗？拒收后将生成异常订单。`,
       okText: '确认',
       cancelText: '取消',
       onOk: async () => {
@@ -272,7 +281,7 @@ const PurchaseReceipt = () => {
             reason: remarks || '收货拒收'
           });
           if (response.code === 1) {
-            message.success(`成功拒收订单 ${selectedOrder.orderNumber}`);
+            message.success(`成功拒收订单 ${selectedOrder.orderNumber} 的剩余待收货商品`);
             loadPurchaseOrders();
             setIsModalVisible(false);
           } else {
@@ -280,7 +289,7 @@ const PurchaseReceipt = () => {
           }
         } catch (error) {
           console.error('拒收失败:', error);
-          message.error('拒收失败，请检查网络连接或联系管理员');
+          message.error(error.message || '拒收失败，请检查网络连接或联系管理员');
         } finally {
           setLoading(false);
         }
@@ -351,19 +360,12 @@ const PurchaseReceipt = () => {
               // 初始化到货数量为采购数量
               const initialReceivedQuantities = {};
               const initialModifiedItems = {};
-              const initialBatchInfo = {};
               record.items.forEach(item => {
-                initialReceivedQuantities[item.key] = item.quantity;
+                initialReceivedQuantities[item.key] = item.remainingQuantity;
                 initialModifiedItems[item.key] = false;
-                initialBatchInfo[item.key] = {
-                  batchNumber: item.batchNumber || '',
-                  productionDate: item.productionDate || '',
-                  expiryDate: item.expiryDate || ''
-                };
               });
               setReceivedQuantities(initialReceivedQuantities);
               setModifiedItems(initialModifiedItems);
-              setBatchInfo(initialBatchInfo);
               setRemarks(''); // 重置备注
               setReceiverName(getCurrentUserName());
               setContactPerson(record.contactPerson || record.buyer || getCurrentUserName());
@@ -693,9 +695,9 @@ const PurchaseReceipt = () => {
             key="reject" 
             danger 
             onClick={() => handleRejectSelectedItems()}
-            disabled={selectedItemKeys.length === 0}
+            disabled={!(selectedOrder?.items || []).some(item => Number(item.remainingQuantity || 0) > 0)}
           >
-            拒收
+            整单拒收
           </Button>,
           <Button 
             key="accept" 
@@ -798,14 +800,22 @@ const PurchaseReceipt = () => {
                   {
                     title: (
                       <Checkbox
-                        checked={selectedOrder?.items?.length > 0 && selectedItemKeys.length === selectedOrder.items.length}
-                        indeterminate={selectedItemKeys.length > 0 && selectedItemKeys.length < (selectedOrder?.items?.length || 0)}
+                        checked={
+                          (selectedOrder?.items || []).filter(item => Number(item.remainingQuantity || 0) > 0).length > 0
+                          && selectedItemKeys.length === (selectedOrder?.items || []).filter(item => Number(item.remainingQuantity || 0) > 0).length
+                        }
+                        indeterminate={
+                          selectedItemKeys.length > 0
+                          && selectedItemKeys.length < (selectedOrder?.items || []).filter(item => Number(item.remainingQuantity || 0) > 0).length
+                        }
                         onChange={(e) => {
                           if (e.target.checked) {
-                            // 全选
-                            setSelectedItemKeys(selectedOrder?.items?.map(item => item.key) || []);
+                            setSelectedItemKeys(
+                              (selectedOrder?.items || [])
+                                .filter(item => Number(item.remainingQuantity || 0) > 0)
+                                .map(item => item.key),
+                            );
                           } else {
-                            // 取消全选
                             setSelectedItemKeys([]);
                           }
                         }}
@@ -817,6 +827,7 @@ const PurchaseReceipt = () => {
                     render: (_, record) => (
                       <Checkbox
                         checked={selectedItemKeys.includes(record.key)}
+                        disabled={Number(record.remainingQuantity || 0) <= 0}
                         onChange={(e) => {
                           if (e.target.checked) {
                             setSelectedItemKeys([...selectedItemKeys, record.key]);
@@ -838,21 +849,23 @@ const PurchaseReceipt = () => {
                   { title: '单位', dataIndex: 'unit', key: 'unit', width: 80 },
                   { title: '采购价格', dataIndex: 'price', key: 'price', width: 100, render: (value) => `¥${value?.toFixed(2)}` },
                   { title: '采购数量', dataIndex: 'quantity', key: 'quantity', width: 100 },
+                  { title: '已收货', dataIndex: 'receivedQuantity', key: 'receivedQuantity', width: 90 },
+                  { title: '待收货', dataIndex: 'remainingQuantity', key: 'remainingQuantity', width: 90 },
                   { 
-                    title: '到货数量', 
+                    title: '本次收货', 
                     key: 'receivedQuantity', 
                     width: 100, 
                     render: (_, record) => (
                       <InputNumber
                         min={0}
-                        max={record.quantity}
-                        value={receivedQuantities[record.key] || record.quantity}
+                        max={record.remainingQuantity}
+                        value={receivedQuantities[record.key] ?? record.remainingQuantity}
+                        disabled={Number(record.remainingQuantity || 0) <= 0}
                         onChange={(value) => {
                           const newReceivedQuantities = { ...receivedQuantities };
-                          newReceivedQuantities[record.key] = value;
+                          newReceivedQuantities[record.key] = value ?? 0;
                           setReceivedQuantities(newReceivedQuantities);
                           
-                          // 标记该商品已修改过到货数量
                           const newModifiedItems = { ...modifiedItems };
                           newModifiedItems[record.key] = true;
                           setModifiedItems(newModifiedItems);
@@ -865,7 +878,7 @@ const PurchaseReceipt = () => {
                     key: 'amount', 
                     width: 120, 
                     render: (_, record) => {
-                      const receivedQty = receivedQuantities[record.key] || record.quantity;
+                      const receivedQty = receivedQuantities[record.key] ?? record.remainingQuantity;
                       const amount = record.price * receivedQty;
                       return `¥${amount.toFixed(2)}`;
                     } 
@@ -876,7 +889,7 @@ const PurchaseReceipt = () => {
                 rowKey="key"
                 pagination={false}
                 size="small"
-                scroll={{ x: 900 }}
+                scroll={{ x: 1100 }}
               />
             </div>
 

@@ -298,6 +298,10 @@ public final class ScmView {
         private String department;
         /** 当前状态。 */
         private String status;
+        /** 实际到货日期。 */
+        private LocalDate actualDeliveryDate;
+        /** 收货登记时间。 */
+        private LocalDateTime receiveTime;
     }
 
     /**

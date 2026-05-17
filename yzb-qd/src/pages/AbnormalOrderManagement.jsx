@@ -157,7 +157,7 @@ const AbnormalOrderManagement = () => {
   const handleResubmitOrder = (order) => {
     Modal.confirm({
       title: '确认重新提交订单',
-      content: `确定要重新提交订单 ${order.orderNo} 吗？重新提交后订单将进入待验收状态。`,
+      content: `确定要重新提交订单 ${order.orderNo} 吗？重新提交后订单将进入待收货状态。`,
       okText: '确认',
       cancelText: '取消',
       onOk: async () => {
@@ -167,7 +167,7 @@ const AbnormalOrderManagement = () => {
             params: { operatorName: '当前用户' }
           });
           if (response.code === 1) {
-            message.success(`订单 ${order.orderNo} 已重新提交，状态已更新为待验收`);
+            message.success(`订单 ${order.orderNo} 已重新提交，状态已更新为待收货`);
             loadAbnormalOrders();
           } else {
             message.error(response.message || '重新提交订单失败');
@@ -187,6 +187,10 @@ const AbnormalOrderManagement = () => {
     switch (status) {
       case '已拒收':
         return <CloseCircleOutlined style={{ color: '#f5222d' }} />;
+      case '部分到货':
+        return <WarningOutlined style={{ color: '#faad14' }} />;
+      case '待收货':
+        return <ClockCircleOutlined style={{ color: '#1677ff' }} />;
       case '超时未验收':
         return <ClockCircleOutlined style={{ color: '#faad14' }} />;
       default:
@@ -199,6 +203,10 @@ const AbnormalOrderManagement = () => {
     switch (status) {
       case '已拒收':
         return 'error';
+      case '部分到货':
+        return 'warning';
+      case '待收货':
+        return 'processing';
       case '超时未验收':
         return 'warning';
       default:
@@ -282,6 +290,10 @@ const AbnormalOrderManagement = () => {
         switch (status) {
           case '已拒收':
             return <span style={{ color: '#f5222d' }}>{record.rejectReason}</span>;
+          case '部分到货':
+            return <span style={{ color: '#faad14' }}>{record.rejectReason || '部分到货，待补发'}</span>;
+          case '待收货':
+            return <span style={{ color: '#1677ff' }}>{record.rejectReason || '已重新提交，等待再次收货'}</span>;
           case '超时未验收':
             return <span style={{ color: '#faad14' }}>{record.timeoutReason}</span>;
           default:
@@ -463,6 +475,8 @@ const AbnormalOrderManagement = () => {
               <Form.Item name="status" noStyle initialValue="all">
                 <Select style={{ width: 150 }}>
                   <Option value="all">全部状态</Option>
+                  <Option value="部分到货">部分到货</Option>
+                  <Option value="待收货">待收货</Option>
                   <Option value="已拒收">已拒收</Option>
                   <Option value="超时未验收">超时未验收</Option>
                 </Select>
@@ -728,10 +742,15 @@ const AbnormalOrderManagement = () => {
                   <div>
                     <strong>异常原因：</strong>
                     <span style={{ 
-                      color: selectedOrder.status === '已拒收' ? '#f5222d' : '#faad14'
+                      color: selectedOrder.status === '已拒收'
+                        ? '#f5222d'
+                        : selectedOrder.status === '待收货'
+                          ? '#1677ff'
+                          : '#faad14'
                     }}>
-                      {selectedOrder.status === '已拒收' ? selectedOrder.rejectReason :
-                       selectedOrder.timeoutReason}
+                      {selectedOrder.status === '超时未验收'
+                        ? selectedOrder.timeoutReason
+                        : selectedOrder.rejectReason}
                     </span>
                   </div>
                 </Col>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Button, Card, Form, Input, InputNumber, Modal, Table, Tag, message } from 'antd';
+import { Button, Card, DatePicker, Form, Input, InputNumber, Modal, Table, Tag, message } from 'antd';
 import { DownloadOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import moment from 'moment';
 import api from '../utils/api.js';
 
 const StockInAccept = () => {
@@ -26,17 +27,6 @@ const StockInAccept = () => {
     }
   };
 
-  const normalizeDateInput = (value) => {
-    if (!value) {
-      return '';
-    }
-    const trimmed = String(value).trim();
-    if (/^\d{8}$/.test(trimmed)) {
-      return `${trimmed.slice(0, 4)}-${trimmed.slice(4, 6)}-${trimmed.slice(6, 8)}`;
-    }
-    return trimmed;
-  };
-
   const decoratePendingItem = (item, previous = {}) => {
     const meta = materialMetaMap[item.productCode] || materialMetaMap[item.materialCode] || {};
     const receipt = receiptMap[item.receiveId] || receiptMap[item.receiptId] || {};
@@ -52,6 +42,8 @@ const StockInAccept = () => {
       batchNumber: previous.batchNumber || '',
       productionDate: previous.productionDate || '',
       expiryDate: previous.expiryDate || '',
+      actualDeliveryDate: item.actualDeliveryDate || previous.actualDeliveryDate || receipt.actualDeliveryDate || '',
+      receiveTime: item.receiveTime || previous.receiveTime || receipt.createTime || '',
       stockInQuantity: previous.stockInQuantity ?? item.pendingQuantity ?? 0,
       remark: previous.remark || '',
     };
@@ -158,7 +150,7 @@ const StockInAccept = () => {
       }
       return {
         ...item,
-        [field]: field === 'productionDate' || field === 'expiryDate' ? normalizeDateInput(value) : value,
+        [field]: value,
       };
     }));
   };
@@ -319,6 +311,14 @@ const StockInAccept = () => {
       width: 110,
     },
     {
+      title: '采购收货时间',
+      key: 'receiveTime',
+      width: 170,
+      render: (_, record) => record.receiveTime
+        ? moment(record.receiveTime).format('YYYY-MM-DD HH:mm:ss')
+        : (record.actualDeliveryDate || '--'),
+    },
+    {
       title: '批号',
       key: 'batchNumber',
       width: 160,
@@ -335,10 +335,11 @@ const StockInAccept = () => {
       key: 'productionDate',
       width: 150,
       render: (_, record) => (
-        <Input
-          value={record.productionDate}
-          onChange={(event) => handleFieldChange(record.key, 'productionDate', event.target.value)}
-          placeholder="支持 20260508"
+        <DatePicker
+          value={record.productionDate ? moment(record.productionDate, 'YYYY-MM-DD') : null}
+          onChange={(value) => handleFieldChange(record.key, 'productionDate', value ? value.format('YYYY-MM-DD') : '')}
+          format="YYYY-MM-DD"
+          style={{ width: '100%' }}
         />
       ),
     },
@@ -347,10 +348,11 @@ const StockInAccept = () => {
       key: 'expiryDate',
       width: 150,
       render: (_, record) => (
-        <Input
-          value={record.expiryDate}
-          onChange={(event) => handleFieldChange(record.key, 'expiryDate', event.target.value)}
-          placeholder="支持 20270508"
+        <DatePicker
+          value={record.expiryDate ? moment(record.expiryDate, 'YYYY-MM-DD') : null}
+          onChange={(value) => handleFieldChange(record.key, 'expiryDate', value ? value.format('YYYY-MM-DD') : '')}
+          format="YYYY-MM-DD"
+          style={{ width: '100%' }}
         />
       ),
     },
@@ -473,7 +475,7 @@ const StockInAccept = () => {
             position: ['bottomCenter'],
             onChange: (page, pageSize) => loadPendingItems(page, pageSize),
           }}
-          scroll={{ x: 2200 }}
+          scroll={{ x: 2400 }}
           summary={() => (
             <Table.Summary.Row>
               <Table.Summary.Cell index={0} colSpan={8}>
