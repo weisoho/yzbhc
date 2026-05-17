@@ -16,11 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -29,7 +25,7 @@ import java.util.stream.Collectors;
 @Service
 public class RoleServiceImpl implements RoleService {
 
-    private static final Set<String> RESERVED_ROLE_CODES = Set.of("SUPER_ADMIN", "ADMIN");
+    //private static final Set<String> RESERVED_ROLE_CODES = Set.of("SUPER_ADMIN", "ADMIN");
 
     @Autowired
     private SysRoleMapper roleMapper;
@@ -259,6 +255,10 @@ public class RoleServiceImpl implements RoleService {
     }
 
     private boolean isReservedRole(SysRole role) {
+        Set<String> set = new HashSet<>();
+        set.add("SUPER_ADMIN");
+        set.add("ADMIN");
+        Set<String> RESERVED_ROLE_CODES = Collections.unmodifiableSet(set);
         return role != null && RESERVED_ROLE_CODES.contains(String.valueOf(role.getRoleCode()).toUpperCase());
     }
 
